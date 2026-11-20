@@ -4,7 +4,7 @@ mod common;
 
 use glam::Vec3;
 use serde_json::Value;
-use ze_tree::{OptionsError, TreeOptions, TreePreset};
+use ze_tree::{BarkUvMode, OptionsError, TreeOptions, TreePreset};
 
 /// Converts a display name to the file stem shared by presets and fixtures,
 /// for example `"Ash Small"` to `"ash_small"`.
@@ -128,6 +128,15 @@ fn partial_json_keeps_nested_defaults() {
     expected.trellis.position = Vec3::new(0.0, 0.0, 5.0);
     expected.leaves.billboard = ze_tree::Billboard::Single;
     assert_eq!(options, expected);
+}
+
+#[test]
+fn bark_uv_mode_defaults_to_mirrored_and_reads_from_json() {
+    assert_eq!(TreeOptions::default().bark.uv_mode, BarkUvMode::Mirrored);
+    let options = TreeOptions::from_json(r#"{ "bark": { "uvMode": "continuous" } }"#).unwrap();
+    assert_eq!(options.bark.uv_mode, BarkUvMode::Continuous);
+    let json: Value = serde_json::from_str(&options.to_json()).unwrap();
+    assert_eq!(json["bark"]["uvMode"], "continuous");
 }
 
 #[test]

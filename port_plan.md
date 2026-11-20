@@ -19,20 +19,23 @@ Reference source: `prior_art/ez-tree`, a shallow clone of commit
 |---|---|
 | 0 — Scaffolding | ✅ Done |
 | 1 — Foundations (golden harness, `rng`, `options` + `presets`) | ✅ Done |
-| 2 — Skeleton growth | ✅ Done (uncommitted) |
-| 3 — Meshing and LOD | ⏭ Next |
-| 4 — Tree wrapper, trellis layout, material params, WESL wind | Not started |
+| 2 — Skeleton growth | ✅ Done |
+| 3 — Meshing and LOD | ✅ Done (uncommitted) |
+| 4 — Tree wrapper, trellis layout, material params, WESL wind | 🚧 `Tree` wrapper and textures/material params done (uncommitted); trellis layout and WESL wind next |
 | 5 — Exports (glTF, OBJ, rig) | Not started |
 | 6 — Polish | Not started |
 
 Where things stand:
-- `cargo build`, `cargo clippy --all-targets`, `cargo test` (14 unit, 12 options,
-  1 RNG, 5 skeleton tests), `cargo doc --all-features` and the doctests all pass with
-  no warnings. Phases 0–1 are committed; Phase 2 is not.
-- All fixtures from the verification section are generated (7.8 MB). RNG, options and
-  all 24 skeleton fixtures are used by tests; the 9 mesh fixtures are for Phase 3.
-- `skeleton` and the trellis pull (`TrellisOptions::nearest_point` / `pull`) are
-  implemented. `mesh`, `tree` and `material` are still empty modules.
+- `cargo build`, `cargo clippy --all-targets`, `cargo test` (22 unit, 13 options,
+  1 RNG, 5 skeleton, 7 mesh, 7 tree, 3 material tests, 1 doctest),
+  `cargo doc --all-features` and the doctests all pass with no warnings. Phases 0–2
+  are committed; Phase 3 and the Phase 4 work so far are not.
+- All fixtures from the verification section are generated (7.8 MB) and all are used
+  by tests.
+- `skeleton`, `mesh` (with `LodDetail` / `default_lod_levels`) and the trellis pull
+  (`TrellisOptions::nearest_point` / `pull`), `tree` (`Tree`, `TreeError`) and
+  `material` (bark/leaf material params, KTX2 texture paths) are implemented. Bark
+  meshes carry tangents. See "Textures" below.
 
 Open items carried forward:
 - **D9:** fractional seeds act like their truncated value. Accepted as documented;
@@ -44,7 +47,7 @@ Open items carried forward:
   below. One fixture (`evergreen_seed_42`) has a documented, larger tolerance. Doing
   the whole growth in f64 might remove this; not done (see Decision 7).
 - **`cargo fmt`:** the Phase 0–1 files (`options.rs`, `tests/options.rs`,
-  `tests/rng.rs`) are not rustfmt-clean. The Phase 2 files are. Run `cargo fmt` once
+  `tests/rng.rs`) are not rustfmt-clean. The Phase 2–3 files are. Run `cargo fmt` once
   as its own commit.
 
 ---
@@ -134,27 +137,48 @@ impl TrellisOptions { pub fn nearest_point(&self, Vec3) -> Vec3;
                       pub fn pull(&self, position: Vec3, radius: f32) -> Option<TrellisPull>; }
 pub struct TrellisPull { pub direction: Vec3, pub strength: f32 }
 
-// mesh.rs
-pub struct LodDetail { pub section_stride: u32, pub segment_factor: f32,
+// mesh.rs   (implemented; LodDetail/LodLevel are serde, camelCase, all fields optional)
+pub struct LodDetail { pub section_stride: u32, pub segment_factor: f32,   // stride 0 acts as 1
                        pub leaf_stride: u32, pub leaf_scale: f32, pub billboard: Option<Billboard> }
 pub struct LodLevel { pub distance: f32, pub hysteresis: f32, pub detail: LodDetail }
-pub fn default_lod_levels() -> [LodLevel; 3];
+pub fn default_lod_levels() -> [LodLevel; 3];   // already sorted by distance
 pub struct MeshBuffers { pub positions: Vec<[f32;3]>, pub normals: Vec<[f32;3]>,
-                         pub uvs: Vec<[f32;2]>, pub indices: Vec<u32> }
-pub struct TreeMesh { pub branches: MeshBuffers, pub leaves: MeshBuffers }
+                         pub uvs: Vec<[f32;2]>, pub indices: Vec<u32> }   // + vertex_count, triangle_count
+pub struct TreeMesh { pub branches: MeshBuffers, pub leaves: MeshBuffers,
+                      pub branch_spans: Vec<BranchSpan>, pub leaf_spans: Vec<LeafSpan> }
+pub struct BranchSpan { pub branch: usize, pub level: u32, pub vertices: Range<u32>,
+                        pub indices: Range<u32>, pub segments: u32, pub sections: Vec<usize> }
+pub struct LeafSpan { pub leaf: usize, pub vertices: Range<u32>, pub indices: Range<u32> }
 impl Skeleton { pub fn mesh(&self, opts: &TreeOptions, detail: &LodDetail) -> TreeMesh; }
 
-// tree.rs — a convenience wrapper that mirrors the JS `Tree` class
-pub struct Tree { options, skeleton, mesh }
-impl Tree { new, from_preset, generate, create_geometry(&LodDetail), generate_lods(&[LodLevel]),
-            vertex_count, triangle_count }
+// tree.rs — a convenience wrapper that mirrors the JS `Tree` class   (implemented)
+// Immutable: fields are private, so options, skeleton and mesh always agree.
+pub struct Tree { options, skeleton, mesh /*full detail*/ }
+impl Tree { pub fn new(TreeOptions) -> Result<Tree, OptionsError>;   // JS generate()
+            pub fn from_preset(TreePreset) -> Tree;                  // JS loadPreset()
+            pub fn from_json(&str) -> Result<Tree, TreeError>;       // JS loadFromJson()
+            pub fn options/skeleton/mesh(&self);
+            pub fn mesh_with_detail(&self, &LodDetail) -> TreeMesh;  // JS createGeometry()
+            pub fn lod_meshes(&self, &[LodLevel]) -> Vec<(LodLevel, TreeMesh)>; // JS generateLODs(), stable sort by distance
+            pub fn vertex_count, triangle_count, into_parts; }
+pub enum TreeError { Json(serde_json::Error), Options(OptionsError) }
 
 // trellis.rs (Phase 4)
 pub fn trellis_layout(&TrellisOptions) -> TrellisLayout  // line positions, lengths, radius, colour
 
-// material.rs — engine-agnostic material and wind parameters
-pub struct BarkMaterialParams { tint, flat_shading, textured, uv_repeat_y }
-pub struct LeafMaterialParams { tint, alpha_test, rounded_normals, double_sided }
+// material.rs — engine-agnostic material parameters and texture paths   (implemented)
+pub struct BarkMaterial { base_color: [f32;3] /*linear*/, flat_shading, textured,
+                          uv_scale: [f32;2] /*[1, 1/textureScale.y]*/, metallic: 0, roughness: 1 }
+pub struct LeafMaterial { base_color, alpha_cutoff, double_sided: true, rounded_normals, metallic, roughness }
+impl BarkMaterial { pub fn new(&BarkOptions) }  impl LeafMaterial { pub fn new(&LeafOptions) }
+pub enum TextureSet { Uastc, Bc7 }  pub enum BarkMap { Color, Normal, Roughness }
+pub const BARK_KINDS: [&str; 3]; pub const LEAF_KINDS: [&str; 4];
+pub fn bark_texture_path(TextureSet, kind, BarkMap) -> String;  // "bc7/bark/Bark001/normal.ktx2"
+pub fn leaf_texture_path(TextureSet, kind) -> String;           // "uastc/leaves/oak.ktx2"
+// options.rs: BarkOptions::uv_mode: BarkUvMode { Mirrored (default, ez-tree), Continuous }
+// mesh.rs: MeshBuffers::tangents: Vec<[f32;4]>  (bark only; empty for leaves)
+
+// material.rs (Phase 4, with the WESL module)
 pub struct WindParams { strength: Vec3 = (0.5,0,0.5), frequency: 0.5, scale: 70 }
 ```
 
@@ -180,6 +204,8 @@ test.
 | K7 | The evergreen tip has radius 0, so gnarliness `1/sqrt(0)` is ∞ and the force step `strength/0` is ±∞ (then clamped). | `#growBranch` | The orientation computed after the last section is never used. Skip that work explicitly instead of producing NaN or ∞. The result is the same, and the code is clearer. |
 | K8 | Child and leaf placement uses `floor(t * (n-1))` section lookup with lerp/slerp between sections. Note that `qB.slerp(qA, alpha)` slerps *from B toward A* by alpha, while position lerps A→B: at alpha 0 the position is A's but the orientation is B's. | placement | Keep exactly, including the B→A slerp direction. This is an algorithmic detail, not jitter. |
 | K9 | The trellis snaps to the nearest multiple of `spacing` from the grid's min corner, then clamps to the grid edge. When `width` or `height` is not a multiple of `spacing`, a point near the far edge can be pulled toward the edge itself, where there is no wire. | `getNearestTrellisPoint` | Kept; it decides the trellis preset's shape. |
+| K11 | A leaf's normal is the leaf's +Z axis *without* the billboard's quarter turn, so the second quad of a double billboard gets the first quad's normals. With rounded normals each corner's normal is `normalize(face + corner − origin)`, which cancels at one corner of the second quad when the leaf size is near 2. | `#meshLeaf` | Kept: it decides the leaf shading. If the sum is exactly zero the normal is zero, as with three's `normalize` (`normalize_or_zero`), never NaN. |
+| K12 | Bark `v` alternates 0/1 per *kept* ring, so the texture mirrors every section, stretches with section length, and stretches ×3/×6 at the coarser default LODs. three.js gets correct normal-map lighting anyway because it derives tangents per pixel. | `#meshBranch` | Kept as the default (`BarkUvMode::Mirrored`), which the fixtures check. `BarkUvMode::Continuous` (ze_tree only) sets `v` = original section index instead; vertex tangents are only consistent in that mode. |
 | K10 | `rotateTowards` returns unchanged only when the angle is exactly 0, and `setFromUnitVectors(+Y, −Y)` is a half turn about +Z. | growth force, trellis | Private `rotate_towards` and `rotation_from_y` follow three. glam's `rotate_towards` snaps to the target within 1e-4 rad and clamps negative steps, and `from_rotation_arc` picks another axis at 180°. |
 
 **Dropped or changed:**
@@ -238,6 +264,10 @@ test.
     preset.
   - The growth force's `sinFull > 1e-6` cutoff.
   - The Euler decomposition near gimbal lock (|y| ≈ 90°).
+  - Meshing: `wraps_x = round(base_radius · bark.textureScale.x)` and
+    `segments = round(segment_count · segment_factor)` round products of floats. If a
+    product lands near `k + 0.5`, jitter can change the UV wrap count or the ring
+    size. Not seen in the fixtures (UVs are bit-equal).
 
   If a fixture differs at one of these, explain and document the cause before
   adjusting anything.
@@ -312,11 +342,28 @@ Original task list:
 - Tests: skeleton fixtures match for every preset and seed, structure exactly and
   floats within ε. Set and record ε in this phase.
 
-### Phase 3 — Meshing and LOD ⏭ Next
-To mesh a fixture skeleton on its own, build a `Skeleton` from the fixture in the
-test. The fixtures have no `level` / `parent` / leaf `parent`. Fill them from a Rust
-`Skeleton::generate` of the same options (the structure matches exactly) rather than
-regenerating the fixtures.
+### Phase 3 — Meshing and LOD ✅ Done
+All 9 mesh fixtures match, both when meshing the JS skeleton (meshing error alone)
+and when meshing the Rust-grown skeleton (full pipeline). Vertex, normal, UV and index
+counts and every index value are exact; UVs are bit-equal at f32. Spans are tested to
+tile both buffers in order.
+
+**Phase 3 tolerance (`tests/mesh.rs`).**
+- **Meshing alone:** positions 1e-6 of extent (worst 1.0e-7); bark normals 1e-5
+  (worst 5.4e-7); UV 1e-6 (worst 0); leaf normals 2e-3 (worst 5.1e-4).
+- **Leaf normals are looser because of ez-tree's formula, not the port.** With rounded
+  normals, the +X bottom corner of a double billboard's second quad gets
+  `normalize((1 − size/2) · face)` (K11). This loses precision as the scaled leaf size
+  approaches 2, and at exactly 2 has no direction. Every worst case is that vertex
+  (`i % 8 == 6`).
+- **Rust-grown pipeline:** positions use the skeleton ε of 1e-4 (worst 5.3e-6); bark
+  normals 5e-4 (worst 8.5e-5); leaf normals 2e-3 (worst 2.5e-4); UV 1e-6 (worst 0).
+
+The fixture skeleton is loaded into a `Skeleton` in the test, with `level` / `parent`
+copied from a Rust `Skeleton::generate` of the same options (the fixtures don't record
+them).
+
+Original task list:
 - `mesh_branch`: ring sampling with stride that always keeps the first and last rings,
   `segments = max(3, round(n*factor))`, `wraps_x`, the duplicated seam vertex, and the
   index winding `v1,v3,v2,v2,v3,v4`.
@@ -327,11 +374,12 @@ regenerating the fixtures.
   skeletons on its own.
 
 ### Phase 4 — Tree wrapper, trellis layout, material params
-- A `Tree` wrapper with `generate`, `create_geometry`, `generate_lods`, returning
+- ✅ A `Tree` wrapper with `generate`, `create_geometry`, `generate_lods`, returning
   `Vec<(LodLevel, TreeMesh)>`, `vertex_count`, `triangle_count` and preset/JSON loading.
 - `trellis_layout`: the number of horizontal and vertical lines, their positions and
   lengths, the same as `Trellis.generate`.
-- Material parameter structs and `WindParams`.
+- ✅ Material parameter structs (`BarkMaterial`, `LeafMaterial`) and KTX2 texture
+  paths. See "Textures" below. `WindParams` comes with the WESL module.
 - **Wind shader in WESL.** Port the leaf wind from `#createLeafMaterial`
   (`onBeforeCompile`) to `crates/ze_tree/shaders/wind.wesl`:
   - `simplex3` (the ashima simplex noise, ported as is) and
@@ -347,6 +395,51 @@ regenerating the fixtures.
     uses) and validate the output with naga. A CPU port of `wind_sway` in the test
     checks a few hand-computed values against the GLSL maths.
 
+### Textures (done during Phase 4)
+What ez-tree does: the library loads no textures. The demo app's `textures.js` maps
+`bark.type` to `bark/<Type>_1K-JPG/<Type>_1K-JPG_{Color,NormalGL,Roughness}.jpg`
+(11 ambientCG sets, CC0, 44 MB) and `leaves.type` to `leaves/<type>.png` (1024²,
+MIT). The material applies `repeat = (1, 1/textureScale.y)`, sRGB colour maps,
+linear normal/roughness maps, and the roughness map doubles as the metalness map
+(metalness factor 0). The AO slot exists but is never filled. Leaves use
+premultiplied alpha on upload, `alphaTest`, double-sided.
+
+What ze_tree does:
+- **Assets** (`assets/textures/`, repo only, not in the published crate: crates.io
+  caps crates at 10 MB). Only the kinds the presets use: Bark001–003 and the four
+  leaves. Two sets with identical layout (Decision 12):
+  `{uastc,bc7}/bark/<Kind>/{color,normal,roughness}.ktx2` and
+  `{uastc,bc7}/leaves/<kind>.ktx2`. Every file has a full mip chain (11 levels) and
+  zstd supercompression. Colour is sRGB, normal/roughness linear; roughness is
+  replicated into RGB so it works as a glTF/bevy metallic-roughness texture as is.
+  Leaves keep straight alpha. About 9.5 MB per set.
+- **Regenerating:** `tools/textures/convert.sh` (needs ImageMagick 7, KTX-Software
+  4.4 `ktx`, and `ctt-cli` 0.6.1). It reads the ez-tree clone in `prior_art`.
+  `tools/textures/LICENSE.md` is copied next to the assets.
+- **Measured quality (UASTC level 0 vs the source JPEGs):** colour 39.8 dB, roughness
+  45.3 dB, leaves 40.3 dB, bark normal 29.1 dB. The bark normal maps are very noisy;
+  UASTC quality 4 only reaches 29.1 dB too. BC7 was not measured (no BC7 decoder in
+  the toolchain).
+- **Core API:** `BarkMaterial` / `LeafMaterial` (from the options),
+  `bark_texture_path` / `leaf_texture_path`, `TextureSet`, `BARK_KINDS` /
+  `LEAF_KINDS`. `tests/material.rs` checks every preset's kinds are present and
+  parses each KTX2 header (format, transfer function, mip count, zstd).
+- **Tangents:** `MeshBuffers::tangents` is filled for bark (analytic: ring direction
+  of travel, `w = -1`) and empty for leaves (no normal map). Correct only with
+  `BarkUvMode::Continuous` (K12, Decision 13). Tested on a synthetic bending and
+  rolling branch against per-triangle UV gradients. Grown skeletons aren't used for
+  that check: thin twigs turn by more than 90° between sections, and coarse rolled
+  rings are sheared, so single triangles there disagree with any smooth per-vertex
+  frame (up to 24% of checks in Bush 3).
+
+Open texture items:
+- Leaf mipmaps lose alpha coverage at distance (standard alpha-test problem). Neither
+  encoder preserves coverage. Fix in the engine (alpha-to-coverage) or with a
+  coverage-preserving mip pass if it shows.
+- BC5 for normal maps would be better quality on desktop; bevy reads two-component
+  normal maps. Not done, to keep the two sets identical in channel layout.
+- glTF export (Phase 5) can embed the UASTC set with `KHR_texture_basisu`.
+
 ### Phase 5 — Exports
 Each format is an optional cargo feature, off by default. All of them use the
 segmentation and rig data below.
@@ -356,10 +449,11 @@ segmentation and rig data below.
   `parent: Option<BranchAttachment { branch: usize, section: usize, t: f32 }>`, the parent
   branch and where along it the child starts. `SkeletonLeaf` records its parent branch
   and section the same way.
-- Phase 3: `TreeMesh` records a `BranchSpan { branch, level, vertices: Range<u32>,
-  indices: Range<u32>, sections: Vec<usize> }` per branch, where `sections` lists the
-  skeleton sections kept by `section_stride`, and a vertex range per leaf. Exporters
-  split and skin meshes from these ranges.
+- Phase 3 ✅: `TreeMesh` records a `BranchSpan { branch, level, vertices: Range<u32>,
+  indices: Range<u32>, segments, sections: Vec<usize> }` per branch, where `sections`
+  lists the skeleton sections kept by `section_stride` (one ring of `segments + 1`
+  vertices each), and a `LeafSpan { leaf, vertices, indices }` per kept leaf.
+  Exporters split and skin meshes from these ranges.
 
 **Segmentation.** `MeshPart` is `Trunk` (level 0), `Branches(level)` for levels 1–3,
 and `Leaves`. `TreeMesh::part(MeshPart) -> MeshBuffers` extracts one part with
@@ -414,7 +508,10 @@ re-based indices. Exporters write each part as its own named mesh or group: `tru
 - Crate docs and a README with a feature map against ez-tree.
 
 ### Deferred: `ze_tree_bevy` (not in this plan)
-- A bark `StandardMaterial`: tint, flat shading, texture maps and Y repeat.
+- A bark `StandardMaterial`: tint, flat shading, texture maps and Y repeat, built from
+  `BarkMaterial` and the KTX2 assets. Use the BC7 set by default (no transcoder); the
+  UASTC set needs bevy's `basis-universal` feature (C++ build). bevy 0.20 has no ETC1S
+  transcoder. Use `BarkUvMode::Continuous` and the core tangents for normal maps.
 - A leaf material: alpha mask, double-sided, a vertex shader that imports core's
   `wind.wesl` (bevy 0.20 loads WESL natively), and the custom-normals flag that skips
   the backface normal flip.
@@ -468,3 +565,12 @@ re-based indices. Exporters write each part as its own named mesh or group: `tru
 11. **Export formats:** glTF (`export-gltf`, built on `gltf-json`, re-imported with
     `gltf` in tests) and OBJ (`export-obj`, no dependencies). USD, FBX, PLY and STL are
     out of scope for now.
+12. **Textures:** pre-processed to KTX2 in two sets, UASTC + zstd (portable, glTF
+    `KHR_texture_basisu`) and BC7 + zstd (desktop bevy without a transcoder). UASTC is
+    encoded with KTX-Software `ktx create`, BC7 with `ctt-cli` 0.6.1 (the CLI for the
+    `ctt` library bevy 0.20's `CompressedImageSaver` uses). Assets live in the repo,
+    not the crate (D7 still holds for `TreeOptions`).
+13. **Bark UVs and tangents:** `BarkOptions::uv_mode` (`Mirrored` default = ez-tree,
+    `Continuous` opt-in) and analytic bark tangents in `MeshBuffers::tangents`
+    (K12). Mirrored mode keeps the fixtures exact; Continuous is for normal-mapped
+    rendering and is LOD-stable.

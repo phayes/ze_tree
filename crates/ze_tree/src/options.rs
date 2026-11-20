@@ -67,6 +67,24 @@ pub enum Billboard {
     Double,
 }
 
+/// How bark images repeat along each branch. Texture coordinates `u` and `v`
+/// place the image around and along the branch, respectively.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BarkUvMode {
+    /// Matches ez-tree: the image reverses direction between successive rings
+    /// of vertices (`v` alternates between 0 and 1). Lower detail stretches the
+    /// image along the branch. Avoid this mode with the supplied tangents for
+    /// normal maps: their lighting detail is reversed on every other section.
+    #[default]
+    Mirrored,
+    /// Repeats the image in one direction, preserving texture coordinates at
+    /// retained sections when detail changes. Before material scaling, `v`
+    /// increases by one per original branch section. Choose this mode for bark
+    /// normal maps. This option is available in ze_tree only.
+    Continuous,
+}
+
 /// A setting with a separate value for the trunk and each of three branch levels.
 ///
 /// Index 0 is the trunk; branches at each later level grow from the previous
@@ -117,6 +135,10 @@ pub struct BarkOptions {
     /// larger `x` adds repeats around the branch; larger `y` stretches along it.
     #[serde(with = "serde_vec::vec2")]
     pub texture_scale: Vec2,
+    /// How bark images repeat along branches. Defaults to [`BarkUvMode::Mirrored`];
+    /// choose [`BarkUvMode::Continuous`] for normal maps. The JavaScript ez-tree
+    /// generator ignores this setting and always uses mirrored coordinates.
+    pub uv_mode: BarkUvMode,
 }
 
 /// Settings for the trunk and successive levels of child branches.
@@ -249,6 +271,7 @@ impl Default for BarkOptions {
             flat_shading: false,
             textured: true,
             texture_scale: Vec2::ONE,
+            uv_mode: BarkUvMode::Mirrored,
         }
     }
 }

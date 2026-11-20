@@ -201,10 +201,10 @@ use bevy::shader::{Shader, load_shader_library};
 use ze_tree::{LodLevel, WIND_WESL, default_lod_levels};
 
 pub use material::{
-    BarkTextures, TreeMaterial, WindExtension, WindUniform, bark_material, leaf_material,
-    load_leaf_texture, trellis_material,
+    BarkTextures, TreeMaterial, WindExtension, WindUniform, bark_material, flower_material,
+    fruit_material, leaf_material, load_leaf_texture, trellis_material,
 };
-pub use mesh::{ATTRIBUTE_WIND, bark_mesh, leaf_mesh};
+pub use mesh::{ATTRIBUTE_WIND, bark_mesh, cluster_mesh, leaf_mesh};
 pub use spawn::{TreeFinished, TreeGenerating, TreeOptionsAsset, TreePart, TreePartKind, ZeTree};
 pub use wind::Wind;
 

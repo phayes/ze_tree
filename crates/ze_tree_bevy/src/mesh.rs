@@ -1,4 +1,4 @@
-//! Convert generated bark and leaf geometry into meshes Bevy can draw.
+//! Convert generated bark, leaf, fruit and flower geometry into meshes Bevy can draw.
 
 use bevy::asset::RenderAssetUsages;
 use bevy::mesh::{Indices, Mesh, MeshVertexAttribute, PrimitiveTopology, VertexFormat};
@@ -49,6 +49,18 @@ pub fn bark_mesh(buffers: &MeshBuffers, bark: &BarkOptions) -> Mesh {
 pub fn leaf_mesh(buffers: &MeshBuffers) -> Mesh {
     let uvs = buffers.uvs.iter().map(|&[u, v]| [u, 1.0 - v]).collect();
     base_mesh(buffers, uvs)
+}
+
+/// Creates a Bevy mesh for fruit or flowers from buffers such as
+/// [`TreeMesh::fruit`](ze_tree::TreeMesh::fruit) or
+/// [`TreeMesh::flowers`](ze_tree::TreeMesh::flowers).
+///
+/// The surface colour comes from the per-vertex colours, so draw it with
+/// [`fruit_material`](crate::fruit_material) or [`flower_material`](crate::flower_material),
+/// or another material with a white base colour.
+pub fn cluster_mesh(buffers: &MeshBuffers) -> Mesh {
+    let uvs = buffers.uvs.iter().map(|&[u, v]| [u, 1.0 - v]).collect();
+    base_mesh(buffers, uvs).with_inserted_attribute(Mesh::ATTRIBUTE_COLOR, buffers.colors.clone())
 }
 
 /// Builds the shared triangle mesh layout, preserving positions, normals, wind

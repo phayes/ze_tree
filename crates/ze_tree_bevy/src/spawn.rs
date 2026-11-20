@@ -11,9 +11,10 @@ use bevy::tasks::{AsyncComputeTaskPool, Task, block_on, poll_once};
 use ze_tree::{LodLevel, OptionsError, Skeleton, TreeError, TreeOptions, TreePreset, TrellisWire};
 
 use crate::material::{
-    BarkTextures, TreeMaterial, bark_material, leaf_material, load_leaf_texture, trellis_material,
+    BarkTextures, TreeMaterial, bark_material, flower_material, fruit_material, leaf_material,
+    load_leaf_texture, trellis_material,
 };
-use crate::mesh::{bark_mesh, leaf_mesh};
+use crate::mesh::{bark_mesh, cluster_mesh, leaf_mesh};
 use crate::wind::Wind;
 
 /// A generated tree positioned by this entity's transform.
@@ -69,6 +70,10 @@ pub enum TreePartKind {
     Bark,
     /// The tree's leaves, drawn together.
     Leaves,
+    /// The tree's fruit and their stalks, drawn together.
+    Fruit,
+    /// The tree's flowers and their stalks, drawn together.
+    Flowers,
     /// A single support wire for a trellis.
     Trellis,
 }
@@ -135,11 +140,14 @@ pub struct TreeFinished {
     pub result: Result<(), OptionsError>,
 }
 
-/// Bark and leaf meshes produced by a background task for one detail level.
+/// Meshes produced by a background task for one detail level; each is absent
+/// when the level has no triangles of that kind.
 struct LevelMeshes {
     level: LodLevel,
     bark: Option<Mesh>,
     leaves: Option<Mesh>,
+    fruit: Option<Mesh>,
+    flowers: Option<Mesh>,
 }
 
 /// Generated detail levels, or the validation error that prevented generation.
@@ -153,6 +161,10 @@ struct LevelAssets {
     bark: Option<Handle<Mesh>>,
     /// Leaf mesh, absent when this level contains no leaf triangles.
     leaves: Option<Handle<Mesh>>,
+    /// Fruit mesh, absent when this level contains no fruit triangles.
+    fruit: Option<Handle<Mesh>>,
+    /// Flower mesh, absent when this level contains no flower triangles.
+    flowers: Option<Handle<Mesh>>,
 }
 
 /// Meshes and materials reused by trees with identical options.
@@ -161,6 +173,8 @@ struct Generated {
     levels: Vec<LevelAssets>,
     bark: Handle<TreeMaterial>,
     leaves: Handle<TreeMaterial>,
+    fruit: Handle<TreeMaterial>,
+    flowers: Handle<TreeMaterial>,
     /// One cylinder mesh and material shared by all wires, plus each wire's placement.
     trellis: Option<(Handle<Mesh>, Handle<StandardMaterial>, Vec<Transform>)>,
 }
@@ -273,6 +287,8 @@ fn generate(options: &TreeOptions, levels: &[LodLevel]) -> TaskOutput {
                 bark: (!mesh.branches.indices.is_empty())
                     .then(|| bark_mesh(&mesh.branches, &options.bark)),
                 leaves: (!mesh.leaves.indices.is_empty()).then(|| leaf_mesh(&mesh.leaves)),
+                fruit: (!mesh.fruit.indices.is_empty()).then(|| cluster_mesh(&mesh.fruit)),
+                flowers: (!mesh.flowers.indices.is_empty()).then(|| cluster_mesh(&mesh.flowers)),
             }
         })
         .collect())
@@ -333,10 +349,14 @@ pub(crate) fn finish_generation(
                     range,
                     bark: l.bark.map(|m| meshes.add(m)),
                     leaves: l.leaves.map(|m| meshes.add(m)),
+                    fruit: l.fruit.map(|m| meshes.add(m)),
+                    flowers: l.flowers.map(|m| meshes.add(m)),
                 })
                 .collect(),
             bark: tree_materials.add(bark_material(&options.bark, bark_textures.as_ref(), wind.0)),
             leaves: tree_materials.add(leaf_material(&options.leaves, leaf_texture, wind.0)),
+            fruit: tree_materials.add(fruit_material(wind.0)),
+            flowers: tree_materials.add(flower_material(wind.0)),
             trellis: (options.trellis.enabled && options.trellis.visible).then(|| {
                 let wires = options.trellis.wires();
                 (
@@ -417,6 +437,8 @@ fn spawn_tree_parts(commands: &mut Commands, tree: Entity, generated: &Generated
         let parts = [
             (TreePartKind::Bark, &level.bark, &generated.bark),
             (TreePartKind::Leaves, &level.leaves, &generated.leaves),
+            (TreePartKind::Fruit, &level.fruit, &generated.fruit),
+            (TreePartKind::Flowers, &level.flowers, &generated.flowers),
         ];
         for (kind, mesh, material) in parts {
             let Some(mesh) = mesh else { continue };

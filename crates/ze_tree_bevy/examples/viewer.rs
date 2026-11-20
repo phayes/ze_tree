@@ -10,11 +10,14 @@
 //! - N: switch bark normal maps on or off by changing texture coordinates.
 //! - J: turn shape variation on or off so trees of the same preset can look different.
 //! - R: generate new tree shapes while variation is on.
+//! - [ / ]: make fruit and flowers less / more mature (unripe to ripe fruit,
+//!   bud to faded flower). Changing preset returns to the preset's own maturity.
 //! - Hold the left mouse button to look around; use WASD and Q / E to fly.
 //!
 //! Pass options after `--`, for example:
 //! `cargo run -p ze_tree_bevy --example viewer -- --preset oak_medium --forest`.
 //! Use `--vary` to start with shape variation enabled,
+//! `--maturity <0–1>` to set fruit and flower maturity,
 //! `--still` for leaf-only wind or `--flat` for mirrored bark coordinates
 //! without normal maps (this does not enable flat shading). Set camera positions
 //! with `--eye x y z` and `--target x y z`. Use `--screenshot <file.png>` to
@@ -32,6 +35,8 @@ const FOREST_SPACING: f32 = 45.0;
 const FOREST_SIZE: i32 = 7;
 /// Vary shape settings by up to 15% either way, then round branch and leaf counts.
 const JIGGLE: f32 = 0.15;
+/// Change in fruit and flower maturity for each press of [ or ].
+const MATURITY_STEP: f32 = 0.1;
 
 #[derive(Resource)]
 struct Viewer {
@@ -42,6 +47,8 @@ struct Viewer {
     vary: bool,
     /// Selects a new set of tree variations each time R is pressed.
     roll: i32,
+    /// Fruit and flower maturity from 0 to 1; `None` keeps the preset's own values.
+    maturity: Option<f32>,
     screenshot: Option<String>,
 }
 
@@ -59,6 +66,7 @@ fn main() {
         continuous: true,
         vary: false,
         roll: 0,
+        maturity: None,
         screenshot: None,
     };
     let mut eye = Vec3::new(0.0, 30.0, 110.0);
@@ -83,6 +91,11 @@ fn main() {
             }
             "--forest" => viewer.forest = true,
             "--vary" => viewer.vary = true,
+            "--maturity" => {
+                let maturity = args[i + 1].parse::<f32>().expect("a number");
+                viewer.maturity = Some(maturity.clamp(0.0, 1.0));
+                i += 1;
+            }
             "--still" => viewer.sway = false,
             "--flat" => viewer.continuous = false,
             "--eye" => {
@@ -165,9 +178,27 @@ fn controls(keys: Res<ButtonInput<KeyCode>>, mut viewer: ResMut<Viewer>) {
     let count = TreePreset::ALL.len();
     if keys.just_pressed(KeyCode::ArrowRight) {
         viewer.preset = (viewer.preset + 1) % count;
+        viewer.maturity = None;
     }
     if keys.just_pressed(KeyCode::ArrowLeft) {
         viewer.preset = (viewer.preset + count - 1) % count;
+        viewer.maturity = None;
+    }
+
+    // Step maturity from the preset's fruit maturity the first time it changes.
+    let step = match (
+        keys.just_pressed(KeyCode::BracketLeft),
+        keys.just_pressed(KeyCode::BracketRight),
+    ) {
+        (true, false) => -MATURITY_STEP,
+        (false, true) => MATURITY_STEP,
+        _ => 0.0,
+    };
+    if step != 0.0 {
+        let current = viewer
+            .maturity
+            .unwrap_or_else(|| TreePreset::ALL[viewer.preset].options().fruit.maturity);
+        viewer.maturity = Some((current + step).clamp(0.0, 1.0));
     }
     if keys.just_pressed(KeyCode::KeyF) {
         viewer.forest = !viewer.forest;
@@ -210,9 +241,14 @@ fn show_trees(
     if viewer.continuous {
         options.bark.uv_mode = BarkUvMode::Continuous;
     }
+    if let Some(maturity) = viewer.maturity {
+        options.fruit.maturity = maturity;
+        options.flowers.maturity = maturity;
+    }
     info!(
-        "{} (bark normal maps {}, sway {}, variation {})",
+        "{} (maturity {:.1}, bark normal maps {}, sway {}, variation {})",
         preset.name(),
+        options.fruit.maturity,
         if viewer.continuous { "on" } else { "off" },
         if viewer.sway { "on" } else { "off" },
         if viewer.vary { "on" } else { "off" },

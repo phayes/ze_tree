@@ -6,7 +6,8 @@ use bevy::render::render_resource::encase::UniformBuffer;
 use bevy::render::render_resource::{Face, ShaderType};
 use ze_tree::{BarkMaterial, BarkUvMode, Tree, TreePreset, WindParams};
 use ze_tree_bevy::{
-    ATTRIBUTE_WIND, BarkTextures, WindUniform, bark_material, bark_mesh, leaf_material, leaf_mesh,
+    ATTRIBUTE_WIND, BarkTextures, WindUniform, bark_material, bark_mesh, cluster_mesh,
+    flower_material, fruit_material, leaf_material, leaf_mesh,
 };
 
 fn float2(mesh: &Mesh, id: impl Into<bevy::mesh::MeshVertexAttributeId>) -> Vec<[f32; 2]> {
@@ -68,6 +69,32 @@ fn flat_shaded_bark_has_one_normal_per_triangle() {
         bark.indices.len()
     );
     assert_eq!(float4(&mesh, ATTRIBUTE_WIND).len(), bark.indices.len());
+}
+
+#[test]
+fn cluster_mesh_keeps_vertex_colours_and_wind() {
+    let tree = Tree::from_preset(TreePreset::Apple);
+    let fruit = &tree.mesh().fruit;
+    assert!(fruit.vertex_count() > 0);
+    let mesh = cluster_mesh(fruit);
+
+    assert_eq!(mesh.count_vertices(), fruit.vertex_count());
+    assert_eq!(mesh.indices().unwrap().len(), fruit.indices.len());
+    assert_eq!(float4(&mesh, Mesh::ATTRIBUTE_COLOR), fruit.colors);
+    assert_eq!(float4(&mesh, ATTRIBUTE_WIND), fruit.wind);
+}
+
+#[test]
+fn fruit_and_flower_materials_take_colour_from_vertices_and_show_both_sides() {
+    for material in [
+        fruit_material(WindParams::default()),
+        flower_material(WindParams::default()),
+    ] {
+        assert_eq!(material.base.base_color, Color::WHITE);
+        assert!(material.base.base_color_texture.is_none());
+        assert_eq!(material.base.cull_mode, None);
+        assert!(material.base.double_sided);
+    }
 }
 
 #[test]

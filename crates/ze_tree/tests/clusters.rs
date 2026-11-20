@@ -58,8 +58,8 @@ fn assert_well_formed(clusters: &[SkeletonCluster]) {
 }
 
 #[test]
-fn presets_grow_no_fruit_or_flowers() {
-    for preset in TreePreset::ALL {
+fn ez_tree_presets_grow_no_fruit_or_flowers() {
+    for preset in TreePreset::EZ_TREE {
         let skeleton = Skeleton::generate(&preset.options()).unwrap();
         assert!(skeleton.fruit.is_empty(), "{}", preset.name());
         assert!(skeleton.flowers.is_empty(), "{}", preset.name());

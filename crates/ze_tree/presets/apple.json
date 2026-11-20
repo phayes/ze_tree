@@ -1,0 +1,133 @@
+{
+  "seed": 4417,
+  "type": "deciduous",
+  "bark": {
+    "type": "Bark001",
+    "tint": 14211288,
+    "flatShading": false,
+    "textured": true,
+    "textureScale": {
+      "x": 1,
+      "y": 6
+    }
+  },
+  "branch": {
+    "levels": 3,
+    "angle": {
+      "1": 62,
+      "2": 52,
+      "3": 45
+    },
+    "children": {
+      "0": 5,
+      "1": 5,
+      "2": 4
+    },
+    "force": {
+      "direction": {
+        "x": 0,
+        "y": 1,
+        "z": 0
+      },
+      "strength": 0.006
+    },
+    "gnarliness": {
+      "0": 0.08,
+      "1": 0.18,
+      "2": 0.22,
+      "3": 0.15
+    },
+    "length": {
+      "0": 20,
+      "1": 14,
+      "2": 7,
+      "3": 3.5
+    },
+    "radius": {
+      "0": 1.3,
+      "1": 0.65,
+      "2": 0.6,
+      "3": 0.6
+    },
+    "sections": {
+      "0": 8,
+      "1": 7,
+      "2": 5,
+      "3": 3
+    },
+    "segments": {
+      "0": 8,
+      "1": 6,
+      "2": 4,
+      "3": 3
+    },
+    "start": {
+      "1": 0.4,
+      "2": 0.2,
+      "3": 0.15
+    },
+    "taper": {
+      "0": 0.6,
+      "1": 0.55,
+      "2": 0.6,
+      "3": 0.7
+    },
+    "twist": {
+      "0": 0.1,
+      "1": 0,
+      "2": 0,
+      "3": 0
+    }
+  },
+  "leaves": {
+    "type": "aspen",
+    "billboard": "double",
+    "angle": 40,
+    "count": 10,
+    "start": 0.1,
+    "size": 2,
+    "sizeVariance": 0.5,
+    "tint": 9425008,
+    "alphaTest": 0.5
+  },
+  "trellis": {
+    "enabled": false
+  },
+  "fruit": {
+    "placement": {
+      "minLevel": 2,
+      "tips": 0.3,
+      "count": 1,
+      "start": 0.3,
+      "facing": "hang",
+      "facingJitter": 25,
+      "size": 1.1,
+      "sizeVariance": 0.15
+    },
+    "cluster": {
+      "kind": "single",
+      "items": 1,
+      "stalkLength": 0,
+      "stalkRadius": 0.04,
+      "stalkColor": 6113838
+    },
+    "shape": {
+      "elongation": 0.9,
+      "topDimple": 0.5,
+      "bottomTaper": 0.2,
+      "lobes": 5,
+      "lobeDepth": 0.06,
+      "segments": 12,
+      "rings": 8,
+      "stemLength": 0.25,
+      "stemRadius": 0.04,
+      "stemCurve": 0.3,
+      "calyx": true,
+      "color": 12597547,
+      "unripeColor": 9159498,
+      "blushColor": 16734780,
+      "blushAmount": 0.6
+    },
+    "maturity": 1
+  }
+}

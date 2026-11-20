@@ -1,4 +1,5 @@
-//! Ready-made tree settings from ez-tree, covering several species and sizes.
+//! Ready-made tree settings covering several species and sizes: the presets
+//! from ez-tree, plus trees that grow fruit or flowers.
 //!
 //! Use [`TreePreset::options`] to get settings that can be customised, for example
 //! `TreePreset::OakSmall.options()`. Missing settings in the embedded preset JSON
@@ -29,11 +30,36 @@ pub enum TreePreset {
     PineLarge,
     /// A broadleaf tree configured to grow along a grid of guide wires.
     Trellis,
+    /// A short, spreading apple tree hung with ripe apples.
+    Apple,
 }
 
 impl TreePreset {
-    /// All 16 presets in ez-tree display order, suitable for a selection menu.
-    pub const ALL: [TreePreset; 16] = [
+    /// Every preset, suitable for a selection menu: the ez-tree presets in
+    /// [`EZ_TREE`](Self::EZ_TREE) order, followed by the fruit and flower trees.
+    pub const ALL: [TreePreset; 17] = [
+        Self::AshSmall,
+        Self::AshMedium,
+        Self::AshLarge,
+        Self::AspenSmall,
+        Self::AspenMedium,
+        Self::AspenLarge,
+        Self::Bush1,
+        Self::Bush2,
+        Self::Bush3,
+        Self::OakSmall,
+        Self::OakMedium,
+        Self::OakLarge,
+        Self::PineSmall,
+        Self::PineMedium,
+        Self::PineLarge,
+        Self::Trellis,
+        Self::Apple,
+    ];
+
+    /// The 16 presets that come from ez-tree, in ez-tree display order. Their
+    /// settings match ez-tree's own presets, and they grow no fruit or flowers.
+    pub const EZ_TREE: [TreePreset; 16] = [
         Self::AshSmall,
         Self::AshMedium,
         Self::AshLarge,
@@ -52,7 +78,7 @@ impl TreePreset {
         Self::Trellis,
     ];
 
-    /// Returns the ez-tree display name, such as `"Ash Small"`.
+    /// Returns the display name, such as `"Ash Small"`.
     pub fn name(self) -> &'static str {
         match self {
             Self::AshSmall => "Ash Small",
@@ -71,6 +97,7 @@ impl TreePreset {
             Self::PineMedium => "Pine Medium",
             Self::PineLarge => "Pine Large",
             Self::Trellis => "Trellis",
+            Self::Apple => "Apple",
         }
     }
 
@@ -82,7 +109,7 @@ impl TreePreset {
         Self::ALL.into_iter().find(|preset| preset.name() == name)
     }
 
-    /// Returns the embedded ez-tree preset JSON. It may omit settings; use
+    /// Returns the embedded preset JSON. It may omit settings; use
     /// [`TreeOptions::from_json`] or [`options`](Self::options) to fill in defaults.
     pub fn json(self) -> &'static str {
         match self {
@@ -102,6 +129,7 @@ impl TreePreset {
             Self::PineMedium => include_str!("../presets/pine_medium.json"),
             Self::PineLarge => include_str!("../presets/pine_large.json"),
             Self::Trellis => include_str!("../presets/trellis.json"),
+            Self::Apple => include_str!("../presets/apple.json"),
         }
     }
 

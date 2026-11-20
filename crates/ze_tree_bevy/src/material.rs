@@ -12,8 +12,8 @@ use bevy::render::render_resource::{
 };
 use bevy::shader::ShaderRef;
 use ze_tree::{
-    BarkMaterial, BarkOptions, BarkUvMode, LeafMaterial, LeafOptions, TrellisMaterial,
-    TrellisOptions, WindParams,
+    BarkMaterial, BarkOptions, BarkUvMode, FlowerMaterial, FruitMaterial, LeafMaterial,
+    LeafOptions, TrellisMaterial, TrellisOptions, WindParams,
 };
 
 use crate::mesh::ATTRIBUTE_WIND;
@@ -221,6 +221,45 @@ pub fn leaf_material(
         perceptual_roughness: settings.roughness,
         cull_mode: (!settings.double_sided).then_some(Face::Back),
         double_sided: settings.double_sided && !settings.rounded_normals,
+        ..default()
+    };
+    TreeMaterial {
+        base,
+        extension: WindExtension { wind: wind.into() },
+    }
+}
+
+/// Creates a wind-animated fruit material. Pair it with
+/// [`cluster_mesh`](crate::cluster_mesh): the colour comes from the mesh's
+/// vertex colours. Both sides of each triangle are visible.
+/// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
+pub fn fruit_material(wind: WindParams) -> TreeMaterial {
+    let settings = FruitMaterial::default();
+    vertex_color_material(settings.metallic, settings.roughness, settings.double_sided, wind)
+}
+
+/// Creates a wind-animated flower material. Pair it with
+/// [`cluster_mesh`](crate::cluster_mesh): the colour comes from the mesh's
+/// vertex colours. Both sides of each triangle are visible.
+/// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
+pub fn flower_material(wind: WindParams) -> TreeMaterial {
+    let settings = FlowerMaterial::default();
+    vertex_color_material(settings.metallic, settings.roughness, settings.double_sided, wind)
+}
+
+/// Builds an untextured, white-based material whose colour comes from vertex colours.
+fn vertex_color_material(
+    metallic: f32,
+    roughness: f32,
+    double_sided: bool,
+    wind: WindParams,
+) -> TreeMaterial {
+    let base = StandardMaterial {
+        base_color: Color::WHITE,
+        metallic,
+        perceptual_roughness: roughness,
+        cull_mode: (!double_sided).then_some(Face::Back),
+        double_sided,
         ..default()
     };
     TreeMaterial {

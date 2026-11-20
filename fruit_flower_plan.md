@@ -289,6 +289,16 @@ Agreed with the user before starting; this replaces the original `simple_items` 
 
 ### F5 — Bevy plugin and viewer
 
+**Status: done (except translucency).**
+- `cluster_mesh`, `fruit_material` and `flower_material` added; fruit and flowers spawn
+  as `TreePartKind::Fruit` and `TreePartKind::Flowers` at every LOD level, using
+  vertex colours, wind, and two-sided `StandardMaterial`s.
+- The viewer steps maturity with `[` and `]`, and also accepts `--maturity <0–1>`.
+- Petal translucency (`diffuse_transmission`) is not done.
+- `TreePreset::EZ_TREE` added and the ez-tree fixture tests use it. `TreePreset::Apple`
+  is the first F6 preset, checked in the viewer at ripe and unripe maturity; its
+  triangle count has not been checked against a budget.
+
 - Add `TreePartKind::Fruit` and `TreePartKind::Flowers`; convert vertex colours;
   set up the materials and the wind shader path.
 - Viewer:

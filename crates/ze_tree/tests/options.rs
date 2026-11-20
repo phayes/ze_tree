@@ -80,7 +80,7 @@ fn default_json_matches_ez_tree_format() {
 #[test]
 fn presets_match_ez_tree_merge() {
     let merged = common::fixture_json("options/presets_merged.json");
-    for preset in TreePreset::ALL {
+    for preset in TreePreset::EZ_TREE {
         let stem = preset_stem(preset);
         let expected = merged
             .get(&stem)
@@ -100,7 +100,7 @@ fn presets_match_ez_tree_merge() {
 #[test]
 fn preset_json_output_matches_ez_tree_format() {
     let merged = common::fixture_json("options/presets_merged.json");
-    for preset in TreePreset::ALL {
+    for preset in TreePreset::EZ_TREE {
         let stem = preset_stem(preset);
         let actual: Value = serde_json::from_str(&preset.options().to_json()).unwrap();
         assert_contains(&merged[&stem], &actual, &stem);

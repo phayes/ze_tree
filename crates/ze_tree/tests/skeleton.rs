@@ -334,6 +334,33 @@ fn deciduous_tips_continue_and_evergreen_tips_end() {
 }
 
 #[test]
+fn deciduous_branches_tapered_to_a_point_end_there() {
+    // A trunk with no side branches, tapered to a point, has nothing growing from it.
+    let mut options = TreeOptions::default();
+    options.branch.children[0] = 0;
+    options.branch.taper[0] = 1.0;
+    let skeleton = Skeleton::generate(&options).unwrap();
+    assert_eq!(skeleton.branches.len(), 1);
+    assert!(skeleton.leaves.is_empty());
+
+    // Full taper at any level still grows a finite tree.
+    for level in 0..3 {
+        let mut options = TreeOptions::default();
+        options.branch.taper[level] = 1.0;
+        let skeleton = Skeleton::generate(&options).unwrap();
+        for section in skeleton.branches.iter().flat_map(|b| &b.sections) {
+            assert!(
+                section.origin.is_finite() && section.orientation.is_finite(),
+                "level {level}: {section:?}"
+            );
+        }
+        for leaf in &skeleton.leaves {
+            assert!(leaf.origin.is_finite(), "level {level}: {leaf:?}");
+        }
+    }
+}
+
+#[test]
 fn invalid_options_are_rejected() {
     let mut options = TreeOptions::default();
     options.branch.sections[0] = 0;

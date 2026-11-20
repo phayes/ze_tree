@@ -6,8 +6,8 @@ use bevy::render::render_resource::encase::UniformBuffer;
 use bevy::render::render_resource::{Face, ShaderType};
 use ze_tree::{BarkMaterial, BarkUvMode, Tree, TreePreset, WindParams};
 use ze_tree_bevy::{
-    ATTRIBUTE_WIND, BarkTextures, WindUniform, bark_material, bark_mesh, cluster_mesh,
-    flower_material, fruit_material, leaf_material, leaf_mesh,
+    ATTRIBUTE_WIND, BarkTextures, LeafTextures, WindUniform, bark_material, bark_mesh,
+    cluster_mesh, flower_material, fruit_material, leaf_material, leaf_mesh,
 };
 
 fn float2(mesh: &Mesh, id: impl Into<bevy::mesh::MeshVertexAttributeId>) -> Vec<[f32; 2]> {
@@ -107,6 +107,30 @@ fn leaf_mesh_puts_the_leaf_tip_at_the_top_of_the_image() {
         assert_eq!(*converted, [u, 1.0 - v]);
     }
     assert_eq!(float4(&mesh, ATTRIBUTE_WIND), leaves.wind);
+    assert_eq!(float4(&mesh, Mesh::ATTRIBUTE_TANGENT), leaves.tangents);
+}
+
+#[test]
+fn leaf_material_uses_the_supplied_leaf_textures() {
+    let leaves = TreePreset::OakSmall.options().leaves;
+    let wind = WindParams::default();
+
+    // Colour-only textures must leave the material without a normal map.
+    let color_only = LeafTextures {
+        color: Handle::default(),
+        normal: None,
+    };
+    let material = leaf_material(&leaves, Some(&color_only), wind);
+    assert!(material.base.base_color_texture.is_some());
+    assert!(material.base.normal_map_texture.is_none());
+
+    // A supplied normal-map handle must reach Bevy's material so it can add lighting detail.
+    let with_normal = LeafTextures {
+        color: Handle::default(),
+        normal: Some(Handle::default()),
+    };
+    let material = leaf_material(&leaves, Some(&with_normal), wind);
+    assert!(material.base.normal_map_texture.is_some());
 }
 
 #[test]

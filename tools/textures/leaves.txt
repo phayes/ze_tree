@@ -1,0 +1,38 @@
+# Leaf texture sources, one texture per line:
+#   <kind> <source> <path> <title>
+# Use kind in LeafOptions::kind and output file names. Paths are relative to
+# prior_art/ (or the source folder passed to the conversion script). The title
+# is the rest of the line and may contain spaces.
+#
+# Sources and setup:
+#   ez-tree  Colour PNGs with transparency from the ez-tree demo (MIT).
+#            Clone ez-tree into prior_art/ez-tree.
+#   nobiax   Colour and normal maps from Nobiax's "Free 3D branches textures"
+#            packs 01-04 (CC0). Extract each pack's .7z into prior_art/, keeping
+#            the folder paths below. Each texture folder contains diffuse.tga
+#            (colour with transparency) and normal.tga (lighting detail).
+# Nobiax normal maps use OpenGL (+Y) directions. ez-tree textures have no normal map.
+ash ez-tree ez-tree/src/app/public/textures/leaves/ash.png Ash
+aspen ez-tree ez-tree/src/app/public/textures/leaves/aspen.png Aspen
+oak ez-tree ez-tree/src/app/public/textures/leaves/oak.png Oak
+pine ez-tree ez-tree/src/app/public/textures/leaves/pine.png Pine
+aspen_autumn nobiax free_3d_branches_textures_01_by_yughues_d4oxx3r/#21 Quaking aspen, autumn
+european_aspen nobiax free_3d_branches_textures_01_by_yughues_d4oxx3r/#22 European aspen
+bigtooth_aspen nobiax free_3d_branches_textures_01_by_yughues_d4oxx3r/#23 Bigtooth aspen
+alder_buckthorn nobiax free_3d_branches_textures_01_by_yughues_d4oxx3r/#24 Alder buckthorn, autumn
+smoke_bush nobiax free_3d_branches_textures_01_by_yughues_d4oxx3r/#25 Purple smoke bush
+field_maple_autumn nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#26 Field maple, autumn
+bamboo nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#27 Bamboo
+fir nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#28 Fir
+white_pine nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#29 White pine
+arborvitae_autumn nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#30 Arborvitae, autumn
+birch_autumn nobiax free_3d_branches_textures_03_by_yughues_d4rcjmu/#31 Birch, autumn
+larch nobiax free_3d_branches_textures_03_by_yughues_d4rcjmu/#32 Larch
+black_locust nobiax free_3d_branches_textures_03_by_yughues_d4rcjmu/#33 Black locust
+olive nobiax free_3d_branches_textures_03_by_yughues_d4rcjmu/#34 Olive
+cotoneaster nobiax free_3d_branches_textures_03_by_yughues_d4rcjmu/#35 Cotoneaster with berries
+bare_twig_1 nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#36 Bare twig 1
+bare_twig_2 nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#37 Bare twig 2
+white_oak_autumn nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#38 White oak, autumn
+white_oak nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#39 White oak
+white_oak_dead nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#40 White oak, dead leaves

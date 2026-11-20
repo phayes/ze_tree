@@ -1,7 +1,8 @@
 //! Explore tree presets, wind animation and distance-based mesh detail.
 //!
 //! Run `cargo run -p ze_tree_bevy --example viewer` from the repository.
-//! The viewer uses the repository's `assets/textures/bc7` texture set.
+//! The viewer uses the repository's `assets/textures` folder with BC7 textures.
+//! Run `tools/textures/download.sh` first to fetch the bark and leaf textures.
 //!
 //! Controls:
 //! - Left / Right: choose the previous / next preset.
@@ -10,6 +11,8 @@
 //! - N: switch bark normal maps on or off by changing texture coordinates.
 //! - J: turn shape variation on or off so trees of the same preset can look different.
 //! - R: generate new tree shapes while variation is on.
+//! - L: cycle the leaf texture through every kind in `ze_tree::LEAF_KINDS`, starting
+//!   from the preset's own leaves. Changing preset returns to the preset's leaves.
 //! - [ / ]: make fruit and flowers less / more mature (unripe to ripe fruit,
 //!   bud to faded flower). Changing preset returns to the preset's own maturity.
 //! - Hold the left mouse button to look around; use WASD and Q / E to fly.
@@ -17,7 +20,8 @@
 //! Pass options after `--`, for example:
 //! `cargo run -p ze_tree_bevy --example viewer -- --preset oak_medium --forest`.
 //! Use `--vary` to start with shape variation enabled,
-//! `--maturity <0–1>` to set fruit and flower maturity,
+//! `--maturity <0–1>` to set fruit and flower maturity, `--leaves <kind>` to use
+//! another leaf texture from `ze_tree::LEAF_KINDS`,
 //! `--still` for leaf-only wind or `--flat` for mirrored bark coordinates
 //! without normal maps (this does not enable flat shading). Set camera positions
 //! with `--eye x y z` and `--target x y z`. Use `--screenshot <file.png>` to
@@ -26,7 +30,7 @@
 use bevy::camera_controller::free_camera::{FreeCamera, FreeCameraPlugin};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
-use ze_tree::{BarkUvMode, Rng, TreeOptions, TreePreset, WindParams};
+use ze_tree::{BarkUvMode, LEAF_KINDS, Rng, TreeOptions, TreePreset, WindParams};
 use ze_tree_bevy::{TreePart, Wind, ZeTree, ZeTreePlugin};
 
 /// Distance between neighbouring trees in the forest, in world units.
@@ -49,6 +53,8 @@ struct Viewer {
     roll: i32,
     /// Fruit and flower maturity from 0 to 1; `None` keeps the preset's own values.
     maturity: Option<f32>,
+    /// Index into [`LEAF_KINDS`]; `None` keeps the preset's own leaf texture.
+    leaves: Option<usize>,
     screenshot: Option<String>,
 }
 
@@ -67,6 +73,7 @@ fn main() {
         vary: false,
         roll: 0,
         maturity: None,
+        leaves: None,
         screenshot: None,
     };
     let mut eye = Vec3::new(0.0, 30.0, 110.0);
@@ -96,6 +103,16 @@ fn main() {
                 viewer.maturity = Some(maturity.clamp(0.0, 1.0));
                 i += 1;
             }
+            "--leaves" => {
+                let kind = &args[i + 1];
+                viewer.leaves = Some(
+                    LEAF_KINDS
+                        .iter()
+                        .position(|k| k == kind)
+                        .unwrap_or_else(|| panic!("unknown leaf kind {kind}")),
+                );
+                i += 1;
+            }
             "--still" => viewer.sway = false,
             "--flat" => viewer.continuous = false,
             "--eye" => {
@@ -122,7 +139,7 @@ fn main() {
                 ..default()
             }),
             ZeTreePlugin {
-                texture_root: Some("textures/bc7".to_owned()),
+                texture_root: Some("textures".to_owned()),
                 ..default()
             },
             FreeCameraPlugin,
@@ -179,10 +196,21 @@ fn controls(keys: Res<ButtonInput<KeyCode>>, mut viewer: ResMut<Viewer>) {
     if keys.just_pressed(KeyCode::ArrowRight) {
         viewer.preset = (viewer.preset + 1) % count;
         viewer.maturity = None;
+        viewer.leaves = None;
     }
     if keys.just_pressed(KeyCode::ArrowLeft) {
         viewer.preset = (viewer.preset + count - 1) % count;
         viewer.maturity = None;
+        viewer.leaves = None;
+    }
+
+    // Step to the next leaf kind, starting after the preset's own leaves.
+    if keys.just_pressed(KeyCode::KeyL) {
+        let current = viewer.leaves.unwrap_or_else(|| {
+            let kind = TreePreset::ALL[viewer.preset].options().leaves.kind;
+            LEAF_KINDS.iter().position(|&k| k == kind).unwrap_or(0)
+        });
+        viewer.leaves = Some((current + 1) % LEAF_KINDS.len());
     }
 
     // Step maturity from the preset's fruit maturity the first time it changes.
@@ -245,9 +273,13 @@ fn show_trees(
         options.fruit.maturity = maturity;
         options.flowers.maturity = maturity;
     }
+    if let Some(leaves) = viewer.leaves {
+        options.leaves.kind = LEAF_KINDS[leaves].to_owned();
+    }
     info!(
-        "{} (maturity {:.1}, bark normal maps {}, sway {}, variation {})",
+        "{} (leaves {}, maturity {:.1}, bark normal maps {}, sway {}, variation {})",
         preset.name(),
+        options.leaves.kind,
         options.fruit.maturity,
         if viewer.continuous { "on" } else { "off" },
         if viewer.sway { "on" } else { "off" },

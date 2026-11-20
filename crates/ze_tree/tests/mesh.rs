@@ -373,25 +373,24 @@ fn rounded_leaf_normals_are_unit_at_size_two() {
     }
 }
 
-/// Checks that every bark vertex has a tangent of length one lying along
-/// the surface, with a valid sign for the second texture direction.
-/// Leaf meshes should leave the tangent buffer empty.
+/// Checks that bark and leaf vertices provide unit tangents perpendicular to
+/// their lighting normals, with a sign of +1 or -1 for the second texture direction.
 #[test]
-fn bark_tangents_are_unit_and_perpendicular() {
+fn bark_and_leaf_tangents_are_unit_and_perpendicular() {
     for preset in TreePreset::ALL {
         let mut options = preset.options();
         options.bark.uv_mode = BarkUvMode::Continuous;
         let skeleton = Skeleton::generate(&options).unwrap();
         for level in default_lod_levels() {
             let mesh = skeleton.mesh(&options, &level.detail);
-            let bark = &mesh.branches;
-            assert_eq!(bark.tangents.len(), bark.vertex_count());
-            assert!(mesh.leaves.tangents.is_empty());
-            for (t, n) in bark.tangents.iter().zip(&bark.normals) {
-                let xyz = Vec3::new(t[0], t[1], t[2]);
-                assert!((xyz.length() - 1.0).abs() < 1e-5, "{t:?}");
-                assert!(xyz.dot(Vec3::from_array(*n)).abs() < 1e-5, "{t:?} {n:?}");
-                assert!(t[3] == 1.0 || t[3] == -1.0, "{t:?}");
+            for buffers in [&mesh.branches, &mesh.leaves] {
+                assert_eq!(buffers.tangents.len(), buffers.vertex_count());
+                for (t, n) in buffers.tangents.iter().zip(&buffers.normals) {
+                    let xyz = Vec3::new(t[0], t[1], t[2]);
+                    assert!((xyz.length() - 1.0).abs() < 1e-5, "{t:?}");
+                    assert!(xyz.dot(Vec3::from_array(*n)).abs() < 1e-5, "{t:?} {n:?}");
+                    assert!(t[3] == 1.0 || t[3] == -1.0, "{t:?}");
+                }
             }
         }
     }

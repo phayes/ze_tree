@@ -7,8 +7,11 @@ use std::fmt::Write;
 
 use glam::Vec3;
 
-use super::{TextureMap, TextureRef, scaled_bark_uvs};
-use crate::{BarkMaterial, BranchGrouping, LeafMaterial, MeshBuffers, TreeMesh, TreeOptions};
+use super::{TextureMap, TextureRef, export_parts, scaled_bark_uvs};
+use crate::{
+    BarkMaterial, BranchGrouping, FlowerMaterial, FruitMaterial, LeafMaterial, MeshBuffers,
+    MeshPart, TreeMesh, TreeOptions, leaf_has_normal_map,
+};
 
 /// Callback returning an image path for a requested texture, or `None` to omit it.
 /// Paths are written unchanged into the material file; use paths relative to that
@@ -66,11 +69,20 @@ pub struct ObjFiles {
 /// With [`BarkOptions::flat_shading`](crate::BarkOptions::flat_shading), trunk and
 /// branch objects get one normal per triangle, so importers shade each face flat.
 ///
+/// Fruit and flowers, when the tree has them, are the `fruit` and `flowers`
+/// objects with white materials of the same names. Their colours are written per
+/// vertex in sRGB as `v x y z r g b`, a common extension. Blender and MeshLab read
+/// these colours, but MTL cannot tell an importer to use them, so Blender shows
+/// the fruit white until the colour attribute is connected to its material.
+/// Prefer glTF for coloured fruit and flowers.
+///
 /// Material colours are linear RGB. Roughness (how matte a surface looks) and
 /// metalness use MTL extensions `Pr`, `Pm`, and `map_Pr`, which not every importer
-/// supports. The leaf image is referenced for both colour and transparency
-/// (`map_d`). Set leaf transparency thresholds and visibility from both sides in
-/// the target tool; these settings are not included in the OBJ export.
+/// supports. The leaf colour image supplies both colour and transparency (`map_d`).
+/// Leaf kinds with normal maps also get a `map_Bump` reference for lighting detail.
+/// Importer support varies: check that the target tool reads this as a normal map
+/// and uses the colour image's alpha for transparency. Set the transparency cutoff
+/// and enable visibility from both sides in that tool; OBJ does not carry those settings.
 ///
 /// # Panics
 ///
@@ -84,15 +96,19 @@ pub fn to_obj(mesh: &TreeMesh, options: &TreeOptions, obj: &ObjOptions<'_>) -> O
     // preceding counts.
     let mut written = 0;
     let mut normals_written = 0;
-    for part in obj.grouping.parts(mesh) {
+    let parts = export_parts(obj.grouping, mesh);
+    for &part in &parts {
         let mut buffers = mesh.part(part).buffers;
-        let material = if part.is_leaves() {
-            "leaves"
-        } else {
-            buffers.uvs = scaled_bark_uvs(&buffers.uvs, options);
-            "bark"
+        let material = match part {
+            MeshPart::Leaves => "leaves",
+            MeshPart::Fruit => "fruit",
+            MeshPart::Flowers => "flowers",
+            MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => {
+                buffers.uvs = scaled_bark_uvs(&buffers.uvs, options);
+                "bark"
+            }
         };
-        let flat = !part.is_leaves() && options.bark.flat_shading;
+        let flat = part.is_bark() && options.bark.flat_shading;
         let _ = writeln!(out, "o {}", part.name());
         normals_written += write_part(&mut out, &buffers, material, written, normals_written, flat);
         written += buffers.positions.len();
@@ -100,7 +116,7 @@ pub fn to_obj(mesh: &TreeMesh, options: &TreeOptions, obj: &ObjOptions<'_>) -> O
 
     ObjFiles {
         obj: out,
-        mtl: material_library(options, obj.textures),
+        mtl: material_library(options, obj.textures, &parts),
     }
 }
 
@@ -116,8 +132,17 @@ fn write_part(
     normal_offset: usize,
     flat: bool,
 ) -> usize {
-    for [x, y, z] in &buffers.positions {
-        let _ = writeln!(out, "v {x} {y} {z}");
+    // Coloured parts add sRGB vertex colours after each position.
+    for (i, [x, y, z]) in buffers.positions.iter().enumerate() {
+        match buffers.colors.get(i) {
+            Some(&[r, g, b, _]) => {
+                let [r, g, b] = [r, g, b].map(linear_to_srgb);
+                let _ = writeln!(out, "v {x} {y} {z} {r} {g} {b}");
+            }
+            None => {
+                let _ = writeln!(out, "v {x} {y} {z}");
+            }
+        }
     }
     for [u, v] in &buffers.uvs {
         let _ = writeln!(out, "vt {u} {v}");
@@ -157,9 +182,24 @@ fn face_normal(buffers: &MeshBuffers, triangle: &[u32; 3]) -> [f32; 3] {
     (b - a).cross(c - a).normalize_or(fallback).to_array()
 }
 
-/// Builds the bark and leaf material text, including any paths returned by `textures`.
+/// Converts a linear colour channel in 0–1 to sRGB, as OBJ vertex colours are stored.
+fn linear_to_srgb(c: f32) -> f32 {
+    let c = c.clamp(0.0, 1.0);
+    if c <= 0.003_130_8 {
+        c * 12.92
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    }
+}
+
+/// Builds the bark and leaf material text, including any paths returned by `textures`,
+/// and a white material for each coloured part in `parts`.
 /// Does not request bark images when bark texturing is disabled.
-fn material_library(options: &TreeOptions, textures: Option<TexturePathFn<'_>>) -> String {
+fn material_library(
+    options: &TreeOptions,
+    textures: Option<TexturePathFn<'_>>,
+    parts: &[MeshPart],
+) -> String {
     let bark = BarkMaterial::new(&options.bark);
     let leaf = LeafMaterial::new(&options.leaves);
     let path = |kind: &str, map| textures.and_then(|f| f(TextureRef { kind, map }));
@@ -192,8 +232,29 @@ fn material_library(options: &TreeOptions, textures: Option<TexturePathFn<'_>>) 
         "\nnewmtl leaves\nKd {r} {g} {b}\nKs 0 0 0\nPr {}\nPm {}\n",
         leaf.roughness, leaf.metallic
     );
-    if let Some(p) = path(&options.leaves.kind, TextureMap::Leaf) {
+    let kind = options.leaves.kind.as_str();
+    if let Some(p) = path(kind, TextureMap::LeafColor) {
         let _ = writeln!(out, "map_Kd {p}\nmap_d {p}");
+    }
+    if leaf_has_normal_map(kind)
+        && let Some(p) = path(kind, TextureMap::LeafNormal)
+    {
+        let _ = writeln!(out, "map_Bump {p}");
+    }
+
+    // Fruit and flowers are white, so their vertex colours show unchanged.
+    let fruit = FruitMaterial::default();
+    let flower = FlowerMaterial::default();
+    for (part, name, roughness, metallic) in [
+        (MeshPart::Fruit, "fruit", fruit.roughness, fruit.metallic),
+        (MeshPart::Flowers, "flowers", flower.roughness, flower.metallic),
+    ] {
+        if parts.contains(&part) {
+            let _ = write!(
+                out,
+                "\nnewmtl {name}\nKd 1 1 1\nKs 0 0 0\nPr {roughness}\nPm {metallic}\n"
+            );
+        }
     }
     out
 }

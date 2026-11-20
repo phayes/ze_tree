@@ -182,6 +182,7 @@ pub struct BranchOptions {
     pub start: PerLevel<f32>,
     /// Radius reduction along deciduous branches: 0 keeps the radius constant,
     /// 1 tapers to a point. Evergreen branches always taper to a point.
+    /// A branch that tapers to a point ends there, with no tip continuation.
     pub taper: PerLevel<f32>,
     /// Rotation around the branch axis for each lengthwise division, in radians.
     pub twist: PerLevel<f32>,

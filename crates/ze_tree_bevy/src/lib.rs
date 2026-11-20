@@ -54,15 +54,22 @@
 //!
 //! ## Add textures
 //!
-//! Copy the repository's `assets/textures/bc7` directory to
-//! `assets/ze_tree/textures/bc7` in your app, then use `ZeTreePlugin::default()`.
-//! The default texture root is `ze_tree/textures/bc7`, relative to Bevy's asset
-//! directory. Set `texture_root` to another path if you store textures elsewhere.
-//! Missing textures cause asset-loading errors.
+//! Bark textures are not stored in the repository. Download them first:
 //!
-//! BC7 requires GPU support for that compression format. For other GPUs, use the
-//! repository's `uastc` set, enable Bevy's `basis-universal` feature, and point
-//! `texture_root` at the copied UASTC directory.
+//! ```sh
+//! tools/textures/download.sh
+//! ```
+//!
+//! This fetches the 512 and 1k sizes into `assets/textures/bark/`; add
+//! `--sizes 512,1k,2k` to include 2k. Then copy the repository's `assets/textures`
+//! directory to `assets/ze_tree/textures` in your app and use
+//! `ZeTreePlugin::default()`. The default texture root is `ze_tree/textures`,
+//! relative to Bevy's asset directory. Set `texture_root` to another path if you
+//! store textures elsewhere. Missing textures cause asset-loading errors.
+//!
+//! Every texture comes in two formats. The default, BC7, requires GPU support for
+//! that compression format. For other GPUs, set `texture_compression` to
+//! `TextureCompression::Uastc` and enable Bevy's `basis-universal` feature.
 //!
 //! Bark normal maps require `BarkUvMode::Continuous`, as in the next example.
 //! Built-in presets use mirrored texture coordinates, so their bark normal maps
@@ -152,18 +159,25 @@
 //!
 //! The plugin generates three mesh detail levels by default, with simpler meshes
 //! starting at camera distances of 100 and 250 world units. Bevy fades between them.
-//! Set `ZeTreePlugin::lod_levels` when adding the plugin to choose your own levels.
-//! For a single full-detail mesh with no distance switching:
+//! The nearest level uses 1k bark textures and the two farther levels use 512.
+//! Set `ZeTreePlugin::lod_levels` when adding the plugin to choose your own levels
+//! and bark texture sizes. For a single full-detail mesh with 2k bark textures and
+//! no distance switching:
 //!
 //! ```rust
-//! use ze_tree::LodLevel;
-//! use ze_tree_bevy::ZeTreePlugin;
+//! use ze_tree::{LodLevel, TextureSize};
+//! use ze_tree_bevy::{TreeLodLevel, ZeTreePlugin};
 //!
 //! let plugin = ZeTreePlugin {
-//!     lod_levels: vec![LodLevel::default()],
+//!     lod_levels: vec![TreeLodLevel {
+//!         level: LodLevel::default(),
+//!         bark_texture_size: TextureSize::Size2k,
+//!     }],
 //!     ..Default::default()
 //! };
 //! ```
+//!
+//! The 2k bark textures are downloaded only with `--sizes 512,1k,2k`.
 //!
 //! An empty list produces no bark or leaf meshes. Generated children have a
 //! `TreePart` component identifying their detail level and whether they draw bark,
@@ -177,7 +191,8 @@
 //! cargo run -p ze_tree_bevy --example viewer
 //! ```
 //!
-//! The viewer uses the repository's textures. Press Left/Right to switch presets,
+//! The viewer uses the repository's textures; run `tools/textures/download.sh`
+//! first to fetch the bark textures. Press Left/Right to switch presets,
 //! F to toggle a forest, Space to toggle trunk and branch movement, and N to toggle
 //! bark normal maps. Hold the left mouse button to look around and use WASD and Q/E
 //! to fly. Press J to toggle shape variation and R to generate new variations.
@@ -198,14 +213,17 @@ use bevy::asset::embedded_asset;
 use bevy::pbr::MaterialPlugin;
 use bevy::prelude::*;
 use bevy::shader::{Shader, load_shader_library};
-use ze_tree::{LodLevel, WIND_WESL, default_lod_levels};
+use ze_tree::{TextureCompression, WIND_WESL};
 
 pub use material::{
-    BarkTextures, TreeMaterial, WindExtension, WindUniform, bark_material, flower_material,
-    fruit_material, leaf_material, load_leaf_texture, trellis_material,
+    BarkTextures, LeafTextures, TreeMaterial, WindExtension, WindUniform, bark_material,
+    flower_material, fruit_material, leaf_material, trellis_material,
 };
 pub use mesh::{ATTRIBUTE_WIND, bark_mesh, cluster_mesh, leaf_mesh};
-pub use spawn::{TreeFinished, TreeGenerating, TreeOptionsAsset, TreePart, TreePartKind, ZeTree};
+pub use spawn::{
+    TreeFinished, TreeGenerating, TreeLodLevel, TreeOptionsAsset, TreePart, TreePartKind, ZeTree,
+    default_tree_lod_levels,
+};
 pub use wind::Wind;
 
 use spawn::{SpawnSettings, TreeCache, TreeOptionsLoader};
@@ -215,22 +233,27 @@ use spawn::{SpawnSettings, TreeCache, TreeOptionsLoader};
 /// Add after Bevy's default plugins, then spawn entities with [`ZeTree`].
 #[derive(Debug, Clone)]
 pub struct ZeTreePlugin {
-    /// Path to a texture set, relative to Bevy's asset directory.
-    /// Defaults to `ze_tree/textures/bc7`; copy the repository's
-    /// `assets/textures/bc7` folder there. Use `None` for tint colours only.
+    /// Folder holding the `bark/` and `leaves/` texture folders, relative to Bevy's
+    /// asset directory. Defaults to `ze_tree/textures`; copy the repository's
+    /// `assets/textures` folder there after downloading the bark textures.
+    /// Use `None` for tint colours only.
     pub texture_root: Option<String>,
-    /// Mesh detail settings and camera switching distances in world units.
-    /// Levels are sorted by distance before generation. Defaults to
-    /// [`default_lod_levels`]. Supply one level to disable distance switching;
-    /// an empty list produces no bark or leaf meshes.
-    pub lod_levels: Vec<LodLevel>,
+    /// Which texture files to load. Defaults to BC7; UASTC needs Bevy's
+    /// `basis-universal` feature.
+    pub texture_compression: TextureCompression,
+    /// Mesh detail, camera switching distance in world units, and bark texture
+    /// size for each detail level. Levels are sorted by distance before
+    /// generation. Defaults to [`default_tree_lod_levels`]. Supply one level to
+    /// disable distance switching; an empty list produces no tree meshes.
+    pub lod_levels: Vec<TreeLodLevel>,
 }
 
 impl Default for ZeTreePlugin {
     fn default() -> Self {
         Self {
-            texture_root: Some("ze_tree/textures/bc7".to_owned()),
-            lod_levels: default_lod_levels().to_vec(),
+            texture_root: Some("ze_tree/textures".to_owned()),
+            texture_compression: TextureCompression::Bc7,
+            lod_levels: default_tree_lod_levels(),
         }
     }
 }
@@ -258,6 +281,7 @@ impl Plugin for ZeTreePlugin {
             .init_resource::<TreeCache>()
             .insert_resource(SpawnSettings {
                 texture_root: self.texture_root.clone(),
+                texture_compression: self.texture_compression,
                 lod_levels: self.lod_levels.clone(),
             })
             .add_systems(

@@ -12,8 +12,9 @@ use bevy::render::render_resource::{
 };
 use bevy::shader::ShaderRef;
 use ze_tree::{
-    BarkMaterial, BarkOptions, BarkUvMode, FlowerMaterial, FruitMaterial, LeafMaterial,
-    LeafOptions, TrellisMaterial, TrellisOptions, WindParams,
+    BarkMap, BarkMaterial, BarkOptions, BarkUvMode, FlowerMaterial, FruitMaterial, LeafMap,
+    LeafMaterial, LeafOptions, TextureCompression, TextureSize, TrellisMaterial, TrellisOptions,
+    WindParams, bark_texture_path, leaf_has_normal_map, leaf_texture_path,
 };
 
 use crate::mesh::ATTRIBUTE_WIND;
@@ -109,7 +110,7 @@ impl MaterialExtension for WindExtension {
     }
 }
 
-/// The colour, surface detail and roughness images for one bark kind.
+/// The colour, surface detail and roughness images for one bark kind at one size.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BarkTextures {
     /// Bark colour image, interpreted as sRGB colour.
@@ -123,31 +124,72 @@ pub struct BarkTextures {
 impl BarkTextures {
     /// Requests the colour, normal and roughness images for a bark kind.
     ///
-    /// Files must be at `<root>/bark/<kind>/{color,normal,roughness}.ktx2`, relative
-    /// to Bevy's asset directory. For example, `root` can point to a copy of the
-    /// repository's `assets/textures/bc7` folder. Use [`BarkOptions::kind`] for `kind`;
-    /// see [`ze_tree::BARK_KINDS`] for available names. Images repeat across the bark
-    /// and load in the background; the returned handles do not mean loading is complete.
-    pub fn load(asset_server: &AssetServer, root: &str, kind: &str) -> Self {
-        let path = |map: &str| format!("{root}/bark/{kind}/{map}.ktx2");
+    /// `root` is a folder relative to Bevy's asset directory, such as a copy of the
+    /// repository's `assets/textures` folder. The files are loaded from
+    /// `<root>/<path>`, where `path` comes from [`bark_texture_path`]. Use
+    /// [`BarkOptions::kind`] for `kind`; see [`ze_tree::BARK_KINDS`] for available
+    /// names. UASTC files need Bevy's `basis-universal` feature. Images repeat across
+    /// the bark and load in the background; the returned handles do not mean
+    /// loading is complete.
+    pub fn load(
+        asset_server: &AssetServer,
+        root: &str,
+        kind: &str,
+        size: TextureSize,
+        compression: TextureCompression,
+    ) -> Self {
+        let load = |map: BarkMap| {
+            let path = bark_texture_path(kind, size, map, compression);
+            load_repeating(asset_server, format!("{root}/{path}"), map.is_srgb())
+        };
         Self {
-            color: load_repeating(asset_server, path("color"), true),
-            normal: load_repeating(asset_server, path("normal"), false),
-            roughness: load_repeating(asset_server, path("roughness"), false),
+            color: load(BarkMap::Color),
+            normal: load(BarkMap::Normal),
+            roughness: load(BarkMap::Roughness),
         }
     }
 }
 
-/// Requests the leaf colour image, including transparency for the leaf outline.
-///
-/// Loads `<root>/leaves/<kind>.ktx2` as sRGB. The root is relative to Bevy's asset
-/// directory, as in [`BarkTextures::load`]. Use [`LeafOptions::kind`] for `kind`;
-/// see [`ze_tree::LEAF_KINDS`] for available names. Loading happens in the background.
-pub fn load_leaf_texture(asset_server: &AssetServer, root: &str, kind: &str) -> Handle<Image> {
-    asset_server
-        .load_builder()
-        .with_settings(|settings: &mut ImageLoaderSettings| settings.is_srgb = true)
-        .load(format!("{root}/leaves/{kind}.ktx2"))
+/// Image handles for a leaf kind's colour and optional surface lighting detail.
+/// Pass these to [`leaf_material`] to texture the leaf mesh.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LeafTextures {
+    /// sRGB colour image with alpha transparency defining the leaf or branch outline.
+    pub color: Handle<Image>,
+    /// Optional OpenGL (+Y) normal map, read as linear data, for lighting detail
+    /// without extra geometry. [`Self::load`] sets this to `None` when
+    /// [`leaf_has_normal_map`] returns false.
+    pub normal: Option<Handle<Image>>,
+}
+
+impl LeafTextures {
+    /// Starts loading a leaf kind's colour image and its normal map, if available.
+    ///
+    /// Use a name from [`ze_tree::LEAF_KINDS`], usually [`LeafOptions::kind`].
+    /// `root` is relative to Bevy's asset directory: use `"textures"` for files
+    /// in `assets/textures/`. Paths below it come from [`leaf_texture_path`].
+    /// Colour loads as sRGB; normal maps load as linear data.
+    ///
+    /// UASTC files require Bevy's `basis-universal` feature. Loading runs in the
+    /// background, so returned handles do not mean the images are ready to draw.
+    pub fn load(
+        asset_server: &AssetServer,
+        root: &str,
+        kind: &str,
+        compression: TextureCompression,
+    ) -> Self {
+        let load = |map: LeafMap| {
+            let srgb = map.is_srgb();
+            asset_server
+                .load_builder()
+                .with_settings(move |settings: &mut ImageLoaderSettings| settings.is_srgb = srgb)
+                .load(format!("{root}/{}", leaf_texture_path(kind, map, compression)))
+        };
+        Self {
+            color: load(LeafMap::Color),
+            normal: leaf_has_normal_map(kind).then(|| load(LeafMap::Normal)),
+        }
+    }
 }
 
 /// Requests an image with linear filtering and repetition in both texture directions.
@@ -201,21 +243,25 @@ pub fn bark_material(
 
 /// Creates a leaf material with the requested appearance and initial wind settings.
 ///
-/// Supply a texture matching [`LeafOptions::kind`]; its transparency defines the
-/// leaf outline. Without one, leaves appear as solid rectangles. Both sides are
-/// visible. [`LeafOptions::rounded_normals`] keeps the lighting directions on back
-/// faces unchanged to give the canopy a rounded appearance.
+/// Supply textures matching [`LeafOptions::kind`]. The colour image's alpha cuts out
+/// the leaf outline using [`LeafOptions::alpha_test`]; without it, leaves are solid
+/// rectangles. An optional normal map adds lighting detail. Use
+/// [`leaf_mesh`](crate::leaf_mesh) to supply the tangents that orient this detail.
+///
+/// Both sides are visible. With [`LeafOptions::rounded_normals`], back faces keep
+/// the front faces' lighting directions for a softer, rounded canopy appearance.
 /// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
 pub fn leaf_material(
     leaves: &LeafOptions,
-    texture: Option<Handle<Image>>,
+    textures: Option<&LeafTextures>,
     wind: WindParams,
 ) -> TreeMaterial {
     let settings = LeafMaterial::new(leaves);
     let [r, g, b] = settings.base_color;
     let base = StandardMaterial {
         base_color: Color::linear_rgb(r, g, b),
-        base_color_texture: texture,
+        base_color_texture: textures.map(|t| t.color.clone()),
+        normal_map_texture: textures.and_then(|t| t.normal.clone()),
         alpha_mode: AlphaMode::Mask(settings.alpha_cutoff),
         metallic: settings.metallic,
         perceptual_roughness: settings.roughness,

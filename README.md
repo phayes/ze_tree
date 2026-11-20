@@ -141,20 +141,26 @@ output directory and an optional source texture directory as positional argument
 ## Materials and animation
 
 `BarkMaterial` and `LeafMaterial` describe the appearance settings for a renderer.
-The repository's `assets/textures/` directory supplies separate KTX2 texture sets
-(these assets are not included in the crate):
+The repository's `assets/textures/` directory holds KTX2 textures, which are not
+included in the crate. Download them with `tools/textures/download.sh`, which
+fetches every leaf and the 512 and 1k bark sizes (add `--sizes 512,1k,2k` for
+2k bark). Every texture comes in two formats:
 
-- `bc7/` for GPUs that support BC7 compression, including most desktop GPUs.
-- `uastc/` for a Basis Universal loader to transcode to a supported GPU format.
+- BC7 for GPUs that support BC7 compression, including most desktop GPUs.
+- UASTC for a Basis Universal loader to transcode to a supported GPU format.
 
-Inside either set, bark maps are `bark/<kind>/{color,normal,roughness}.ktx2` and
-leaf images are `leaves/<kind>.ktx2`. The options' `bark.kind` and `leaves.kind`
-select the texture names. Load colour images as sRGB and normal/roughness maps as
-linear data. Normal maps use the OpenGL/glTF convention; leaf alpha is straight,
+`bark_texture_path` and `leaf_texture_path` give each file's path inside that
+directory, such as `bark/sakura_bark-1k-color-bc7.ktx2`. The options' `bark.kind`
+and `leaves.kind` select the texture names; bark comes in three sizes.
+`LEAF_KINDS` lists 24 leaf textures: four single leaves from ez-tree, and 20
+leafy branch tips from Nobiax's CC0 packs, which also have normal maps
+(`leaf_has_normal_map`). `assets/textures/assets_manifest.json` lists every
+file with its download address. Load colour images as sRGB and normal/roughness maps as linear data. Normal maps use the OpenGL/glTF convention; leaf alpha is straight,
 not premultiplied. Keep the metallic factor at zero if using the roughness image
 as a combined metallic-roughness texture.
 
 For bark normal maps, use `BarkUvMode::Continuous` and the mesh's tangents.
+Leaf normal maps use the leaf mesh's tangents.
 For GPU wind, pass `MeshBuffers::wind` and `WindParams` to the `WIND_WESL` shader
 module and add its `wind_offset` to vertex positions. For joint-based animation,
 create joints with `Tree::rig` and vertex weights with `Rig::skin`.

@@ -176,13 +176,21 @@ pub struct MeshBuffers {
     /// Per-vertex texture coordinates `(u, v)`, in position order.
     /// Leaf coordinates cover 0 to 1; bark coordinates can exceed 1 for repeating textures.
     pub uvs: Vec<[f32; 2]>,
-    /// Directions used to orient normal-map lighting detail on the surface.
-    /// Bark has one `[x, y, z, w]` tangent per position; leaves have none.
-    /// The unit vector `[x, y, z]` points around the branch toward increasing `u`.
-    /// The sign `w` gives the other texture direction as `cross(normal, xyz) * w`.
-    /// Use [`BarkUvMode::Continuous`](crate::BarkUvMode::Continuous) for normal maps.
-    /// These directions approximate a smooth branch surface; they may differ
+    /// Per-vertex directions that orient normal-map lighting detail on the surface.
+    /// Bark and leaves have one `[x, y, z, w]` entry per position; fruit and flowers
+    /// have none. `[x, y, z]` is a unit tangent perpendicular to the vertex normal.
+    /// The sign `w` gives a second direction, the bitangent, as `cross(normal, xyz) * w`.
+    ///
+    /// On bark, the tangent points around the branch toward increasing texture `u`,
+    /// and the bitangent follows increasing `v`. Use [`BarkUvMode::Continuous`] for
+    /// normal maps. These directions approximate a smooth surface and may differ
     /// from triangle texture directions at sharp bends or twists.
+    ///
+    /// On leaves, the tangent runs across the first square toward increasing `u`,
+    /// adjusted to remain perpendicular to the lighting normal. The bitangent points
+    /// toward the tip, or perpendicular to it for some rounded normals. Both squares
+    /// of a double billboard use the first square's reference directions, matching
+    /// the shared face normal; lighting on the second square does not follow its rotation.
     pub tangents: Vec<[f32; 4]>,
     /// Animation data for each vertex, in the same order as [`positions`](Self::positions).
     /// Pass each four-float value to `wind_offset` in [`WIND_WESL`](crate::WIND_WESL).
@@ -543,6 +551,8 @@ fn mesh_leaf(
         // both quads of a double billboard share it. Rounded normals add the offset
         // from the leaf origin to each corner to give the canopy softer lighting.
         let face = leaf.orientation * Vec3::Z;
+        let across = leaf.orientation * Vec3::X;
+        let tip = leaf.orientation * Vec3::Y;
         let uvs = [[0.0, 1.0], [0.0, 0.0], [1.0, 0.0], [1.0, 1.0]];
         // Let the tip corners flutter while keeping the base corners attached to the branch.
         let flutter = [1.0, 0.0, 0.0, 1.0];
@@ -555,6 +565,18 @@ fn mesh_leaf(
                 face
             };
             out.push(corner, normal, uv, [wind[0], wind[1], wind[2], flutter]);
+
+            // Project the first square's width direction onto the lighting surface.
+            // It is never parallel to the normal, so the result can be normalized.
+            // Choose w to keep the bitangent, cross(normal, tangent) * w, from
+            // pointing away from the tip, even when rounded normals lean past it.
+            let tangent = (across - normal * normal.dot(across)).normalize();
+            let w = if normal.cross(tangent).dot(tip) < 0.0 {
+                -1.0
+            } else {
+                1.0
+            };
+            out.tangents.push(tangent.extend(w).to_array());
         }
         out.indices
             .extend_from_slice(&[i, i + 1, i + 2, i, i + 2, i + 3]);
@@ -737,6 +759,53 @@ mod tests {
         );
         // The second square shares the first square's lighting normal, matching ez-tree.
         assert_eq!(out.normals[4], [0.0, 0.0, 1.0]);
+    }
+
+    /// Checks the directions used for leaf normal maps with single and crossed squares.
+    /// Tangents must be unit length, perpendicular to the normals, and point across
+    /// the first square. Bitangents must not point away from the tip; with unrounded
+    /// normals, they point directly toward it.
+    #[test]
+    fn leaf_tangents_form_a_frame_toward_u_and_the_tip() {
+        let orientation = Quat::from_euler(glam::EulerRot::XYZ, 0.3, -0.7, 1.1);
+        let leaf = SkeletonLeaf {
+            parent: crate::Attachment {
+                branch: 0,
+                section: 0,
+                t: 0.0,
+            },
+            origin: Vec3::new(1.0, 2.0, 3.0),
+            orientation,
+            size: 1.5,
+        };
+        let across = orientation * Vec3::X;
+        let tip = orientation * Vec3::Y;
+        for billboard in [Billboard::Single, Billboard::Double] {
+            for rounded in [false, true] {
+                // Exercise rounded lighting at leaf sizes below, at, and above 2.
+                // At 2, one corner needs the fallback normal and another points
+                // toward the tip. Larger sizes can tilt normals past the tip.
+                for scale in [1.0, 2.0 / 1.5, 2.0] {
+                    let mut out = MeshBuffers::default();
+                    mesh_leaf(&mut out, &leaf, 0, scale, billboard, rounded, [0.0; 3]);
+                    assert_eq!(out.tangents.len(), out.positions.len());
+                    for (t, n) in out.tangents.iter().zip(&out.normals) {
+                        let (tangent, n) = (Vec3::from_slice(t), Vec3::from_array(*n));
+                        let case = format!("{billboard:?} rounded={rounded} scale={scale}");
+                        assert!((tangent.length() - 1.0).abs() < 1e-5, "{case}: {tangent}");
+                        assert!(tangent.dot(n).abs() < 1e-5, "{case}: {tangent} vs {n}");
+                        assert!(t[3] == 1.0 || t[3] == -1.0, "{case}: {t:?}");
+                        assert!(tangent.dot(across) > 0.0, "{case}: {tangent}");
+                        let bitangent = n.cross(tangent) * t[3];
+                        if rounded {
+                            assert!(bitangent.dot(tip) >= -1e-6, "{case}: {bitangent}");
+                        } else {
+                            assert!(bitangent.abs_diff_eq(tip, 1e-5), "{case}: {bitangent}");
+                        }
+                    }
+                }
+            }
+        }
     }
 
     #[test]

@@ -45,10 +45,15 @@ pub fn bark_mesh(buffers: &MeshBuffers, bark: &BarkOptions) -> Mesh {
 
 /// Creates a Bevy leaf mesh from buffers such as [`TreeMesh::leaves`](ze_tree::TreeMesh::leaves).
 ///
-/// Flips the vertical texture coordinate so the top of the image maps to the leaf tip.
+/// Flips the vertical texture coordinate to place the top of the image at the leaf
+/// tip. Preserves any supplied tangents, which orient normal-map lighting detail.
 pub fn leaf_mesh(buffers: &MeshBuffers) -> Mesh {
     let uvs = buffers.uvs.iter().map(|&[u, v]| [u, 1.0 - v]).collect();
-    base_mesh(buffers, uvs)
+    let mut mesh = base_mesh(buffers, uvs);
+    if !buffers.tangents.is_empty() {
+        mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, buffers.tangents.clone());
+    }
+    mesh
 }
 
 /// Creates a Bevy mesh for fruit or flowers from buffers such as

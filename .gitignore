@@ -1,4 +1,8 @@
 /target
+/assets/textures/bark
+/assets/textures/leaves
+/assets/textures/images/*
+!/assets/textures/images/images_manifest.json
 /prior_art
 /tools/golden/node_modules
 /tools/golden/.build

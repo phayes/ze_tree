@@ -54,19 +54,29 @@ rectangles. Add textures to give leaves their outline and bark its surface detai
 
 ## Add textures
 
-Copy the repository's `assets/textures/bc7` directory to
-`assets/ze_tree/textures/bc7` in your app, then use `ZeTreePlugin::default()`.
-The default texture root is `ze_tree/textures/bc7`, relative to Bevy's asset
-directory. Set `texture_root` to another path if you store textures elsewhere.
-Missing textures cause asset-loading errors.
+Bark and leaf textures are not stored in the repository. Download them first:
 
-BC7 requires GPU support for that compression format. For other GPUs, use the
-repository's `uastc` set, enable Bevy's `basis-universal` feature, and point
-`texture_root` at the copied UASTC directory.
+```sh
+tools/textures/download.sh
+```
+
+This fetches every leaf into `assets/textures/leaves/` and the 512 and 1k bark
+sizes into `assets/textures/bark/`; add `--sizes 512,1k,2k` to include 2k bark.
+Then copy the repository's `assets/textures`
+directory to `assets/ze_tree/textures` in your app and use
+`ZeTreePlugin::default()`. The default texture root is `ze_tree/textures`,
+relative to Bevy's asset directory. Set `texture_root` to another path if you
+store textures elsewhere. Missing textures cause asset-loading errors.
+
+Every texture comes in two formats. The default, BC7, requires GPU support for
+that compression format. For other GPUs, set `texture_compression` to
+`TextureCompression::Uastc` and enable Bevy's `basis-universal` feature.
 
 Bark normal maps require `BarkUvMode::Continuous`, as in the next example.
 Built-in presets use mirrored texture coordinates, so their bark normal maps
-are disabled unless you change that setting.
+are disabled unless you change that setting. Leaf normal maps are used
+automatically for leaf kinds that have one, such as `white_oak`; see
+`ze_tree::leaf_has_normal_map`.
 
 ## Customize and position trees
 
@@ -152,18 +162,25 @@ materials you create yourself.
 
 The plugin generates three mesh detail levels by default, with simpler meshes
 starting at camera distances of 100 and 250 world units. Bevy fades between them.
-Set `ZeTreePlugin::lod_levels` when adding the plugin to choose your own levels.
-For a single full-detail mesh with no distance switching:
+The nearest level uses 1k bark textures and the two farther levels use 512.
+Set `ZeTreePlugin::lod_levels` when adding the plugin to choose your own levels
+and bark texture sizes. For a single full-detail mesh with 2k bark textures and
+no distance switching:
 
 ```rust
-use ze_tree::LodLevel;
-use ze_tree_bevy::ZeTreePlugin;
+use ze_tree::{LodLevel, TextureSize};
+use ze_tree_bevy::{TreeLodLevel, ZeTreePlugin};
 
 let plugin = ZeTreePlugin {
-    lod_levels: vec![LodLevel::default()],
+    lod_levels: vec![TreeLodLevel {
+        level: LodLevel::default(),
+        bark_texture_size: TextureSize::Size2k,
+    }],
     ..Default::default()
 };
 ```
+
+The 2k bark textures are downloaded only with `--sizes 512,1k,2k`.
 
 An empty list produces no bark or leaf meshes. Generated children have a
 `TreePart` component identifying their detail level and whether they draw bark,
@@ -177,7 +194,8 @@ From the repository, run:
 cargo run -p ze_tree_bevy --example viewer
 ```
 
-The viewer uses the repository's textures. Press Left/Right to switch presets,
+The viewer uses the repository's textures; run `tools/textures/download.sh`
+first to fetch the bark textures. Press Left/Right to switch presets,
 F to toggle a forest, Space to toggle trunk and branch movement, and N to toggle
 bark normal maps. Hold the left mouse button to look around and use WASD and Q/E
 to fly. Press J to toggle shape variation and R to generate new variations.

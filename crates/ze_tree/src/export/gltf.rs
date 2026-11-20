@@ -25,9 +25,10 @@ use json::validation::Checked::Valid;
 use json::validation::USize64;
 use json::{Index, Root};
 
-use super::{TextureMap, TextureRef, scaled_bark_uvs};
+use super::{TextureMap, TextureRef, export_parts, scaled_bark_uvs};
 use crate::{
-    BarkMaterial, BranchGrouping, LeafMaterial, MeshPart, MeshSkin, Rig, TreeMesh, TreeOptions,
+    BarkMaterial, BranchGrouping, FlowerMaterial, FruitMaterial, LeafMaterial, MeshPart, MeshSkin,
+    Rig, TreeMesh, TreeOptions, leaf_has_normal_map,
 };
 
 /// Callback returning a texture image URI, or `None` to omit that map.
@@ -213,8 +214,12 @@ pub fn to_glb(
 /// The bark roughness image supplies the green channel of glTF's combined
 /// metallic-roughness texture; a zero metallic factor keeps bark non-metallic.
 ///
-/// A supplied rig adds joint nodes and their connections to the meshes, but no
-/// animation clips.
+/// Fruit and flowers, when the tree has them, are the `fruit` and `flowers` parts,
+/// coloured per vertex (`COLOR_0`) rather than by an image.
+///
+/// A supplied rig adds joint nodes and their connections to the bark and leaf
+/// meshes, but no animation clips. Fruit and flowers are not connected to it, so
+/// they stay in place if the joints are animated.
 ///
 /// # Errors
 ///
@@ -269,6 +274,25 @@ fn build(
 
     let bark = b.bark_material(options);
     let leaves = b.leaf_material(options);
+    // Fruit and flower materials only when some mesh has them.
+    let has = |part: MeshPart| {
+        meshes
+            .iter()
+            .any(|mesh| export_parts(gltf.grouping, mesh).contains(&part))
+    };
+    let fruit = has(MeshPart::Fruit).then(|| {
+        let fruit = FruitMaterial::default();
+        b.colored_material("fruit", fruit.metallic, fruit.roughness, fruit.double_sided)
+    });
+    let flowers = has(MeshPart::Flowers).then(|| {
+        let flower = FlowerMaterial::default();
+        b.colored_material(
+            "flowers",
+            flower.metallic,
+            flower.roughness,
+            flower.double_sided,
+        )
+    });
     let mut scene = Vec::new();
 
     // Add the rig's root joint as a separate scene root when the rig is nonempty.
@@ -282,13 +306,20 @@ fn build(
     // Place mesh nodes directly in the scene without an additional parent transform.
     for (lod, mesh) in meshes.iter().enumerate() {
         let weights = rig.map(|rig| rig.skin(mesh));
-        for part in gltf.grouping.parts(mesh) {
+        for part in export_parts(gltf.grouping, mesh) {
             let name = if meshes.len() > 1 {
                 format!("{}_LOD{lod}", part.name())
             } else {
                 part.name()
             };
-            let material = if part.is_leaves() { leaves } else { bark };
+            let material = match part {
+                MeshPart::Leaves => leaves,
+                MeshPart::Fruit => fruit.expect("fruit material exists for fruit parts"),
+                MeshPart::Flowers => flowers.expect("flower material exists for flower parts"),
+                MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => bark,
+            };
+            // The rig moves bark and leaves only; fruit and flowers stay unskinned.
+            let skinned = part.is_bark() || part.is_leaves();
             let mesh_index = b.part_mesh(
                 &name,
                 mesh,
@@ -301,7 +332,7 @@ fn build(
             scene.push(b.root.push(json::Node {
                 name: Some(name),
                 mesh: Some(mesh_index),
-                skin,
+                skin: skin.filter(|_| skinned),
                 ..Default::default()
             }));
         }
@@ -455,17 +486,17 @@ impl Builder<'_> {
         let buffers = &part_mesh.buffers;
 
         // Convert the vertical texture coordinate to glTF's top-left image origin.
-        let uvs = if part.is_leaves() {
-            buffers.uvs.clone()
-        } else {
+        let uvs = if part.is_bark() {
             scaled_bark_uvs(&buffers.uvs, options)
+        } else {
+            buffers.uvs.clone()
         };
         let uvs: Vec<[f32; 2]> = uvs.into_iter().map(|[u, v]| [u, 1.0 - v]).collect();
 
         // Include optional attributes only when their buffers are populated.
         // Flat-shaded bark omits normals, which tells glTF viewers to compute
         // per-face normals; glTF ignores tangents without normals, so omit those too.
-        let smooth = part.is_leaves() || !options.bark.flat_shading;
+        let smooth = !part.is_bark() || !options.bark.flat_shading;
         let mut attributes = BTreeMap::new();
         attributes.insert(
             Valid(Semantic::Positions),
@@ -491,9 +522,17 @@ impl Builder<'_> {
             let accessor = self.floats(&buffers.wind, Type::Vec4);
             attributes.insert(Valid(Semantic::Extras("WIND".to_owned())), accessor);
         }
+        // Fruit and flowers take their colour from the vertices, in linear RGBA.
+        if !buffers.colors.is_empty() {
+            attributes.insert(
+                Valid(Semantic::Colors(0)),
+                self.floats(&buffers.colors, Type::Vec4),
+            );
+        }
 
         // Use original vertex indices to copy joint assignments into the extracted part.
-        if let Some(skin) = skin {
+        // Only bark and leaves have them.
+        if let Some(skin) = skin.filter(|_| part.is_bark() || part.is_leaves()) {
             let source = if part.is_leaves() {
                 &skin.leaves
             } else {
@@ -579,25 +618,47 @@ impl Builder<'_> {
                 extensions: None,
                 extras: None,
             },
-            normal_texture: normal.map(|index| NormalTexture {
-                index,
-                scale: 1.0,
-                tex_coord: 0,
-                extensions: None,
-                extras: None,
-            }),
+            normal_texture: normal.map(normal_texture),
             ..Default::default()
         })
     }
 
-    /// Adds a leaf material visible from both sides, hiding pixels below the alpha threshold.
+    /// Adds an untextured material whose colour comes from each vertex's `COLOR_0`.
+    fn colored_material(
+        &mut self,
+        name: &str,
+        metallic: f32,
+        roughness: f32,
+        double_sided: bool,
+    ) -> Index<json::Material> {
+        self.root.push(json::Material {
+            name: Some(name.to_owned()),
+            double_sided,
+            pbr_metallic_roughness: PbrMetallicRoughness {
+                base_color_factor: PbrBaseColorFactor([1.0; 4]),
+                base_color_texture: None,
+                metallic_factor: StrengthFactor(metallic),
+                roughness_factor: StrengthFactor(roughness),
+                metallic_roughness_texture: None,
+                extensions: None,
+                extras: None,
+            },
+            ..Default::default()
+        })
+    }
+
+    /// Adds a leaf material that shows both sides and cuts out transparent pixels
+    /// using the configured alpha threshold. Requests colour and, for supported leaf
+    /// kinds, a normal map to add lighting detail.
     fn leaf_material(&mut self, options: &TreeOptions) -> Index<json::Material> {
         let leaf = LeafMaterial::new(&options.leaves);
-        let color = self.texture(
-            &options.leaves.kind,
-            TextureMap::Leaf,
-            WrappingMode::ClampToEdge,
-        );
+        let kind = options.leaves.kind.as_str();
+        let color = self.texture(kind, TextureMap::LeafColor, WrappingMode::ClampToEdge);
+        let normal = if leaf_has_normal_map(kind) {
+            self.texture(kind, TextureMap::LeafNormal, WrappingMode::ClampToEdge)
+        } else {
+            None
+        };
         let [r, g, b] = leaf.base_color;
         self.root.push(json::Material {
             name: Some("leaves".to_owned()),
@@ -613,6 +674,7 @@ impl Builder<'_> {
                 extensions: None,
                 extras: None,
             },
+            normal_texture: normal.map(normal_texture),
             ..Default::default()
         })
     }
@@ -725,13 +787,26 @@ fn info(index: Index<json::Texture>) -> json::texture::Info {
     }
 }
 
-/// Returns an image name combining its kind and role, such as `Bark001_normal`.
+/// Uses a texture as a normal map at full strength, with the mesh's first set
+/// of texture coordinates.
+fn normal_texture(index: Index<json::Texture>) -> NormalTexture {
+    NormalTexture {
+        index,
+        scale: 1.0,
+        tex_coord: 0,
+        extensions: None,
+        extras: None,
+    }
+}
+
+/// Names an exported texture by its kind and purpose, for example `oak_leaf`
+/// for leaf colour or `white_oak_normal` for leaf lighting detail.
 fn texture_name(reference: TextureRef<'_>) -> String {
     let map = match reference.map {
         TextureMap::BarkColor => "color",
-        TextureMap::BarkNormal => "normal",
+        TextureMap::BarkNormal | TextureMap::LeafNormal => "normal",
         TextureMap::BarkRoughness => "roughness",
-        TextureMap::Leaf => "leaf",
+        TextureMap::LeafColor => "leaf",
     };
     format!("{}_{map}", reference.kind)
 }

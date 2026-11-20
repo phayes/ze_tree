@@ -593,6 +593,20 @@ Each format is an optional cargo feature, off by default (`export-obj`,
   - `cargo fmt` as its own commit (see Status open items).
   - Crate metadata for publishing: `license`, `repository`, `readme`, `keywords`,
     `categories` in both `Cargo.toml` files (needs the user's choices).
+  - Validate `BarkOptions::texture_scale` (added 2026-11-20, found while porting
+    ze_stone's exporters). `TreeOptions::validate` never checks it:
+    - `y = 0` gives an infinite bark UV scale (`BarkMaterial::new` computes
+      `1 / texture_scale.y`), so meshes and OBJ/glTF exports get infinite texture
+      coordinates. A NaN or infinite `y` breaks them the same way.
+    - An infinite `x` gives infinite wraps around the branch (`mesh.rs`,
+      `(base_radius * texture_scale.x).round().max(1.0)`). NaN, zero or negative `x`
+      silently falls back to one wrap.
+
+    Fix it in `TreeOptions::validate`: require both components to be finite and
+    greater than zero, add a test, and update the `texture_scale` and
+    `BarkMaterial::new` docs. ze_stone made the same check in its exporters
+    (`ExportMaterial::texture_size`), because stones have no material settings;
+    trees keep the setting in their options.
 
 ### Extra: `TreeOptions::jiggle` ✅ Done (2026-11-20)
 - `jiggle(&mut self, amount: f32, rng: &mut Rng)` in `src/jiggle.rs`: new seed, then
@@ -626,8 +640,11 @@ Built for bevy 0.20.1 (`crates/ze_tree_bevy`, Decision 19):
 - Texture v orientation: flipped in the Bevy mesh conversion (`1 - v`, after the bark
   repeat), the same as the glTF export. Core and OBJ keep ez-tree's bottom-left origin.
 - LOD: one `VisibilityRange` per level, cross-fading over `distance × hysteresis`.
-- Textures: BC7 KTX2 from `<texture_root>/…` (default `ze_tree/textures/bc7`, copied
-  by the user); bark images load with a repeating sampler.
+- Textures: KTX2 from `<texture_root>/…` (default `ze_tree/textures`, copied by the
+  user), BC7 by default or UASTC via `texture_compression`; bark size is chosen per
+  detail level (`TreeLodLevel`, default 1k/512/512). Bark images load with a
+  repeating sampler. Bark files come from `tools/textures/download.sh`
+  (2026-11-20).
 - Trellis: one shared unit cylinder, scaled and rotated per wire, `StandardMaterial`.
 - Wind defaults (moved from core open items): `WindParams::default()` now has
   `trunk_bend: 2.0`, `branch_sway: 0.05`; `WindParams::LEAVES_ONLY` keeps ez-tree's

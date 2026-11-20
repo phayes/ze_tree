@@ -1,17 +1,233 @@
 //! Appearance settings to apply in your renderer for bark, leaves, fruit, flowers,
 //! and trellis guide wires. These settings do not configure the renderer themselves.
 //! Fruit and flowers use mesh vertex colours. For bark and leaf textures, use
-//! [`BARK_KINDS`] and [`LEAF_KINDS`] with the repository's `assets/textures/` folder.
+//! [`BARK_KINDS`] and [`LEAF_KINDS`] with [`bark_texture_path`] and
+//! [`leaf_texture_path`] to find files in the repository's `assets/textures/` folder.
 
 use crate::{BarkOptions, LeafOptions, TrellisOptions};
 
 /// Available bark texture names. Use these values for [`BarkOptions::kind`];
-/// they cover all built-in presets.
-pub const BARK_KINDS: [&str; 3] = ["Bark001", "Bark002", "Bark003"];
+/// they include every built-in preset's bark.
+pub const BARK_KINDS: [&str; 29] = [
+    "bark_brown_02",
+    "bark_brown_01",
+    "bark_willow",
+    "bark_willow_02",
+    "pine_bark",
+    "tree_bark_03",
+    "palm_tree_bark",
+    "sakura_bark",
+    "japanese_sycamore",
+    "japanese_hackberry_bark",
+    "chinese_cedar_bark",
+    "japanese_zelkova_bark",
+    "japanese_camphor_bark",
+    "knotted_pine_bark",
+    "jolcham_oak_bark_01",
+    "eucalyptus_bark",
+    "trident_maple_bark",
+    "palm_bark",
+    "japanese_cedar_bark",
+    "bark_platanus",
+    "bark_bluegum",
+    "metasequoia_bark",
+    "chinese_hackberry_bark",
+    "Bark001",
+    "Bark002",
+    "Bark003",
+    "Bark009",
+    "Bark014",
+    "Bark016",
+];
 
-/// Available leaf texture names. Use these values for [`LeafOptions::kind`];
-/// they cover all built-in presets.
-pub const LEAF_KINDS: [&str; 4] = ["ash", "aspen", "oak", "pine"];
+/// Bark texture resolution. Each size fits within a square of that many pixels;
+/// textures that are taller than they are wide keep their shape.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum TextureSize {
+    /// Fits within 512 × 512 pixels: the least memory, for distant trees.
+    Size512,
+    /// Fits within 1024 × 1024 pixels.
+    Size1k,
+    /// Fits within 2048 × 2048 pixels: the most detail, for close-up views.
+    /// The repository's download script skips this size unless asked.
+    Size2k,
+}
+
+impl TextureSize {
+    /// Every size, smallest first.
+    pub const ALL: [TextureSize; 3] = [Self::Size512, Self::Size1k, Self::Size2k];
+
+    /// The size as written in texture file names: `"512"`, `"1k"` or `"2k"`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Size512 => "512",
+            Self::Size1k => "1k",
+            Self::Size2k => "2k",
+        }
+    }
+}
+
+/// GPU compression format of a texture file.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum TextureCompression {
+    /// BC7, read directly by GPUs that support it, including most desktop GPUs.
+    #[default]
+    Bc7,
+    /// Basis Universal UASTC. The loader converts it to a format the GPU supports;
+    /// in Bevy this needs the `basis-universal` feature.
+    Uastc,
+}
+
+impl TextureCompression {
+    /// Both formats.
+    pub const ALL: [TextureCompression; 2] = [Self::Bc7, Self::Uastc];
+
+    /// The format as written in texture file names: `"bc7"` or `"uastc"`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Bc7 => "bc7",
+            Self::Uastc => "uastc",
+        }
+    }
+}
+
+/// One of the three images that make up a bark texture.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BarkMap {
+    /// Surface colour. Load as sRGB.
+    Color,
+    /// Surface lighting detail, using the OpenGL (+Y) normal map convention.
+    /// Load as linear data.
+    Normal,
+    /// How matte the surface is, with the same value in red, green and blue.
+    /// Load as linear data.
+    Roughness,
+}
+
+impl BarkMap {
+    /// Every map.
+    pub const ALL: [BarkMap; 3] = [Self::Color, Self::Normal, Self::Roughness];
+
+    /// The map as written in texture file names: `"color"`, `"normal"` or `"roughness"`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Color => "color",
+            Self::Normal => "normal",
+            Self::Roughness => "roughness",
+        }
+    }
+
+    /// Whether the image holds sRGB colour rather than linear data.
+    pub fn is_srgb(self) -> bool {
+        self == Self::Color
+    }
+}
+
+/// Returns the path of a bark texture file relative to the texture folder, such as
+/// `"bark/sakura_bark-1k-color-bc7.ktx2"`.
+///
+/// Pass a name from [`BARK_KINDS`] as `kind`. The repository's texture folder is
+/// `assets/textures/`; its bark files come from `tools/textures/download.sh`.
+pub fn bark_texture_path(
+    kind: &str,
+    size: TextureSize,
+    map: BarkMap,
+    compression: TextureCompression,
+) -> String {
+    format!(
+        "bark/{kind}-{}-{}-{}.ktx2",
+        size.as_str(),
+        map.as_str(),
+        compression.as_str()
+    )
+}
+
+/// Images used to colour a leaf and add lighting detail. Every leaf kind has a colour
+/// image; use [`leaf_has_normal_map`] to check whether it also has a normal map.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum LeafMap {
+    /// Leaf colour and transparency, which cuts out the leaf or branch outline.
+    /// Load as sRGB. Alpha is straight: RGB colours are not multiplied by opacity.
+    Color,
+    /// Surface directions that add lighting detail without adding geometry.
+    /// Uses the OpenGL (+Y) convention; load as linear data, without sRGB conversion.
+    /// Available only when [`leaf_has_normal_map`] returns true.
+    Normal,
+}
+
+impl LeafMap {
+    /// Both map types. A leaf kind may provide only [`LeafMap::Color`].
+    pub const ALL: [LeafMap; 2] = [Self::Color, Self::Normal];
+
+    /// The map name used in texture paths: `"color"` or `"normal"`.
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Color => "color",
+            Self::Normal => "normal",
+        }
+    }
+
+    /// Whether to load this map as sRGB colour. Returns false for normal maps,
+    /// whose values describe directions and must be read as linear data.
+    pub fn is_srgb(self) -> bool {
+        self == Self::Color
+    }
+}
+
+/// Builds a path relative to `assets/textures/`, such as `"leaves/oak-color-bc7.ktx2"`.
+///
+/// Use a name from [`LEAF_KINDS`] for `kind`. Leaf textures have one size per kind,
+/// so no size argument is needed. Download the files with `tools/textures/download.sh`.
+///
+/// This function only builds a path; it does not check that the file exists. Request
+/// [`LeafMap::Normal`] only when [`leaf_has_normal_map`] returns true for `kind`.
+pub fn leaf_texture_path(kind: &str, map: LeafMap, compression: TextureCompression) -> String {
+    format!("leaves/{kind}-{}-{}.ktx2", map.as_str(), compression.as_str())
+}
+
+/// Whether a built-in leaf kind provides a normal map for surface lighting detail.
+/// For example, `"white_oak"` does and `"oak"` does not. Unknown names return false.
+/// This checks the available texture set, not whether the file has been downloaded.
+pub fn leaf_has_normal_map(kind: &str) -> bool {
+    LEAF_KINDS[EZ_TREE_LEAF_KIND_COUNT..].contains(&kind)
+}
+
+/// Available texture names for [`LeafOptions::kind`], including those used by all presets.
+///
+/// The first four (`ash`, `aspen`, `oak`, `pine`) come from ez-tree and have colour
+/// images only. The remaining 20 come from Nobiax's CC0 "Free 3D branches textures"
+/// packs and depict branch tips or bare twigs. Each includes a colour image and a
+/// normal map for lighting detail; use [`leaf_has_normal_map`] to check a name.
+pub const LEAF_KINDS: [&str; 24] = [
+    "ash",
+    "aspen",
+    "oak",
+    "pine",
+    "aspen_autumn",
+    "european_aspen",
+    "bigtooth_aspen",
+    "alder_buckthorn",
+    "smoke_bush",
+    "field_maple_autumn",
+    "bamboo",
+    "fir",
+    "white_pine",
+    "arborvitae_autumn",
+    "birch_autumn",
+    "larch",
+    "black_locust",
+    "olive",
+    "cotoneaster",
+    "bare_twig_1",
+    "bare_twig_2",
+    "white_oak_autumn",
+    "white_oak",
+    "white_oak_dead",
+];
+
+/// Number of ez-tree entries at the start of [`LEAF_KINDS`]. These have colour
+/// images only; the remaining entries also provide normal maps.
+const EZ_TREE_LEAF_KIND_COUNT: usize = 4;
 
 /// Bark shading settings for your renderer, matching ez-tree's appearance.
 /// Creating these settings does not load textures or configure a renderer.

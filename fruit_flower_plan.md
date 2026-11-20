@@ -281,20 +281,16 @@ Agreed with the user before starting; this replaces the original `simple_items` 
   - grapes: 582 → 304, and all 30 grapes are kept instead of 15;
   - oceanspray: 720 → 260;
   - laburnum: 192 → 70.
-- **Not done yet:**
-  - the Codex comment pass for this follow-up;
-  - re-exporting the comparison page, which still shows the earlier disc angles
-    without the 1.25× scale. The exporter is in the session scratchpad and is not
-    kept.
+- **Not done yet:** the Codex comment pass for this follow-up.
 
 ### F5 — Bevy plugin and viewer
 
-**Status: done (except translucency).**
+**Status: done.**
 - `cluster_mesh`, `fruit_material` and `flower_material` added; fruit and flowers spawn
   as `TreePartKind::Fruit` and `TreePartKind::Flowers` at every LOD level, using
   vertex colours, wind, and two-sided `StandardMaterial`s.
 - The viewer steps maturity with `[` and `]`, and also accepts `--maturity <0–1>`.
-- Petal translucency (`diffuse_transmission`) is not done.
+- No petal translucency: `diffuse_transmission` was judged too expensive (user's call).
 - `TreePreset::EZ_TREE` added and the ez-tree fixture tests use it. `TreePreset::Apple`
   is the first F6 preset, checked in the viewer at ripe and unripe maturity; its
   triangle count has not been checked against a budget.
@@ -334,8 +330,6 @@ Agreed with the user before starting; this replaces the original `simple_items` 
 - **Pendulum swing:** if the `flutter` channel looks wrong on hanging fruit, add a
   fifth wind value. That would change the wind attribute and the shaders, so ask
   first.
-- **Petal translucency:** Bevy's `diffuse_transmission` costs performance. Decide in
-  F5 after seeing it.
 - **Triangle budget:** set a target per preset. Proposed: under 2× the leaf triangles
   at LOD 0. Revisit after F5/F6 testing, including whether presets need their own
   LOD levels.

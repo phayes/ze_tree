@@ -100,7 +100,8 @@ fn mtl_lists_textures_from_the_path_function() {
         TextureMap::BarkColor => Some(format!("{}_color.jpg", t.kind)),
         TextureMap::BarkNormal => Some(format!("{}_normal.jpg", t.kind)),
         TextureMap::BarkRoughness => None,
-        TextureMap::Leaf => Some(format!("{}.png", t.kind)),
+        TextureMap::LeafColor => Some(format!("{}.png", t.kind)),
+        TextureMap::LeafNormal => Some(format!("{}_normal.png", t.kind)),
     };
     let options = ObjOptions {
         textures: Some(&paths),
@@ -116,6 +117,16 @@ fn mtl_lists_textures_from_the_path_function() {
     assert!(!mtl.contains("map_Pr"));
     assert!(mtl.contains("newmtl leaves\n"));
     assert!(mtl.contains(&format!("map_Kd {leaf}.png\nmap_d {leaf}.png\n")));
+    // The colour-only "ash" texture must not request a normal map in the MTL material.
+    assert!(!mtl.contains(&format!("{leaf}_normal.png")));
+
+    // For a kind with lighting detail, the MTL material must name its normal map in map_Bump.
+    let mut options_with_normals = tree.options().clone();
+    options_with_normals.leaves.kind = "white_oak".to_owned();
+    let mtl = to_obj(tree.mesh(), &options_with_normals, &options).mtl;
+    assert!(mtl.contains(
+        "map_Kd white_oak.png\nmap_d white_oak.png\nmap_Bump white_oak_normal.png\n"
+    ));
 
     // Omitting the image callback must retain colours without emitting texture paths.
     let plain = to_obj(tree.mesh(), tree.options(), &ObjOptions::default()).mtl;
@@ -180,4 +191,76 @@ fn flat_shaded_bark_gets_face_normals() {
         }
         triangle += 1;
     }
+}
+
+/// Converts a linear colour channel to sRGB, as OBJ vertex colours are stored.
+fn srgb(c: f32) -> f32 {
+    if c <= 0.003_130_8 {
+        c * 12.92
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    }
+}
+
+/// Fruit and flowers are their own objects and materials, with sRGB colours on
+/// their vertices; bark and leaf vertices have none.
+#[test]
+fn fruit_and_flowers_carry_vertex_colours() {
+    let mut options = TreePreset::AshSmall.options();
+    for (placement, cluster) in [
+        (&mut options.fruit.placement, &mut options.fruit.cluster),
+        (&mut options.flowers.placement, &mut options.flowers.cluster),
+    ] {
+        placement.count = 2;
+        placement.min_level = 2;
+        cluster.kind = ze_tree::ClusterKind::Umbel;
+        cluster.items = 5;
+    }
+    let tree = Tree::new(options).unwrap();
+    let mesh = tree.mesh();
+    let files = to_obj(mesh, tree.options(), &ObjOptions::default());
+    let obj = &files.obj;
+
+    // Every vertex and triangle is written, in parts named after their materials.
+    assert_eq!(count(obj, "v"), mesh.vertex_count());
+    assert_eq!(count(obj, "f"), mesh.triangle_count());
+    let objects: Vec<&str> = obj.lines().filter_map(|l| l.strip_prefix("o ")).collect();
+    assert_eq!(objects, ["trunk", "branches", "leaves", "fruit", "flowers"]);
+    let materials: Vec<&str> = obj
+        .lines()
+        .filter_map(|l| l.strip_prefix("usemtl "))
+        .collect();
+    assert_eq!(materials, ["bark", "bark", "leaves", "fruit", "flowers"]);
+    assert!(files.mtl.contains("\nnewmtl fruit\nKd 1 1 1\n"));
+    assert!(files.mtl.contains("\nnewmtl flowers\nKd 1 1 1\n"));
+
+    // Coloured vertices come last, in fruit then flower order, as sRGB.
+    let vertices: Vec<Vec<f32>> = obj
+        .lines()
+        .filter_map(|l| l.strip_prefix("v "))
+        .map(|l| l.split(' ').map(|n| n.parse().unwrap()).collect())
+        .collect();
+    let colors: Vec<[f32; 4]> = mesh
+        .fruit
+        .colors
+        .iter()
+        .chain(&mesh.flowers.colors)
+        .copied()
+        .collect();
+    let plain = vertices.len() - colors.len();
+    assert!(vertices[..plain].iter().all(|v| v.len() == 3));
+    for (v, color) in vertices[plain..].iter().zip(&colors) {
+        assert_eq!(v.len(), 6);
+        for channel in 0..3 {
+            assert!((v[3 + channel] - srgb(color[channel])).abs() < 1e-6, "{v:?}");
+        }
+    }
+}
+
+/// A tree without fruit or flowers gets no materials for them.
+#[test]
+fn trees_without_fruit_get_no_fruit_material() {
+    let tree = Tree::from_preset(TreePreset::OakSmall);
+    let files = to_obj(tree.mesh(), tree.options(), &ObjOptions::default());
+    assert!(!files.mtl.contains("fruit") && !files.mtl.contains("flowers"));
 }

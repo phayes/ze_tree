@@ -5,14 +5,12 @@
 //! ```
 //!
 //! `OUT_DIR` defaults to the workspace's `target/ze_tree_export`. Images are
-//! optional. If supplied, `TEXTURE_DIR` must contain these ez-tree texture paths:
-//!
-//! - `bark/<kind>_1K-JPG/<kind>_1K-JPG_{Color,NormalGL,Roughness}.jpg`
-//! - `leaves/<kind>.png`
-//!
-//! If no texture directory is supplied, the example looks in the workspace's
-//! `prior_art/ez-tree/src/app/public/textures`. Missing or unreadable images are
-//! omitted, leaving the corresponding material colours or surface settings.
+//! optional. `TEXTURE_DIR` holds the export images named by
+//! [`TextureRef::image_path`]; the 1k bark images are used. It defaults to the
+//! workspace's `assets/textures/images`, which `tools/textures/images.sh` fills,
+//! or download the files listed in its `images_manifest.json`. Missing or
+//! unreadable images are omitted, leaving the corresponding material colours or
+//! surface settings.
 //!
 //! Each preset produces:
 //!
@@ -30,8 +28,8 @@ use std::path::{Path, PathBuf};
 
 use ze_tree::export::gltf::{EmbeddedImage, GltfOptions, GltfTextures, ImageFormat, to_glb};
 use ze_tree::export::obj::{ObjOptions, to_obj};
-use ze_tree::export::{TextureMap, TextureRef};
-use ze_tree::{RigOptions, Tree, TreePreset, default_lod_levels};
+use ze_tree::export::TextureRef;
+use ze_tree::{RigOptions, TextureSize, Tree, TreePreset, default_lod_levels};
 
 fn main() -> Result<(), Box<dyn Error>> {
     // Use command-line folders when supplied, otherwise the workspace defaults.
@@ -45,7 +43,7 @@ fn main() -> Result<(), Box<dyn Error>> {
     let texture_dir = args
         .next()
         .map(PathBuf::from)
-        .or_else(|| Some(workspace.join("prior_art/ez-tree/src/app/public/textures")))
+        .or_else(|| Some(workspace.join("assets/textures/images")))
         .filter(|dir| dir.is_dir());
     fs::create_dir_all(&out_dir)?;
     match &texture_dir {
@@ -55,20 +53,7 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Resolve the requested texture kind and role to an existing image file.
     let texture_path = |t: TextureRef<'_>| -> Option<PathBuf> {
-        let dir = texture_dir.as_ref()?;
-        let kind = t.kind;
-        let path = match t.map {
-            TextureMap::BarkColor => {
-                dir.join(format!("bark/{kind}_1K-JPG/{kind}_1K-JPG_Color.jpg"))
-            }
-            TextureMap::BarkNormal => {
-                dir.join(format!("bark/{kind}_1K-JPG/{kind}_1K-JPG_NormalGL.jpg"))
-            }
-            TextureMap::BarkRoughness => {
-                dir.join(format!("bark/{kind}_1K-JPG/{kind}_1K-JPG_Roughness.jpg"))
-            }
-            TextureMap::Leaf => dir.join(format!("leaves/{kind}.png")),
-        };
+        let path = texture_dir.as_ref()?.join(t.image_path(TextureSize::Size1k));
         path.is_file().then_some(path)
     };
     // Copy images beside the export so relative material paths remain usable

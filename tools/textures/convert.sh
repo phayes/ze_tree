@@ -1,50 +1,68 @@
 #!/usr/bin/env bash
-# Converts the built-in presets' ez-tree images to KTX2, a file format for
-# compressed GPU textures. Existing output files are overwritten.
+# Convert bark and leaf source images to KTX2 files for GPU rendering.
+# Existing output files are overwritten. Run manifest.sh afterwards to update
+# assets/textures/assets_manifest.json for downloads.
 #
-# Writes two sets with the same layout under assets/textures/:
-#   uastc/  Basis Universal UASTC: a compatible loader converts these images to
-#           a format supported by the target GPU. For glTF, use KHR_texture_basisu;
-#           for Bevy, enable `basis-universal`.
-#   bc7/    BC7: usable directly by GPUs that support it, commonly on desktops.
-#           Check support before choosing it for mobile devices or glTF viewers.
-# Both sets use Zstandard (zstd) compression to reduce file size.
+# Every map is written in two formats, both with Zstandard compression:
+#   bc7    Read directly by GPUs that support BC7, including most desktop GPUs.
+#   uastc  Basis Universal: a compatible loader converts it for the target GPU.
+#          In Bevy, enable the basis-universal feature.
+# Each file includes mipmaps, smaller copies down to 1x1 that reduce shimmering
+# when textures are viewed from a distance.
 #
-# Layout within each set:
-#   bark/<Kind>/color.ktx2      surface colour, encoded as sRGB
-#   bark/<Kind>/normal.ktx2     lighting detail, using OpenGL (+Y) normal maps
-#   bark/<Kind>/roughness.ktx2  surface roughness, identical in R, G, and B
-#   leaves/<kind>.ktx2          sRGB colour with separate transparency (straight alpha)
-# Load colour images as sRGB so the renderer converts them for lighting. Load
-# normal and roughness images as linear data, without colour conversion.
+# Bark: assets/textures/bark/<id>-<size>-<map>-<format>.ktx2
+# Sizes 512, 1k and 2k fit within 512, 1024 and 2048 pixels square, preserving
+# image proportions. Smaller sizes use less memory; larger sizes retain detail.
+# Bark maps are color (sRGB), normal (OpenGL +Y lighting detail), and roughness
+# (how matte the surface looks, with the same value in red, green and blue).
 #
-# Every file includes mipmaps: progressively smaller images down to 1x1,
-# used to keep distant textures from shimmering.
+# Leaves: assets/textures/leaves/<kind>-<map>-<format>.ktx2
+# Kinds and source paths come from tools/textures/leaves.txt. Each kind keeps
+# its source dimensions, with no size variants. Every kind has a color map;
+# Nobiax kinds also have a normal map for lighting detail without extra geometry.
+# Colour uses sRGB with straight alpha: transparency is separate from RGB colour.
+# Load normal maps as linear data using the OpenGL (+Y) convention. Bark roughness
+# maps also use linear data, without sRGB colour conversion.
 #
-# Requirements: ImageMagick 7 (`magick`), KTX-Software 4.4+ (`ktx`) and
-# ctt-cli 0.6 (`cargo install ctt-cli --version 0.6.1 --locked`).
-#
-# Usage: tools/textures/convert.sh [EZ_TREE_TEXTURES_DIR]
-# The default source is prior_art/ez-tree/src/app/public/textures, a clone of
-# ez-tree at the commit named in port_plan.md.
+# Requirements: ImageMagick 7 (magick), KTX-Software 4.4+ (ktx), and
+# ctt-cli 0.6 (cargo install ctt-cli --version 0.6.1 --locked).
+# Usage: tools/textures/convert.sh [--only bark|leaves] [PRIOR_ART_DIR]
+# By default both categories are converted. Use --only leaves to skip the slower
+# bark conversion. PRIOR_ART_DIR defaults to prior_art/ in the repository.
+# Run fetch.sh for bark sources in its textures/ folder. For leaves, clone ez-tree
+# at the commit in port_plan.md and extract Nobiax's packs as described in
+# leaves.txt. All leaf source paths are relative to PRIOR_ART_DIR.
 
 set -euo pipefail
 
 repo=$(cd "$(dirname "$0")/../.." && pwd)
-src=${1:-$repo/prior_art/ez-tree/src/app/public/textures}
+source "$repo/tools/textures/leaves.sh"
+
+# Read the options.
+only=
+while [[ $# -gt 0 && $1 == --* ]]; do
+    case $1 in
+        --only) only=$2; shift 2 ;;
+        *) echo "unknown option $1" >&2; exit 1 ;;
+    esac
+done
+if [[ -n $only && $only != bark && $only != leaves ]]; then
+    echo "--only takes bark or leaves" >&2
+    exit 1
+fi
+prior_art=${1:-$repo/prior_art}
+bark_src=$prior_art/textures
 out=$repo/assets/textures
 stage=$(mktemp -d)
 trap 'rm -rf "$stage"' EXIT
 
-# Convert the bark and leaf images used by the presets in crates/ze_tree/presets.
-bark_kinds=(Bark001 Bark002 Bark003)
-leaf_kinds=(ash aspen oak pine)
+sizes=(512:512 1k:1024 2k:2048)
 
-# Write both encodings from one prepared PNG. Arguments: input PNG, output path
-# within each set, colour space (srgb|linear), channels (rgb|rgba), and whether
-# to optimise UASTC for smaller compressed files (yes|no).
+# Write both encodings from one prepared PNG. Arguments: input PNG, UASTC output
+# path, BC7 output path, colour space (srgb|linear), channels (rgb|rgba), and
+# whether to optimise UASTC for smaller compressed files (yes|no).
 encode() {
-    local png=$1 rel=$2 space=$3 channels=$4 rdo=$5
+    local png=$1 uastc=$2 bc7=$3 space=$4 channels=$5 rdo=$6
 
     # Tell the UASTC encoder which channels and colour encoding the PNG contains.
     local format tf
@@ -57,37 +75,65 @@ encode() {
     esac
     local rdo_args=()
     if [[ $rdo == yes ]]; then rdo_args=(--uastc-rdo); fi
-    mkdir -p "$(dirname "$out/uastc/$rel")"
+    mkdir -p "$(dirname "$uastc")"
     ktx create --format "$format" --assign-tf "$tf" \
         --encode uastc --uastc-quality 3 "${rdo_args[@]}" --zstd 19 \
         --generate-mipmap --mipmap-filter lanczos4 \
-        "$png" "$out/uastc/$rel"
+        "$png" "$uastc"
 
     # Encode BC7 with the same colour space, keeping transparency when present.
-    mkdir -p "$(dirname "$out/bc7/$rel")"
-    ctt "$png" -o "$out/bc7/$rel" --format bc7 --quality slow \
+    mkdir -p "$(dirname "$bc7")"
+    ctt "$png" -o "$bc7" --format bc7 --quality slow \
         --input-color-space "$space" --output-color-space "$space" \
         --mipmap --mipmap-filter lanczos3 --zstd=19
 }
 
-# Prepare matching 8-bit PNG inputs for both encoders. Copy greyscale roughness
-# into all three colour channels, including green, where glTF and Bevy read it.
-for kind in "${bark_kinds[@]}"; do
-    dir=$src/bark/${kind}_1K-JPG
-    base=$dir/${kind}_1K-JPG
-    magick "$base"_Color.jpg -alpha off -type TrueColor "PNG24:$stage/$kind-color.png"
-    magick "$base"_NormalGL.jpg -alpha off -type TrueColor "PNG24:$stage/$kind-normal.png"
-    magick "$base"_Roughness.jpg -alpha off -type TrueColor "PNG24:$stage/$kind-roughness.png"
+# Load the bark ids from the texture list; ignore comments and empty lines.
+bark_ids=()
+while read -r source id; do
+    [[ -z $source || $source == \#* ]] || bark_ids+=("$id")
+done <"$repo/tools/textures/sets.txt"
 
-    encode "$stage/$kind-color.png" "bark/$kind/color.ktx2" srgb rgb yes
-    encode "$stage/$kind-normal.png" "bark/$kind/normal.ktx2" linear rgb no
-    encode "$stage/$kind-roughness.png" "bark/$kind/roughness.ktx2" linear rgb yes
+[[ $only == leaves ]] && bark_ids=()
+for id in "${bark_ids[@]}"; do
+    for size in "${sizes[@]}"; do
+        name=${size%%:*} px=${size#*:}
+        base=$stage/$id-$name
+
+        # Fit each image within px × px, keeping its shape, as 8-bit PNG inputs
+        # for both encoders. Resize colour in linear light to preserve average
+        # brightness. Copy greyscale roughness into all three colour channels,
+        # including green, where glTF and Bevy read it.
+        magick "$bark_src/$id/color.jpg" -colorspace RGB -filter Lanczos -resize "${px}x${px}" \
+            -colorspace sRGB -alpha off -type TrueColor "PNG24:$base-color.png"
+        magick "$bark_src/$id/normal.jpg" -filter Lanczos -resize "${px}x${px}" \
+            -alpha off -type TrueColor "PNG24:$base-normal.png"
+        magick "$bark_src/$id/roughness.jpg" -filter Lanczos -resize "${px}x${px}" \
+            -alpha off -type TrueColor "PNG24:$base-roughness.png"
+
+        prefix=$out/bark/$id-$name
+        encode "$base-color.png" "$prefix-color-uastc.ktx2" "$prefix-color-bc7.ktx2" \
+            srgb rgb yes
+        encode "$base-normal.png" "$prefix-normal-uastc.ktx2" "$prefix-normal-bc7.ktx2" \
+            linear rgb no
+        encode "$base-roughness.png" "$prefix-roughness-uastc.ktx2" \
+            "$prefix-roughness-bc7.ktx2" linear rgb yes
+    done
 done
 
-for kind in "${leaf_kinds[@]}"; do
-    magick "$src/leaves/$kind.png" -type TrueColorAlpha "PNG32:$stage/$kind-leaf.png"
-    encode "$stage/$kind-leaf.png" "leaves/$kind.ktx2" srgb rgba yes
-done
+# Prepare each leaf colour image and available normal map, then write both GPU formats.
+if [[ $only != bark ]]; then
+    while IFS=$'\t' read -r kind source path _; do
+        prepare_leaf "$kind" "$source" "$prior_art/$path" "$stage/leaves"
+        prefix=$out/leaves/$kind
+        encode "$stage/leaves/$kind-color.png" "$prefix-color-uastc.ktx2" \
+            "$prefix-color-bc7.ktx2" srgb rgba yes
+        if [[ -f $stage/leaves/$kind-normal.png ]]; then
+            encode "$stage/leaves/$kind-normal.png" "$prefix-normal-uastc.ktx2" \
+                "$prefix-normal-bc7.ktx2" linear rgb no
+        fi
+    done < <(leaf_list "$repo")
+fi
 
 cp "$repo/tools/textures/LICENSE.md" "$out/LICENSE.md"
 echo "Wrote $out"

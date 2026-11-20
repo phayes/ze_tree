@@ -146,21 +146,32 @@
 //!
 //! ## Materials and animation
 //!
-//! `BarkMaterial` and `LeafMaterial` describe the appearance settings for a renderer.
-//! The repository's `assets/textures/` directory supplies separate KTX2 texture sets
-//! (these assets are not included in the crate):
+//! [`BarkMaterial`] and [`LeafMaterial`] describe appearance settings for a renderer.
+//! Texture images are not bundled with the crate. In the repository, run
+//! `tools/textures/download.sh` to save ready-made KTX2 textures in `assets/textures/`.
+//! The script downloads all leaf textures and the 512 and 1k bark sizes by default;
+//! add `--sizes 512,1k,2k` to include 2k bark. Each image comes in two formats:
 //!
-//! - `bc7/` for GPUs that support BC7 compression, including most desktop GPUs.
-//! - `uastc/` for a Basis Universal loader to transcode to a supported GPU format.
+//! - BC7 for GPUs that support it, including most desktop GPUs.
+//! - UASTC for loaders that convert Basis Universal textures to a supported GPU format.
 //!
-//! Inside either set, bark maps are `bark/<kind>/{color,normal,roughness}.ktx2` and
-//! leaf images are `leaves/<kind>.ktx2`. The options' `bark.kind` and `leaves.kind`
-//! select the texture names. Load colour images as sRGB and normal/roughness maps as
-//! linear data. Normal maps use the OpenGL/glTF convention; leaf alpha is straight,
-//! not premultiplied. Keep the metallic factor at zero if using the roughness image
-//! as a combined metallic-roughness texture.
+//! Set `bark.kind` and `leaves.kind` to names from [`BARK_KINDS`] and [`LEAF_KINDS`].
+//! [`bark_texture_path`] and [`leaf_texture_path`] give paths inside the texture folder,
+//! such as `bark/sakura_bark-1k-color-bc7.ktx2` or `leaves/white_oak-normal-bc7.ktx2`.
+//! Bark has three sizes; leaves have one size per kind. [`leaf_has_normal_map`] tells
+//! you whether a leaf kind includes a normal map, which adds lighting detail without
+//! extra geometry. `assets/textures/assets_manifest.json` lists the downloadable files.
 //!
-//! For bark normal maps, use `BarkUvMode::Continuous` and the mesh's tangents.
+//! Load colour images as sRGB, and normal and roughness maps as linear data without
+//! colour conversion. Normal maps use the OpenGL (+Y) convention. Leaf colour images
+//! include straight alpha: transparency is stored separately from the RGB colours.
+//! Keep the metallic factor at zero when using a roughness image as a combined
+//! metallic-roughness texture.
+//!
+//! Normal maps need the directions in [`MeshBuffers::tangents`] to orient lighting
+//! detail on the surface. Supply the leaf mesh's tangents for leaf normal maps.
+//! For bark normal maps, also select [`BarkUvMode::Continuous`].
+//!
 //! For GPU wind, pass `MeshBuffers::wind` and `WindParams` to the `WIND_WESL` shader
 //! module and add its `wind_offset` to vertex positions. For joint-based animation,
 //! create joints with `Tree::rig` and vertex weights with `Rig::skin`.
@@ -194,8 +205,9 @@ mod wind;
 
 pub use cluster::{ClusterItem, ClusterStalk, SkeletonCluster};
 pub use material::{
-    BARK_KINDS, BarkMaterial, FlowerMaterial, FruitMaterial, LEAF_KINDS, LeafMaterial,
-    TrellisMaterial,
+    BARK_KINDS, BarkMap, BarkMaterial, FlowerMaterial, FruitMaterial, LEAF_KINDS, LeafMap,
+    LeafMaterial, TextureCompression, TextureSize, TrellisMaterial, bark_texture_path,
+    leaf_has_normal_map, leaf_texture_path,
 };
 pub use mesh::{
     BranchSpan, ClusterSpan, ItemDetail, LeafSpan, LodDetail, LodLevel, MeshBuffers, TreeMesh,

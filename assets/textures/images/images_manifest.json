@@ -1,0 +1,3400 @@
+{
+  "version": 1,
+  "baseUrl": "https://storage.googleapis.com/ze_textures/tree/images/",
+  "pathPatterns": {
+    "bark": "bark/<id>-<size>-<map>.jpg",
+    "leaves": "leaves/<id>-<map>.png"
+  },
+  "sizes": {
+    "512": "fits within 512 x 512 pixels",
+    "1k": "fits within 1024 x 1024 pixels",
+    "2k": "fits within 2048 x 2048 pixels"
+  },
+  "maps": {
+    "color": "surface colour, sRGB",
+    "normal": "surface lighting detail, OpenGL (+Y) convention, linear data",
+    "roughness": "how matte the surface is, identical in R, G and B, linear data"
+  },
+  "assets": [
+    {
+      "id": "bark_brown_02",
+      "category": "bark",
+      "title": "Bark Brown 02",
+      "authors": [
+        "Rob Tuytel"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/bark_brown_02",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/bark_brown_02-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 153453,
+          "sha256": "b13aa784dd3c782e24557176956ef2ab5dfe2000b9a7f1101976b5ddda2b5b15"
+        },
+        {
+          "path": "bark/bark_brown_02-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 331332,
+          "sha256": "66abe98aa1702d8794c39ea38c53293fc7b20e460dfaf42579ecca7c99efd3e4"
+        },
+        {
+          "path": "bark/bark_brown_02-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 76788,
+          "sha256": "09860f736ec908a54cd57b88000f4095fce85d3ef53001b8154b824a0e27a588"
+        },
+        {
+          "path": "bark/bark_brown_02-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 590430,
+          "sha256": "a0312791483a63dca6ff93c15df4e080a86137be1ca0fd84244c9eb3dd8081db"
+        },
+        {
+          "path": "bark/bark_brown_02-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1183028,
+          "sha256": "1a55527add9a05a77583cbcded08ec60e5c34a4afc063afee9f9a1cb8f33fe53"
+        },
+        {
+          "path": "bark/bark_brown_02-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 298965,
+          "sha256": "54abeea8888e549beef0d2ff515a51e9cfa2ddc68b115d102c8028a93299711f"
+        },
+        {
+          "path": "bark/bark_brown_02-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2034485,
+          "sha256": "726f7bd78fe9c62c22104f013d6256c66e9ea6dc6d369f3ba7f238229e1464e3"
+        },
+        {
+          "path": "bark/bark_brown_02-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3708463,
+          "sha256": "f3af8a5516075e21ab8111de4d8ae2204c5946a4079f07e1beba0794ac667670"
+        },
+        {
+          "path": "bark/bark_brown_02-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1078727,
+          "sha256": "a12d037a3fc08aec692e94c7e6c6aebfb352bea3158fed2b9819a138b869c827"
+        }
+      ]
+    },
+    {
+      "id": "bark_brown_01",
+      "category": "bark",
+      "title": "Bark Brown 01",
+      "authors": [
+        "Rob Tuytel"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/bark_brown_01",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/bark_brown_01-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 141606,
+          "sha256": "8b1d79059c9b838651f126fd57fc8bf2341ed64e20d48201618160a02f1fa650"
+        },
+        {
+          "path": "bark/bark_brown_01-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 324498,
+          "sha256": "9fddeed4b4f3920def3b1d60a62219e63386560588380ceacb3172cf4ae991fb"
+        },
+        {
+          "path": "bark/bark_brown_01-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 44296,
+          "sha256": "6cf0b4e0c296530217c1f733236732935dc8881dfa39314b170b8e6529a1ade4"
+        },
+        {
+          "path": "bark/bark_brown_01-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 580082,
+          "sha256": "aaa500459c45cf19560fcc52821bb978bac4d014094cb4681e0f4cf1f7b09e76"
+        },
+        {
+          "path": "bark/bark_brown_01-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1237712,
+          "sha256": "45762218608325f043364a36df01f7024321dcf895fafadccefe8cbfaf32d40d"
+        },
+        {
+          "path": "bark/bark_brown_01-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 169270,
+          "sha256": "24e58ca32d17f329da5086a7a9f316a8dac2e590ddbd4cbab637d37ad963a8f8"
+        },
+        {
+          "path": "bark/bark_brown_01-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2303708,
+          "sha256": "7c01b0f632e369d37d7288fca908ef6444384cea87bf092a3dec4f3c279a9ccc"
+        },
+        {
+          "path": "bark/bark_brown_01-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 4622351,
+          "sha256": "d00f01f34e7033c090adef4140d0b1a356faaa1d611709305b7f3159c941978b"
+        },
+        {
+          "path": "bark/bark_brown_01-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 698030,
+          "sha256": "9fdf15e66be51b7ac1ba6eea9cd51f66f2e10999f6d4bf5e81d69757dd574101"
+        }
+      ]
+    },
+    {
+      "id": "bark_willow",
+      "category": "bark",
+      "title": "Bark Willow",
+      "authors": [
+        "Dario Barresi",
+        "Dimitrios Savva"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/bark_willow",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/bark_willow-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 81325,
+          "sha256": "676420640a19b320b24913fbb8bba0a7ee95992bdd23bbc2d0b05b824d112ace"
+        },
+        {
+          "path": "bark/bark_willow-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 370563,
+          "sha256": "2a19f25840c28914759bf7f5728075ecb0a7fb07babb83a2d85d75a0aaf66d9b"
+        },
+        {
+          "path": "bark/bark_willow-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 23531,
+          "sha256": "d67857bc69b3b277ff6c970fb3b568a23c3d9fa683d222ed49321324b6ba1996"
+        },
+        {
+          "path": "bark/bark_willow-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 334303,
+          "sha256": "e85fb6d35a7c796b17bd69fc21be5cc9469fd167007db5db0798b287d680d349"
+        },
+        {
+          "path": "bark/bark_willow-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1373870,
+          "sha256": "70e8c2cc5d0c24ba8be0af07d10db845dcd85e39578f1ad444833420826d30ca"
+        },
+        {
+          "path": "bark/bark_willow-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 101689,
+          "sha256": "a4ce5b96bf5c63520ed522987991f5f2e459efc6c9d6f2fccf9f9d9a4ea9a1b7"
+        },
+        {
+          "path": "bark/bark_willow-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1347898,
+          "sha256": "17131be9ae128d0e87295714a3403dde6e55eaace8a777ac1a6524caf391fe06"
+        },
+        {
+          "path": "bark/bark_willow-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 4141814,
+          "sha256": "fe5fd5f90fac966ba165d662fd0db982becb2d7a0341e2e599f0036599ef3711"
+        },
+        {
+          "path": "bark/bark_willow-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 478094,
+          "sha256": "1e17f18a1937b645165caea0fd29b582fdc39878048c52ddef4fdf0aefbba14e"
+        }
+      ]
+    },
+    {
+      "id": "bark_willow_02",
+      "category": "bark",
+      "title": "Bark Willow 02",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/bark_willow_02",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/bark_willow_02-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 120013,
+          "sha256": "7c01b24bbf7574a935be7669f90959ab742dc62138440f01cffd57e206a51644"
+        },
+        {
+          "path": "bark/bark_willow_02-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 351059,
+          "sha256": "f4fa7b33b3c1367b2a391c3221663e266eabe8d7c4a7a8f77b29a5a054da5b10"
+        },
+        {
+          "path": "bark/bark_willow_02-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 44455,
+          "sha256": "f4ecc455b70d6002e53a25b9c0627c08d57acb3137eafd01b614f18f03695a66"
+        },
+        {
+          "path": "bark/bark_willow_02-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 466390,
+          "sha256": "d8fcc7ea463633a0ffc7a1da68da35e244333e17ad1406dcf7249bbd7e7889bb"
+        },
+        {
+          "path": "bark/bark_willow_02-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1284753,
+          "sha256": "f59dd71e27f2be1da41f9a7c3c9b5128edc16179680192a525a817ee5bc32f7a"
+        },
+        {
+          "path": "bark/bark_willow_02-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 179355,
+          "sha256": "e068e364adf271f12217e2a73da1954d53f3c4f72c940f4b11236e99f4bd1eb6"
+        },
+        {
+          "path": "bark/bark_willow_02-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1887791,
+          "sha256": "3d1edd822b4227ebc6cd060157a0013b7c3cb97de226ccba76ebbeb15ced9fa3"
+        },
+        {
+          "path": "bark/bark_willow_02-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3853300,
+          "sha256": "2fb856bde0bb575ce5940c653b76c42f31de4a53d08542e9fdac425f27a39549"
+        },
+        {
+          "path": "bark/bark_willow_02-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 849866,
+          "sha256": "a48c65aeff86191005dcaf9d351a7e4ce2b4ce3fb90b13e09b7657cd35520c25"
+        }
+      ]
+    },
+    {
+      "id": "pine_bark",
+      "category": "bark",
+      "title": "Pine Bark",
+      "authors": [
+        "Dimitrios Savva"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/pine_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/pine_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 90467,
+          "sha256": "8581fd7baa5d96ed3320bcb25c9143acc978787679b348be16377df4cfc21f88"
+        },
+        {
+          "path": "bark/pine_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 288767,
+          "sha256": "4f3743302a8ad37e36a075612d209e3dcdd2dad7374e96e4778e0b8b1e83ec5a"
+        },
+        {
+          "path": "bark/pine_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 48567,
+          "sha256": "e49b0ac8320dfe6851934c8e8b1879fbde24e0c6ccfb2191a005ca035916ee62"
+        },
+        {
+          "path": "bark/pine_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 338102,
+          "sha256": "29b3fdd83e2c90fbe46bfc0eda72b968116aabccdaf77b443e6d6fd9ea752ed2"
+        },
+        {
+          "path": "bark/pine_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1026689,
+          "sha256": "5a022b6b06f3198641c6c2d31f7ede9941630fe829e87e7b28dd8f13ccd48555"
+        },
+        {
+          "path": "bark/pine_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 191936,
+          "sha256": "f820a4e87b809488d271482e609917c32ed569a025a9f1a8c78e7358ad6e4eea"
+        },
+        {
+          "path": "bark/pine_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1279183,
+          "sha256": "c33e93b04c17208b13aee825fdabf836efd4e9764e6c2b5e53941f9ee1c81b4f"
+        },
+        {
+          "path": "bark/pine_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3275994,
+          "sha256": "a4f9b9ba1487cca74ed70b2735d3b362c996e389e80d87a27c576bbebc173c68"
+        },
+        {
+          "path": "bark/pine_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 812250,
+          "sha256": "370fd9ecc9c65aa2e65d738c72be736588aeec603bd34c8e4ef30dcfe609307b"
+        }
+      ]
+    },
+    {
+      "id": "tree_bark_03",
+      "category": "bark",
+      "title": "Tree Bark 03",
+      "authors": [
+        "Rob Tuytel"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/tree_bark_03",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/tree_bark_03-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 128265,
+          "sha256": "c8815e821c30f75e494c0121cc0e4eca35c21d9e3a41eeecde691cfdb1edf4b7"
+        },
+        {
+          "path": "bark/tree_bark_03-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 343698,
+          "sha256": "d330ea1daca4ef891381784195f4b28b99a74447c25a49ccfe359f04e89c45d5"
+        },
+        {
+          "path": "bark/tree_bark_03-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 36666,
+          "sha256": "a7bc687167d181a64697063e70467c2de27f27c1c423b23f2f443970d5028408"
+        },
+        {
+          "path": "bark/tree_bark_03-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 493664,
+          "sha256": "5e7ecdc89268d57d7e0201e55f77259bcce91f3f0d1d6e791c1128b561362166"
+        },
+        {
+          "path": "bark/tree_bark_03-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1121046,
+          "sha256": "def972e0bdee9559cb274db9dec54e738b0137452438bd0d2935fa07b6025764"
+        },
+        {
+          "path": "bark/tree_bark_03-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 156301,
+          "sha256": "6909b54b738db0f213968e3f2d5fd2c4217d48eb02c71d778c3b1db2c11f3f40"
+        },
+        {
+          "path": "bark/tree_bark_03-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1716361,
+          "sha256": "177bbe84b604fa210dcfc5cc8dec2b5b2a6ed673a1d99786873cac164eeaf741"
+        },
+        {
+          "path": "bark/tree_bark_03-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3410274,
+          "sha256": "e82fde25532bcbeb114c9d5e65804895ddd6ffe4f9ff10eefc57e9772a3583f8"
+        },
+        {
+          "path": "bark/tree_bark_03-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 657144,
+          "sha256": "88ff59e26dfabc13fb9b8f4e7c4f94cd71f69f67490a95e3bae85ef40e50a793"
+        }
+      ]
+    },
+    {
+      "id": "palm_tree_bark",
+      "category": "bark",
+      "title": "Palm Tree Bark",
+      "authors": [
+        "Dimitrios Savva",
+        "Rico Cilliers"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/palm_tree_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/palm_tree_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 256,
+          "height": 512,
+          "bytes": 61888,
+          "sha256": "a68397e133b06a9d60eaecc676b98377e7cb88ac26c40d4269c550f4f2799552"
+        },
+        {
+          "path": "bark/palm_tree_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 256,
+          "height": 512,
+          "bytes": 43670,
+          "sha256": "272c945c5e19cdd53152fa0fd57f7940cb07c54a7c5ff845b0b232f1f249d03b"
+        },
+        {
+          "path": "bark/palm_tree_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 256,
+          "height": 512,
+          "bytes": 42670,
+          "sha256": "2bf880bec91387cb6de7c9711a24d1dfa5fe6874ae07968bfe4ffe9b9597a578"
+        },
+        {
+          "path": "bark/palm_tree_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 512,
+          "height": 1024,
+          "bytes": 245498,
+          "sha256": "3f7be0b1fa83fbc17729fa4285d9eec611c0254d8f266f68d7636f0fe68bd9a2"
+        },
+        {
+          "path": "bark/palm_tree_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 512,
+          "height": 1024,
+          "bytes": 208488,
+          "sha256": "14606571d1c816783132fcc1ca54cfb616876623548ad63b12bb790897d96e99"
+        },
+        {
+          "path": "bark/palm_tree_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 512,
+          "height": 1024,
+          "bytes": 169025,
+          "sha256": "a0f824e13d0554673f00a5910749e5767231bb7ea607e5c6ddc92fa5ed3e684d"
+        },
+        {
+          "path": "bark/palm_tree_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 933513,
+          "sha256": "413979dc67d06832bd1aedcbea6dacad28dc407440b9468dba35b17daeec2620"
+        },
+        {
+          "path": "bark/palm_tree_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 1039295,
+          "sha256": "79aee8a1637faa8cb4b5b7a117b171cafaf755cdac4732c83f5eee281033c2e7"
+        },
+        {
+          "path": "bark/palm_tree_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 634828,
+          "sha256": "a1aec170c4e7af732cbaed87dfee2d71010b2a4e04e300878f49efed409e687c"
+        }
+      ]
+    },
+    {
+      "id": "sakura_bark",
+      "category": "bark",
+      "title": "Sakura Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/sakura_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/sakura_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 100702,
+          "sha256": "7fcaa00616c3c6e6a2c60bfebffaa5aeae26a523bb1adfd3fc5db81f4575c64f"
+        },
+        {
+          "path": "bark/sakura_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 260052,
+          "sha256": "92366b7aeb8b89e9524bac0095f00efbe4137a18f24e415b8786649faed2ec1f"
+        },
+        {
+          "path": "bark/sakura_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 103379,
+          "sha256": "e02288f2154b30b4ed028e66fa93ffdd83ffdc0030d44ef5dae5ba4553886c19"
+        },
+        {
+          "path": "bark/sakura_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 411453,
+          "sha256": "f10d9b930c9a44c0f179be9ffe39f1061d9bde59e229c53f94d4d2bf06eca533"
+        },
+        {
+          "path": "bark/sakura_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1005573,
+          "sha256": "7a76b3b2e541d3aec6ddfbbb4c821739afb91b041a3fa469f6e522c0ac6e14b0"
+        },
+        {
+          "path": "bark/sakura_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 446672,
+          "sha256": "cb0df401774175e2c818ea2aadf5044c3b580c83e3811e91497786903f53a00d"
+        },
+        {
+          "path": "bark/sakura_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1711467,
+          "sha256": "c3ff1329bf8c8de2cdf2efaa9beeb988f40bb0494ab949f921d65cf373a00fad"
+        },
+        {
+          "path": "bark/sakura_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3116905,
+          "sha256": "7c1fd3708867f1779debb991716e0f18fd8c010a79f348012d9a2d83466aebd6"
+        },
+        {
+          "path": "bark/sakura_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2058290,
+          "sha256": "4941c24e03f6f4dee91914aff13366741df776ba3dc18d4ef6a09ce9fe8ca1f5"
+        }
+      ]
+    },
+    {
+      "id": "japanese_sycamore",
+      "category": "bark",
+      "title": "Japanese Sycamore",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/japanese_sycamore",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/japanese_sycamore-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 256,
+          "height": 512,
+          "bytes": 50679,
+          "sha256": "0b937f4d82eb14eefba49b566fdc745e09eb82b1ccc655d9582759ccbc13aa20"
+        },
+        {
+          "path": "bark/japanese_sycamore-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 256,
+          "height": 512,
+          "bytes": 77335,
+          "sha256": "a612b1c7de2712e54a030112091c74e8e0285b234cff3deef6496b5504fb1d0f"
+        },
+        {
+          "path": "bark/japanese_sycamore-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 256,
+          "height": 512,
+          "bytes": 18094,
+          "sha256": "9b54daf87774b44044d24a4b766558ad6bacb76e624bd51478c9164bb55ae69d"
+        },
+        {
+          "path": "bark/japanese_sycamore-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 512,
+          "height": 1024,
+          "bytes": 178839,
+          "sha256": "88e57aa29177236a84c63ede0a18376ddffa80511fe124e389409ba147da34a3"
+        },
+        {
+          "path": "bark/japanese_sycamore-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 512,
+          "height": 1024,
+          "bytes": 291992,
+          "sha256": "dbfa244ca48ef3560b216971c885ab3d6af05f4adbb319c98691154287188bbd"
+        },
+        {
+          "path": "bark/japanese_sycamore-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 512,
+          "height": 1024,
+          "bytes": 62946,
+          "sha256": "7689de398cf8830fc1ab079b11c440864eeb797ed89a39f994bf5c45c0df850c"
+        },
+        {
+          "path": "bark/japanese_sycamore-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 673398,
+          "sha256": "4909b793757fdcaa55c699fab4ad034736338b07e0309b8f55a8f10252028221"
+        },
+        {
+          "path": "bark/japanese_sycamore-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 992022,
+          "sha256": "50a4685fd9f2d9c0596ff54cee0d2694979ad439568d746272415f47f02475dd"
+        },
+        {
+          "path": "bark/japanese_sycamore-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 242065,
+          "sha256": "d96718eac4dfe4799e98f9357c8a020d42665f7117d176c6dff1ff72d3731061"
+        }
+      ]
+    },
+    {
+      "id": "japanese_hackberry_bark",
+      "category": "bark",
+      "title": "Japanese Hackberry Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/japanese_hackberry_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/japanese_hackberry_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 124203,
+          "sha256": "d8c1a21706797fbb8bb2eab2c2e1d86e773b5c989ffd2bebfb7369f5123ab92d"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 283326,
+          "sha256": "4b5c7b16fba945162b080135330824cfe1417af39792fb5fbff65fcb88269316"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 24957,
+          "sha256": "56075305e5322c110eabcd9d2223a5d7bbf0df1f679d62b1ccae1d10713134fb"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 525755,
+          "sha256": "5f22383ef51818e613f3bff3b9941fd98e51c5796f1230f23b64144142faacad"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1161052,
+          "sha256": "dd37de13ceebac8fa426c51f5967f93a8e1ba79791812c172942e2f22ebb11b7"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 122034,
+          "sha256": "3b17d4ca0f9f2792c45036bbad3bb6b80e5e73dfa9b34399187c33eaff1bc92e"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2199852,
+          "sha256": "aed2ea68a36caa3dd57da8beb1d58c8ee9bbd01d97ba492f32c753d213b5fb34"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3800861,
+          "sha256": "0d756d7812acdb44ef66cab5781105e5c41883cd154e9ae8f7b55f701182fba7"
+        },
+        {
+          "path": "bark/japanese_hackberry_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 661987,
+          "sha256": "4c56572f8732750f904525697c9845c830cdd64a4501e89d9b4d7de08b1d196a"
+        }
+      ]
+    },
+    {
+      "id": "chinese_cedar_bark",
+      "category": "bark",
+      "title": "Chinese Cedar Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/chinese_cedar_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/chinese_cedar_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 72503,
+          "sha256": "5bde6f397f2990642cca60deb3b24e5bef5348ec5dc59dd80b8483a8ff4d9774"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 215891,
+          "sha256": "5c2153a93ae1bbe4c166ef19ab69d9f8585a0269bca7828c2c1959f6829e4694"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 11617,
+          "sha256": "6f7559bb36f3408dc12e4e8dac8ebcad315a8d1ea70b6d68ab2409efcda8b615"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 292550,
+          "sha256": "51d4fbd737a583d543a8b7d58791fc7960ec3e9b9d45236b8671327c2ca48655"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 831867,
+          "sha256": "3a0bc3a3ddd6d5cc9f844798d85c3fe5f0e8659b1d2a583638d705744d04308a"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 51977,
+          "sha256": "bb367617a778f3289263d9c8ade744cc4313311b2f92a904e3b235481160c3cc"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1206146,
+          "sha256": "3531a9631f43ff3e72ec0bdb8f813db48a0c9d8bc531ca4501a97b7a42d4e827"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2703329,
+          "sha256": "b415c860a361a799bba6c018a01776928a1ed82a68ed6f74c3d88aea58a5a0bb"
+        },
+        {
+          "path": "bark/chinese_cedar_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 250665,
+          "sha256": "5d21babec57029314c53e8282773590e31d83c04488480570529478314070597"
+        }
+      ]
+    },
+    {
+      "id": "japanese_zelkova_bark",
+      "category": "bark",
+      "title": "Japanese Zelkova Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/japanese_zelkova_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/japanese_zelkova_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 108559,
+          "sha256": "83ca45ca75c5a65c4070aad7acf542b0d21d5c177ad9d312c422fd1c9904b89f"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 234578,
+          "sha256": "34d544729e594bf937af87ac747cf161d1280d50bdfebd3c995f6345ad267c23"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 33856,
+          "sha256": "5e414c0ef909d21edfb03b93b8e78a30968a3731ffdd0fef2a138e8ff1143f0f"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 446061,
+          "sha256": "067263eb0f89ed993f1e2de514660a40870bf65e4d54df8bb61f8dbee9619937"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 934597,
+          "sha256": "83a4b3042fa72335cda060d47e9c164cd810b967fc86a86c54a1614d26385f71"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 150693,
+          "sha256": "1d7a48a9db67f37f3624a7b1f217738261dd91c8039722346b0a3b92bad44092"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1878231,
+          "sha256": "5cbb1f67cd86db97dd8086caa6510482876fe19ceb4eee30a5796a16fafd5a4a"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3181334,
+          "sha256": "239699d2a9183e75d696808d04b325025a4cdebb777f4ef9d110ccd020c36641"
+        },
+        {
+          "path": "bark/japanese_zelkova_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 788399,
+          "sha256": "e251d51854d8eddcac2343a06bed75778c498ad43bc212b2fcd59f0cafb2e0a5"
+        }
+      ]
+    },
+    {
+      "id": "japanese_camphor_bark",
+      "category": "bark",
+      "title": "Japanese Camphor Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/japanese_camphor_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/japanese_camphor_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 117519,
+          "sha256": "0c97668cca9f597b697533bc2b969cafca1840546a5fd1bf353096c2d89bb21d"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 319682,
+          "sha256": "9d9c163c7850ba17f864d9e8d68d94d0cd8666bceca86dd40a5a765bbf5db802"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 42593,
+          "sha256": "bd317d636af090889af78df51bb79ec1481f9ad1ab12501ccf36010a3a99b7dd"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 490595,
+          "sha256": "89237d2e7c8f06bcda68f80318c355ee45ec30df44d784cc249d91f20c29ce52"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1196012,
+          "sha256": "72b37c0f6a8eeb5ab51cf79940727f3631d22a83a1990ef858d549b278ea18ef"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 194955,
+          "sha256": "a67771f890832e3e593dd978870945358ee23b284afa9e92ea033cd2ae77f3aa"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2033425,
+          "sha256": "119f48b60dd134e89d52e3f8421561d4fa58a890ebddb72d262800999e41bed0"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3607135,
+          "sha256": "25f2bf8938620aec909dedd45e19d7f843b3071c41f80692842c858f73019e9a"
+        },
+        {
+          "path": "bark/japanese_camphor_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 978766,
+          "sha256": "a807460dca154891d6dcaead63da2323950172b9061d818fae836c0862b7a120"
+        }
+      ]
+    },
+    {
+      "id": "knotted_pine_bark",
+      "category": "bark",
+      "title": "Knotted Pine Bark",
+      "authors": [
+        "Dimitrios Savva"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/knotted_pine_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/knotted_pine_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 86539,
+          "sha256": "3d2dbaa3c590289537e9c0d9fd39c390832119e46859439ba07b2169fe5c6c78"
+        },
+        {
+          "path": "bark/knotted_pine_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 350202,
+          "sha256": "d3346422e62d876490f0f94fa8d17aa43efa55fdf7f50368a9003366f83bc845"
+        },
+        {
+          "path": "bark/knotted_pine_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 49948,
+          "sha256": "bb2636d89652d3aa0de596e4463d68e8929013d84aa8218dfbcc58619b799c43"
+        },
+        {
+          "path": "bark/knotted_pine_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 341706,
+          "sha256": "2a3e2b8b955dd1b3700fa21459eacacf40633896669c5ff46ea3b3ca3a8a1d2a"
+        },
+        {
+          "path": "bark/knotted_pine_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1309897,
+          "sha256": "e985e2ac85a5ff42e99c3686d07a2aa4bc0e11c4787618391223a28805ec2f90"
+        },
+        {
+          "path": "bark/knotted_pine_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 210564,
+          "sha256": "5d7a66761a724f308f9ec381273c987fb917254ebb616d5908d044bf554a84a1"
+        },
+        {
+          "path": "bark/knotted_pine_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1300311,
+          "sha256": "fffe8ee2a16e983cd0e0dec4a4511d8485a8143e25cbe4b3e9622beca8ab1e9a"
+        },
+        {
+          "path": "bark/knotted_pine_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 4007711,
+          "sha256": "d28435cf89058d5a35d6f9e2aa123e1ac60de4f3e2f4eedf22f961eb2e870232"
+        },
+        {
+          "path": "bark/knotted_pine_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 946985,
+          "sha256": "90d6e310fc2a0c21fce7cfb26928769df16cdd2516754a92bec265eac08c1b48"
+        }
+      ]
+    },
+    {
+      "id": "jolcham_oak_bark_01",
+      "category": "bark",
+      "title": "Jolcham Oak Bark 01",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/jolcham_oak_bark_01",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/jolcham_oak_bark_01-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 256,
+          "height": 512,
+          "bytes": 62619,
+          "sha256": "c36b6279953d8274817e4efcc625af0707999907a6d0824dbbe2f4a49ad65d75"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 256,
+          "height": 512,
+          "bytes": 162096,
+          "sha256": "c23dde5c820dfe222d8dff2c36fc72400e27b8cd92d18e4cccdebbe731bad074"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 256,
+          "height": 512,
+          "bytes": 18207,
+          "sha256": "a7475033e51503f52e760313eb9c4d1e56fb825277c25d7aa97dfb449f8039a1"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 512,
+          "height": 1024,
+          "bytes": 237875,
+          "sha256": "28db87d051a6ea2d20abc4b1d95da240916abfc454540546d275d04519bef4a7"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 512,
+          "height": 1024,
+          "bytes": 689477,
+          "sha256": "3660cb3afd4fe76748c417e9bedac8ee89edd7ba06ec9338c669306ddcc1b8ec"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 512,
+          "height": 1024,
+          "bytes": 68902,
+          "sha256": "846aceaa1bffedcfb9f51e1df22ec66145c7fe6384ce791f0e2136c5b1cdcafa"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 892706,
+          "sha256": "2767fcec133d3f6b6a02a15bbcc08bd20bcbe94ea41a2fcd514707c1c63b3aeb"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 2521520,
+          "sha256": "95c75e90266bd37e26530f874bc829a5698e547b9a3c94d364562fb26ccb5aff"
+        },
+        {
+          "path": "bark/jolcham_oak_bark_01-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 269370,
+          "sha256": "c341c720006d15cb15db732684507a79961ab481caae7e8f6e1cdf4ca74a4b41"
+        }
+      ]
+    },
+    {
+      "id": "eucalyptus_bark",
+      "category": "bark",
+      "title": "Eucalyptus Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/eucalyptus_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/eucalyptus_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 79865,
+          "sha256": "5e11ba191b3665ed18490b17fd441884ad24465d519a15c09130bb6fe6e009b6"
+        },
+        {
+          "path": "bark/eucalyptus_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 305682,
+          "sha256": "b8344be1c0d76a16fd5f556a0b2d4c6a93f150938b99823e2f97c071e5a2aba1"
+        },
+        {
+          "path": "bark/eucalyptus_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 7101,
+          "sha256": "043ed93b4b182601006bd5f9193df83bd6ed511fdb7e69694d583b5d459d853e"
+        },
+        {
+          "path": "bark/eucalyptus_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 331529,
+          "sha256": "608e90a930420426158ad805e3c9811b43755ba7ad0c58112782637fa0cfd6bd"
+        },
+        {
+          "path": "bark/eucalyptus_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1148165,
+          "sha256": "ba6137582ceddc440a765ecc8d958a50ded67070cbd751226c2b52cf900c09af"
+        },
+        {
+          "path": "bark/eucalyptus_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 35011,
+          "sha256": "3fc447327923456d48b7d0cc6402ae6279c30a7adffa2782943eb401a712f7fe"
+        },
+        {
+          "path": "bark/eucalyptus_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1358839,
+          "sha256": "9f8e359d3bc69823513793aeaa03170b84b008d083fdeb81db6c2649fa5e01b3"
+        },
+        {
+          "path": "bark/eucalyptus_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3514326,
+          "sha256": "c4213b04935db789bdcdf8b3d4594cfcfe0ff7debb32903095c1a2603fa8430e"
+        },
+        {
+          "path": "bark/eucalyptus_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 186492,
+          "sha256": "7ffa281a92782d46b30644fc92f6ba6a43748742379619fb12b84eb37fe1a901"
+        }
+      ]
+    },
+    {
+      "id": "trident_maple_bark",
+      "category": "bark",
+      "title": "Trident Maple Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/trident_maple_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/trident_maple_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 73294,
+          "sha256": "9172435d6226753dd08726db0c9097bdd81d4289b80ca0e9d28dac4a919996e5"
+        },
+        {
+          "path": "bark/trident_maple_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 276877,
+          "sha256": "a2c52869e646e7d24ee1a4674c16e2564d91c3d5a090ea9f1192950e25f3ee85"
+        },
+        {
+          "path": "bark/trident_maple_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 17532,
+          "sha256": "95ad09e46f9d7e5da740bb570320660d5b1989ad684144c22f95d858eabcb8ce"
+        },
+        {
+          "path": "bark/trident_maple_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 303293,
+          "sha256": "56611d3af50a2c6f4c93975fea215dbcbc34c91ca47a70ca472bfb60a96fcd6f"
+        },
+        {
+          "path": "bark/trident_maple_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 975167,
+          "sha256": "3c748b7e3459216bf96c44997612ed29ee78e6cd17559c7fef4daff7799f79b6"
+        },
+        {
+          "path": "bark/trident_maple_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 80261,
+          "sha256": "58070607ec7340d163ce2fe0b6edb62607456a80a61930892b93eee301a4590d"
+        },
+        {
+          "path": "bark/trident_maple_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1252828,
+          "sha256": "608f1401ef99081a06735ac867409a93c69bfed156140e5ed9fa7e34dfd1deed"
+        },
+        {
+          "path": "bark/trident_maple_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2906601,
+          "sha256": "fa1fe97aea9d6d7c03b9d026b28c9257ca94ec6e9a7e682b06aee55f0fbd0c77"
+        },
+        {
+          "path": "bark/trident_maple_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 382420,
+          "sha256": "17a4c9635a506719d9d57217b90cf2e0da333c5252487fb247a255c1e1ff9363"
+        }
+      ]
+    },
+    {
+      "id": "palm_bark",
+      "category": "bark",
+      "title": "Palm Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/palm_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/palm_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 66390,
+          "sha256": "b864fe05b426a2469c992e7be1a39d5d484111bd4c024a68e8443c38385acb80"
+        },
+        {
+          "path": "bark/palm_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 304767,
+          "sha256": "1b0c18d9f467a64ad6961ea4dd99b544dc1bef8b12ee6a36a3575ca4fc4ce3fb"
+        },
+        {
+          "path": "bark/palm_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 9769,
+          "sha256": "96d4c04832b3fc63e31427c0239bed3e6062d4c8172213919744057a3df42281"
+        },
+        {
+          "path": "bark/palm_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 287812,
+          "sha256": "753ce3e3e693b1795023e313aaf8011391ccb838e17ded426c035fe959c1f9ba"
+        },
+        {
+          "path": "bark/palm_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1234823,
+          "sha256": "73feb3e962039ca4672883e305422e2a4ff880e97d5b18bf34d96c6400e9296d"
+        },
+        {
+          "path": "bark/palm_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 49223,
+          "sha256": "ea17ee927c83156cc175439562612bc9efcf258184621425a8e40e7e4594c78c"
+        },
+        {
+          "path": "bark/palm_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1246755,
+          "sha256": "76cea9fa3b1dc78ba90dbc7e1e5b83bb8eb33a07b4f12e0f51bed29ded30a2d7"
+        },
+        {
+          "path": "bark/palm_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3901643,
+          "sha256": "6385087dd49a74be8690a35593b03159a88b9896a3a0c809c674687bb1477dd8"
+        },
+        {
+          "path": "bark/palm_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 267020,
+          "sha256": "c988d66fd291e2d8656bb34d4320940c6e5519e2dc66804e24c68758db10e86d"
+        }
+      ]
+    },
+    {
+      "id": "japanese_cedar_bark",
+      "category": "bark",
+      "title": "Japanese Cedar Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/japanese_cedar_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/japanese_cedar_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 256,
+          "height": 512,
+          "bytes": 32417,
+          "sha256": "ac816618da0dc933cf487f2906b0e82bb395f69fd1284afc73e812df4d7337c9"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 256,
+          "height": 512,
+          "bytes": 115207,
+          "sha256": "2b8d9fbd48bbccbb37ec84bea722a08e81f9a5b268bbac86e8a4b6598155997a"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 256,
+          "height": 512,
+          "bytes": 4459,
+          "sha256": "feddab779dc66381ddb0b8353b6f9922ceb6a2aebbbcd3190669f6e82bdfed71"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 512,
+          "height": 1024,
+          "bytes": 134702,
+          "sha256": "fcdb1fa3f291f270184a663cc66bb933ee698cbd7b6ab037450446347df9ad3b"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 512,
+          "height": 1024,
+          "bytes": 493573,
+          "sha256": "401bf3fd13b3754dcc2211575bf009862bc366e01f23a7c9c3162988a67962a8"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 512,
+          "height": 1024,
+          "bytes": 18529,
+          "sha256": "cff9945e4e7cfa116e9709496d76252a17a7160687c6a1da89f45c3d822b4607"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 536362,
+          "sha256": "acbdaf19a63ed68038b67c2e32989b7cc2b89cf21c9c6a05a32f751094fc92c6"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 1719201,
+          "sha256": "a7f86e6c99c7397a70f96fd0d5fbd5bd0a62dd9c1ef26843a123f99a0283e33e"
+        },
+        {
+          "path": "bark/japanese_cedar_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 79464,
+          "sha256": "c80b0bea63a0fbdb3a6e3e87fe3ca4f63c5e2337efa78a80b78082bc74b7ab8e"
+        }
+      ]
+    },
+    {
+      "id": "bark_platanus",
+      "category": "bark",
+      "title": "Bark Platanus",
+      "authors": [
+        "Dimitrios Savva"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/bark_platanus",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/bark_platanus-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 104359,
+          "sha256": "d0805b44b848f6e9e90eac2bd80e0ec877b6f032fd55617667f7148c16b11dcb"
+        },
+        {
+          "path": "bark/bark_platanus-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 323683,
+          "sha256": "38746e21af8ed1042735dbb327c9831fcd16486e658764ac643667a06ac67a69"
+        },
+        {
+          "path": "bark/bark_platanus-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 34504,
+          "sha256": "3d229e84623a1292a86768c6f6941201e76d26908d5f69bd4f372bae4cff5505"
+        },
+        {
+          "path": "bark/bark_platanus-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 402990,
+          "sha256": "b677a40a1bb4f34c6c7d3cbd206b0c0e324dd04bcda91cd29f6a611c6e22fd14"
+        },
+        {
+          "path": "bark/bark_platanus-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1189959,
+          "sha256": "8efe6d44f4fe62bf0cba270d1e4b7e460de04d6eb5119ed694d01ebf2120d166"
+        },
+        {
+          "path": "bark/bark_platanus-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 134015,
+          "sha256": "0351464e795f635fd1f0802906612f09c3e4992e0b22dd432adac94b887e8f5a"
+        },
+        {
+          "path": "bark/bark_platanus-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1510657,
+          "sha256": "1c26ce14184ca9668290878fafb3ce73e467fe782efa96b8ef7abe85fb300224"
+        },
+        {
+          "path": "bark/bark_platanus-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3660120,
+          "sha256": "28e0543c69b987f96914596cbaa34d5489e2cdb9cae45e5799dcf4057f79112a"
+        },
+        {
+          "path": "bark/bark_platanus-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 508179,
+          "sha256": "24ec55f23ea40e12c445f97e8705a45f8b8f2ef415298a18c72fdda37f6d44a7"
+        }
+      ]
+    },
+    {
+      "id": "bark_bluegum",
+      "category": "bark",
+      "title": "Bark Blue gum",
+      "authors": [
+        "Dimitrios Savva"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/bark_bluegum",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/bark_bluegum-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 96269,
+          "sha256": "3fcc489e63d1ea88880fc3be5ccf791e48adccebab2d175395bcc3a93086be6f"
+        },
+        {
+          "path": "bark/bark_bluegum-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 261028,
+          "sha256": "53792497c4a504634aa6966e538174eeee606b05d27446700223e28185be661f"
+        },
+        {
+          "path": "bark/bark_bluegum-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 26448,
+          "sha256": "46f3be69c8a73b82b2b0342ee65dcb82d5932c12eba92e891812ae87f66f521b"
+        },
+        {
+          "path": "bark/bark_bluegum-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 380624,
+          "sha256": "a37b35ce1a78aa3541aa8f9c44780f4b436978f7991de43606f4ce5ec9505166"
+        },
+        {
+          "path": "bark/bark_bluegum-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 982448,
+          "sha256": "7576c38afec86d90507ba2416054a6ccc9e3d00daa7ca7843ee8e43e239cf592"
+        },
+        {
+          "path": "bark/bark_bluegum-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 104208,
+          "sha256": "3b8af3da9dc22c51ddf2cd542154eb6d2d5c5f57e75834eb8cc38a08afaf9a82"
+        },
+        {
+          "path": "bark/bark_bluegum-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1521515,
+          "sha256": "b1b947ee80e8340ba18f3c3e79166e902f369175a9de876fa39b0f48814b61c1"
+        },
+        {
+          "path": "bark/bark_bluegum-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3303162,
+          "sha256": "d2438350fe5aad71c44a6698dd94aa1428135413dd6a614ecb9339795a883205"
+        },
+        {
+          "path": "bark/bark_bluegum-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 419777,
+          "sha256": "72f1b649cabdbe236b1ac73892b779b0dd7e6de3a9442dfdf207b1b6c3df91b6"
+        }
+      ]
+    },
+    {
+      "id": "metasequoia_bark",
+      "category": "bark",
+      "title": "Metasequoia Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/metasequoia_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/metasequoia_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 101152,
+          "sha256": "c3c847434ae58145fb4d5ff56b21a5951bfb7c54807323b2fbf957c1738414e6"
+        },
+        {
+          "path": "bark/metasequoia_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 239884,
+          "sha256": "307fecb9e09bebfd92858e767fb5ca6c4a153f181b20fd98655492e8df32a85a"
+        },
+        {
+          "path": "bark/metasequoia_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 12996,
+          "sha256": "855f33ae601db3ce573e2da86ecd80f08b8742410e1effe55c567afc81fd2ca2"
+        },
+        {
+          "path": "bark/metasequoia_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 380081,
+          "sha256": "a0f82f9148eb26cea5a41a431c7a8eed167825ef1ab898cec863a14c93b3ad75"
+        },
+        {
+          "path": "bark/metasequoia_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 935132,
+          "sha256": "75cb98c8d79d2e0f033a43cea91274fa6eb4634d7cbe1e76db2299c0485bf8c4"
+        },
+        {
+          "path": "bark/metasequoia_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 54341,
+          "sha256": "4e156d5ce5fd3b02808df700406205cedfcc5d77a93199cf163b314cfb97b74a"
+        },
+        {
+          "path": "bark/metasequoia_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1391685,
+          "sha256": "fe323e5039d62d4465ffc57f5981949688cecda766f935e94f5d76c49322edef"
+        },
+        {
+          "path": "bark/metasequoia_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3031753,
+          "sha256": "337d871f7063fb5427f4f10efdb10d53bd5b04affb9ed8104c4ed4e2c20a44c6"
+        },
+        {
+          "path": "bark/metasequoia_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 238566,
+          "sha256": "9c32808725665f0db28630d7b40a12c8ef635efec1a187ce043d4163e3fbd416"
+        }
+      ]
+    },
+    {
+      "id": "chinese_hackberry_bark",
+      "category": "bark",
+      "title": "Chinese Hackberry Bark",
+      "authors": [
+        "Charlotte Baglioni"
+      ],
+      "source": "polyhaven",
+      "sourceUrl": "https://polyhaven.com/a/chinese_hackberry_bark",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/chinese_hackberry_bark-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 256,
+          "height": 512,
+          "bytes": 31318,
+          "sha256": "c9490d45d098411f6ca65d80e1e3adfb415c3d464334799d14c8bcff39354778"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 256,
+          "height": 512,
+          "bytes": 58782,
+          "sha256": "8ab4d3ab75fe3dfc0d3f7039e25b0afd72552d2cc5671f49c5025168c806cd80"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 256,
+          "height": 512,
+          "bytes": 3138,
+          "sha256": "4d5ae4302aec4d098cbdbbf8192e49873ab8581c4bd60b511447fcb6240830cf"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 512,
+          "height": 1024,
+          "bytes": 131412,
+          "sha256": "0d699b7bad779143db6362458c47df133982a2e6b3e2e9709526f1b2903387e0"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 512,
+          "height": 1024,
+          "bytes": 310636,
+          "sha256": "2d2efccb6e7092ce22318a72bc082fed492616bd31299a5889960db2f6e2a587"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 512,
+          "height": 1024,
+          "bytes": 12496,
+          "sha256": "6dba11ddedf119786a83717a2052db0d7b17d2e8c968d51ac7a2f0e789e8355c"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 555805,
+          "sha256": "3763fb4d44af162cb902dbbde0b9bc9e3cf6b6962ad2ac9406a5cc2f9660015c"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 1280366,
+          "sha256": "35f4687c64e0d98a10c7d63dd1b386a72d605d8060acb67ddfcc37e780b23ec1"
+        },
+        {
+          "path": "bark/chinese_hackberry_bark-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 60754,
+          "sha256": "09ee8eb17f6a3c0ddf3aceb6e292cc870935bf2ef148aefc14378a71637629ed"
+        }
+      ]
+    },
+    {
+      "id": "Bark001",
+      "category": "bark",
+      "title": "Bark 001",
+      "authors": [],
+      "source": "ambientcg",
+      "sourceUrl": "https://ambientcg.com/view?id=Bark001",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/Bark001-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 256,
+          "height": 512,
+          "bytes": 85564,
+          "sha256": "ca583572661fed87c79981213e9f2b30c4c0b2e77d26e438ce9c890e27aa2a13"
+        },
+        {
+          "path": "bark/Bark001-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 256,
+          "height": 512,
+          "bytes": 166854,
+          "sha256": "3ba05000db4dd471e50cfbdb5c51af460826f3b999436226c3509edad3dce6d7"
+        },
+        {
+          "path": "bark/Bark001-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 256,
+          "height": 512,
+          "bytes": 66605,
+          "sha256": "e11dd58e728190a148abbe78984917f112aab47b5c22f0ea6d37fd923a75e6d7"
+        },
+        {
+          "path": "bark/Bark001-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 512,
+          "height": 1024,
+          "bytes": 325085,
+          "sha256": "faa30f9fc55d872e8695e32df4ff49056d5298a61c8ae7e224c2352897969946"
+        },
+        {
+          "path": "bark/Bark001-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 512,
+          "height": 1024,
+          "bytes": 801074,
+          "sha256": "7f6ba7d1dd4cbfbcd2d36b7929ad6b6bfd1a3617435af4bfdb63d96a4b25d5a7"
+        },
+        {
+          "path": "bark/Bark001-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 512,
+          "height": 1024,
+          "bytes": 240475,
+          "sha256": "34fcaa7aa7219e243135ca588a01a4dcf89bdbe98630895080bf782ed7170615"
+        },
+        {
+          "path": "bark/Bark001-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 1110757,
+          "sha256": "ff4a71cf35955c73a151249a5bd747fb71ef0d7772ba403625e5d0b0536b5105"
+        },
+        {
+          "path": "bark/Bark001-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 3394637,
+          "sha256": "a42a8c610f596f7d2367d8017bcc965223e192ac2967fab6c53cec8d5f130cf3"
+        },
+        {
+          "path": "bark/Bark001-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 2048,
+          "bytes": 750467,
+          "sha256": "670ff287b3914626d8256cc52415683983b4319c8a7a453656393def1cf346cb"
+        }
+      ]
+    },
+    {
+      "id": "Bark002",
+      "category": "bark",
+      "title": "Bark 002",
+      "authors": [],
+      "source": "ambientcg",
+      "sourceUrl": "https://ambientcg.com/view?id=Bark002",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/Bark002-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 129529,
+          "sha256": "586c89ee50c8550fa37d5f93aa4f9135a352de9919d193d962f47a8f68015335"
+        },
+        {
+          "path": "bark/Bark002-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 401270,
+          "sha256": "506016c09a47015071cf0a09b43ddd6988c2f405351252b6dff2ba1badf4b7f0"
+        },
+        {
+          "path": "bark/Bark002-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 86786,
+          "sha256": "2ea105084a4d7d8c0b0792c4d37102f278f268a602fba0d60f97b19707b478ce"
+        },
+        {
+          "path": "bark/Bark002-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 506668,
+          "sha256": "cbb3b559afcdc21f5418a4cbe263527a01dad7fb362cd452e3f13e8ed454bc4c"
+        },
+        {
+          "path": "bark/Bark002-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1466426,
+          "sha256": "69046ddb8cd85d6a6b15d997704097be80e8926dc942f15fc0711a0fd81023fa"
+        },
+        {
+          "path": "bark/Bark002-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 333746,
+          "sha256": "d04549c4d30df48e32d461090f7a6df19b698de524807b5fa1533726a2f1cd10"
+        },
+        {
+          "path": "bark/Bark002-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1698110,
+          "sha256": "2b8700eff12306bcc77c980db693c8decaf8450c841f754e267949ff9fb75708"
+        },
+        {
+          "path": "bark/Bark002-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 4204846,
+          "sha256": "445f56d2acf46c8ae83763a1b10c452435ee391d25f88d44b9e7c6acb6e9313d"
+        },
+        {
+          "path": "bark/Bark002-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1141043,
+          "sha256": "cbd85d8ee6dc236bddbe6de7b0d980b88a0a748cc2da57f2540e0405b8985436"
+        }
+      ]
+    },
+    {
+      "id": "Bark003",
+      "category": "bark",
+      "title": "Bark 003",
+      "authors": [],
+      "source": "ambientcg",
+      "sourceUrl": "https://ambientcg.com/view?id=Bark003",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/Bark003-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 108865,
+          "sha256": "60585dc1842dd18baeb12e4c54ab29a8fb05d6483abfb5a0ba95c6d931d1ef90"
+        },
+        {
+          "path": "bark/Bark003-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 419782,
+          "sha256": "f057c533c9379e469a1e11e135a9315ee8a0b68c1d85f25da9528ac45b2ef7bf"
+        },
+        {
+          "path": "bark/Bark003-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 89749,
+          "sha256": "56d176c23e6abe67d4e0c27a01ff72def8300deb288661ba9d4d50b57cbfa181"
+        },
+        {
+          "path": "bark/Bark003-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 429589,
+          "sha256": "2a8319d214b6f7f79278ec44b2f7866799018423aeb5eb8bee5280c30f914b01"
+        },
+        {
+          "path": "bark/Bark003-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1596675,
+          "sha256": "8991ae741bbeabe17ae3b16f70d9b0ab8d3778a85bd9c07dc3c78e3b1ebc30a4"
+        },
+        {
+          "path": "bark/Bark003-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 347174,
+          "sha256": "1e5ee0b1bd91906d88f17c1ca8389e9e5fa2a221cb63b7d48c64b6e530eb584e"
+        },
+        {
+          "path": "bark/Bark003-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1424117,
+          "sha256": "c5b04fae95c5a30b81c1c85ce0ec67f5667a551e6a789acb21b38d0afb7ed48d"
+        },
+        {
+          "path": "bark/Bark003-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 4956513,
+          "sha256": "4ef91d1d885e9aac59f8c9fdfab504fc552886fc42993b822bb9e411a058478a"
+        },
+        {
+          "path": "bark/Bark003-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1175246,
+          "sha256": "f19b6c488708a17ad71dbe11674aedfc91502b5435ff7a59506315224852c82e"
+        }
+      ]
+    },
+    {
+      "id": "Bark009",
+      "category": "bark",
+      "title": "Bark 009",
+      "authors": [],
+      "source": "ambientcg",
+      "sourceUrl": "https://ambientcg.com/view?id=Bark009",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/Bark009-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 92279,
+          "sha256": "729ca7dd5ddde66673beefac61c052383d5c241b0d00c4262530b48290ac4d59"
+        },
+        {
+          "path": "bark/Bark009-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 334763,
+          "sha256": "ed54632f66e2819342a036ed7012647e7b782b5569403082720df73049ebaada"
+        },
+        {
+          "path": "bark/Bark009-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 43255,
+          "sha256": "0dfd5d962cb0b01c3a0df53ff267d1bdf3afa2428ff4b8c0719a06ea586143c9"
+        },
+        {
+          "path": "bark/Bark009-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 356820,
+          "sha256": "cafdeafe3a74fbf2f6c1db8e6fde97348593149554b39fc6add910604d408497"
+        },
+        {
+          "path": "bark/Bark009-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1452622,
+          "sha256": "fc7486ff68f45ce0fdf4cc2d78bcd2d9569a1cf7bbbc4439e928b453b2a38a6b"
+        },
+        {
+          "path": "bark/Bark009-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 269362,
+          "sha256": "616f748d29e1ce139460a657b105c6ddfee3b7ce8a5d12935ab31fbe23cc4ca3"
+        },
+        {
+          "path": "bark/Bark009-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1304410,
+          "sha256": "92f0d9895bc8c38f2894bba1b39c3d127252369dfe95e5024758e7cb0d9b83a2"
+        },
+        {
+          "path": "bark/Bark009-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 5440120,
+          "sha256": "cca47e6c5acab307c6e0c17ae6b70a8f7c25976b46ef9d1b88b10fb474389f85"
+        },
+        {
+          "path": "bark/Bark009-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1265883,
+          "sha256": "193bd7e9f3c30f245f7e52ea751bffd9c44e79297755eeb5248d5405c2c203ed"
+        }
+      ]
+    },
+    {
+      "id": "Bark014",
+      "category": "bark",
+      "title": "Bark 014",
+      "authors": [],
+      "source": "ambientcg",
+      "sourceUrl": "https://ambientcg.com/view?id=Bark014",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/Bark014-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 159896,
+          "sha256": "60c5d37e4e62abcfe12c126d06cf58530bbf298f3babbb6f034ca063737cd685"
+        },
+        {
+          "path": "bark/Bark014-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 193756,
+          "sha256": "4d06b83d243d78c34a2dc5ded6208ed51f8551c9b8c2754bf8b995c5810c8280"
+        },
+        {
+          "path": "bark/Bark014-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 118603,
+          "sha256": "1eaa411b3b2afedbb83bc589417fea41f0d37f88fbe614164563ea1de4995932"
+        },
+        {
+          "path": "bark/Bark014-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 621980,
+          "sha256": "78c1cec52f0d7285ab4df7912e29ad3cc6b610b5cd5742bbba373849e21a12eb"
+        },
+        {
+          "path": "bark/Bark014-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 834035,
+          "sha256": "bb2e6386b94ee811c4b95d99c6b47131e77d75b9b32751b92cfbed3087c91262"
+        },
+        {
+          "path": "bark/Bark014-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 470687,
+          "sha256": "e26504e318b5b3e40b9f4c6430f92fc471d2834bea2097d33bf16b82a242210f"
+        },
+        {
+          "path": "bark/Bark014-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2234392,
+          "sha256": "ba3cb89a7f5b87d6090dde55200ecf5db2d6f2487aac288cc94d16d22f0ef3b7"
+        },
+        {
+          "path": "bark/Bark014-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3210241,
+          "sha256": "0be686735a4f4e5f733e73097bff1f8bfe344d1339bbde104de475a969bb23fa"
+        },
+        {
+          "path": "bark/Bark014-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1776770,
+          "sha256": "c3eec8db2c9578d46197ad8a7d38d41d2c0f8fd466d878b765f4c971aee267c8"
+        }
+      ]
+    },
+    {
+      "id": "Bark016",
+      "category": "bark",
+      "title": "Bark 016",
+      "authors": [],
+      "source": "ambientcg",
+      "sourceUrl": "https://ambientcg.com/view?id=Bark016",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "bark/Bark016-512-color.jpg",
+          "size": "512",
+          "map": "color",
+          "width": 512,
+          "height": 512,
+          "bytes": 163950,
+          "sha256": "21eec59add2c7297a6dad9683bf6499b6f713f46a9ba8527dd601f78b613fc1f"
+        },
+        {
+          "path": "bark/Bark016-512-normal.jpg",
+          "size": "512",
+          "map": "normal",
+          "width": 512,
+          "height": 512,
+          "bytes": 251237,
+          "sha256": "464f90ad1834ba04c752986310eaa1815053527fcd88bc7f1c699cf90572d769"
+        },
+        {
+          "path": "bark/Bark016-512-roughness.jpg",
+          "size": "512",
+          "map": "roughness",
+          "width": 512,
+          "height": 512,
+          "bytes": 109024,
+          "sha256": "3e1bbea36ffffa4f6967708fa2a493c51898997443f17b564c4578d399b77169"
+        },
+        {
+          "path": "bark/Bark016-1k-color.jpg",
+          "size": "1k",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 634263,
+          "sha256": "8232e6c62ddd385b31bc0d8664e1fff78bed690df4f7562e3cf1f4904c66bed6"
+        },
+        {
+          "path": "bark/Bark016-1k-normal.jpg",
+          "size": "1k",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 971370,
+          "sha256": "d14022b8655013f5782bf734868f140e9aeffd038e85d42d60196b140fa87e4e"
+        },
+        {
+          "path": "bark/Bark016-1k-roughness.jpg",
+          "size": "1k",
+          "map": "roughness",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 423292,
+          "sha256": "06a21f278b3e6322bbd81fec24ec6a5bd1ec5e3c7089bfb936668e6b497919e7"
+        },
+        {
+          "path": "bark/Bark016-2k-color.jpg",
+          "size": "2k",
+          "map": "color",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 2266665,
+          "sha256": "aebf8011db18e5de54c967b0d85db35cc4da41953c38fb28f108533fb1c018ce"
+        },
+        {
+          "path": "bark/Bark016-2k-normal.jpg",
+          "size": "2k",
+          "map": "normal",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 3267544,
+          "sha256": "123948c9d349015d0a380cc4909efd9996115b783a27746a73f256c7c6e95b82"
+        },
+        {
+          "path": "bark/Bark016-2k-roughness.jpg",
+          "size": "2k",
+          "map": "roughness",
+          "width": 2048,
+          "height": 2048,
+          "bytes": 1488596,
+          "sha256": "4cc7db7b9c1c25f27693c721a2966eea92b2a3dd30ce8926e8430a850d0e0847"
+        }
+      ]
+    },
+    {
+      "id": "ash",
+      "category": "leaves",
+      "title": "Ash",
+      "authors": [
+        "Daniel Greenheck"
+      ],
+      "source": "ez-tree",
+      "sourceUrl": "https://github.com/dgreenheck/ez-tree",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "leaves/ash-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 528935,
+          "sha256": "9a0fccb97293569314e3090327893e35bede8ca4d2c9d9e8828ae753b1c26247"
+        }
+      ]
+    },
+    {
+      "id": "aspen",
+      "category": "leaves",
+      "title": "Aspen",
+      "authors": [
+        "Daniel Greenheck"
+      ],
+      "source": "ez-tree",
+      "sourceUrl": "https://github.com/dgreenheck/ez-tree",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "leaves/aspen-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 442410,
+          "sha256": "d718509283eaf520d4d3464158910e1299d3bff41d5a4c75203359709f70b7cb"
+        }
+      ]
+    },
+    {
+      "id": "oak",
+      "category": "leaves",
+      "title": "Oak",
+      "authors": [
+        "Daniel Greenheck"
+      ],
+      "source": "ez-tree",
+      "sourceUrl": "https://github.com/dgreenheck/ez-tree",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "leaves/oak-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 664777,
+          "sha256": "20e2e54398a3e491509b2a678795962b73a51546eb62c8e6e9fd51e2d2f45f87"
+        }
+      ]
+    },
+    {
+      "id": "pine",
+      "category": "leaves",
+      "title": "Pine",
+      "authors": [
+        "Daniel Greenheck"
+      ],
+      "source": "ez-tree",
+      "sourceUrl": "https://github.com/dgreenheck/ez-tree",
+      "license": "MIT",
+      "files": [
+        {
+          "path": "leaves/pine-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 950163,
+          "sha256": "911bbea3aa946e709a40705b83d323fa2b04305971a8923a97d0ce2c3f4d4f11"
+        }
+      ]
+    },
+    {
+      "id": "aspen_autumn",
+      "category": "leaves",
+      "title": "Quaking aspen, autumn",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/aspen_autumn-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 900158,
+          "sha256": "13f7e09b1257101b51bbf3555e78ee2e0bbe6a2cfd4c3e4aab23d3ed7ec42b9e"
+        },
+        {
+          "path": "leaves/aspen_autumn-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 357879,
+          "sha256": "31ec2f529e726266abdb1841887df5d9685982fc66f8b6645a4b13b59036406b"
+        }
+      ]
+    },
+    {
+      "id": "european_aspen",
+      "category": "leaves",
+      "title": "European aspen",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/european_aspen-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1281421,
+          "sha256": "3e351d9d9ee2463f57af01d78160b58b26a0bb0af48ac40d1cc909968963dd10"
+        },
+        {
+          "path": "leaves/european_aspen-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 418982,
+          "sha256": "c0bcdb37e8ebccde80da48fc7c117c8c6c8229cdeb90915d4ed867ab22521250"
+        }
+      ]
+    },
+    {
+      "id": "bigtooth_aspen",
+      "category": "leaves",
+      "title": "Bigtooth aspen",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/bigtooth_aspen-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1615128,
+          "sha256": "82670f64c27a9908bc0eb0135d1a895e8da6f8f34cd0bbc92055f0479eb22865"
+        },
+        {
+          "path": "leaves/bigtooth_aspen-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 591190,
+          "sha256": "1bdf57a764e7dbfd180676f0624892567f794b79431479fe7f0a233dca491448"
+        }
+      ]
+    },
+    {
+      "id": "alder_buckthorn",
+      "category": "leaves",
+      "title": "Alder buckthorn, autumn",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/alder_buckthorn-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 800351,
+          "sha256": "0dcc5fef3e52bc1aead6929f52fa2859fe33167925d42bece7c66ed775cd1ee9"
+        },
+        {
+          "path": "leaves/alder_buckthorn-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 297875,
+          "sha256": "5deb313213ed9e5c13df422a1c9cd6c35228919cf8638a3c6e69bd73025b2a8e"
+        }
+      ]
+    },
+    {
+      "id": "smoke_bush",
+      "category": "leaves",
+      "title": "Purple smoke bush",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/smoke_bush-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1307286,
+          "sha256": "9134acdc8e9e9d2d95250f5bf9cf49e8e48de35e101ef9ebf0ac0e1e0cebc833"
+        },
+        {
+          "path": "leaves/smoke_bush-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 426907,
+          "sha256": "9d325b4335e361bfa3a3ffb0dc10ab05f1b4f8f820a6d828afc7b3615b91aef1"
+        }
+      ]
+    },
+    {
+      "id": "field_maple_autumn",
+      "category": "leaves",
+      "title": "Field maple, autumn",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/field_maple_autumn-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1096116,
+          "sha256": "524749eb2cd8e92b95c9ff2d5ab4e90bd50ed0135964de4eb0913b0e15d02e93"
+        },
+        {
+          "path": "leaves/field_maple_autumn-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 492002,
+          "sha256": "05bf3f48eb976887aad852e06777d746e7d0315297a1c0f194fde3fc894b504b"
+        }
+      ]
+    },
+    {
+      "id": "bamboo",
+      "category": "leaves",
+      "title": "Bamboo",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/bamboo-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1172358,
+          "sha256": "5bce43ed2bbff8b316a6fb76a4a60ec5def984c8521aa605e998cea2f06aef1e"
+        },
+        {
+          "path": "leaves/bamboo-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 889085,
+          "sha256": "5b4acf55e4d3afa93f681e01e9939d82d694f48d62a1ab8cc03f82c21669148e"
+        }
+      ]
+    },
+    {
+      "id": "fir",
+      "category": "leaves",
+      "title": "Fir",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/fir-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1130684,
+          "sha256": "5995d6eee0f0c2a0b7b300c739f9dac8ac9ff285b1084de7e22d5ef668467657"
+        },
+        {
+          "path": "leaves/fir-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 573206,
+          "sha256": "dd3bae0c19b8435bfa8f90064e5ae24e59940ce8693327bd4e4cbecc926dd71a"
+        }
+      ]
+    },
+    {
+      "id": "white_pine",
+      "category": "leaves",
+      "title": "White pine",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/white_pine-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1933125,
+          "sha256": "8178ee054f2c00e915bf1018ca82aa91fa50f6ecfd1d3cd8e832f9d01bf97ca5"
+        },
+        {
+          "path": "leaves/white_pine-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1078934,
+          "sha256": "a87fc37c4d63afe3cefe965c68d993c28c6f02167c84ae3cda7f1cdf9ab2ad19"
+        }
+      ]
+    },
+    {
+      "id": "arborvitae_autumn",
+      "category": "leaves",
+      "title": "Arborvitae, autumn",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/arborvitae_autumn-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1734087,
+          "sha256": "65772de2a6f42c2440751745feaebaf5776bd519e00faee091d32f365905b4c0"
+        },
+        {
+          "path": "leaves/arborvitae_autumn-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1026922,
+          "sha256": "8d0bd0c43fc36e1563dd031996a39e2dc9fd04b81d3ebe88d385d19222f1e485"
+        }
+      ]
+    },
+    {
+      "id": "birch_autumn",
+      "category": "leaves",
+      "title": "Birch, autumn",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/birch_autumn-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 558234,
+          "sha256": "ece1a4cb838ca644979e797106eede4372ac32c60e60734ca239adee83cad06e"
+        },
+        {
+          "path": "leaves/birch_autumn-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 218862,
+          "sha256": "b1b7a1fe5c49fe9e05ab0633d4b47f85b632e64d1c1ab3960d9f708cd0357014"
+        }
+      ]
+    },
+    {
+      "id": "larch",
+      "category": "leaves",
+      "title": "Larch",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/larch-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 824895,
+          "sha256": "1bba19ce9a8331df406e76244247fc0925476231661fb3dace08b642d7d3228f"
+        },
+        {
+          "path": "leaves/larch-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 250601,
+          "sha256": "cb2b0a0c4f16bc7da6c898957c20de59e10a8d9ec558d6967ace63fe65e1bf46"
+        }
+      ]
+    },
+    {
+      "id": "black_locust",
+      "category": "leaves",
+      "title": "Black locust",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/black_locust-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 637198,
+          "sha256": "88421eca205a036ca0c74caed2975f4183dae1c9a037e2bf52acef7d11ac0070"
+        },
+        {
+          "path": "leaves/black_locust-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 276040,
+          "sha256": "856324d9fed54c7426c510b9657b0a434fb064f049913e85df93600eed92f830"
+        }
+      ]
+    },
+    {
+      "id": "olive",
+      "category": "leaves",
+      "title": "Olive",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/olive-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 643726,
+          "sha256": "896e7b26726038d8eb3f84bed9d3045daed9975d290687b880603eb2e9532304"
+        },
+        {
+          "path": "leaves/olive-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 242413,
+          "sha256": "04c4073cf718f5d55bfe97dcb15290275e477d774e8a80e353cfbdf963f722ea"
+        }
+      ]
+    },
+    {
+      "id": "cotoneaster",
+      "category": "leaves",
+      "title": "Cotoneaster with berries",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/cotoneaster-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 671157,
+          "sha256": "c8bfdc1e20f49bd64835c59b569afddf9c3a70d1c0f0bb4706a8c97802e86c75"
+        },
+        {
+          "path": "leaves/cotoneaster-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 337740,
+          "sha256": "27795255f57e408b4b3b5882458ef5bee45c8326ab105a84ec526bf5ea731657"
+        }
+      ]
+    },
+    {
+      "id": "bare_twig_1",
+      "category": "leaves",
+      "title": "Bare twig 1",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/bare_twig_1-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 360828,
+          "sha256": "6c41c0b9660a81f9254f8043c0ed6c7127b16cbdb2714561e99d715e84b2056c"
+        },
+        {
+          "path": "leaves/bare_twig_1-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 195849,
+          "sha256": "54a372afbd18c17f18b7b956ddaf0af564ab2e581ee93e9ca34ea8a4e30fd43c"
+        }
+      ]
+    },
+    {
+      "id": "bare_twig_2",
+      "category": "leaves",
+      "title": "Bare twig 2",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/bare_twig_2-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 575599,
+          "sha256": "3131d3303e7ed51063757b866a9b351807d3dd9db639ee29b76725c260356878"
+        },
+        {
+          "path": "leaves/bare_twig_2-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 274302,
+          "sha256": "a884b21ab9d46c07577106b0a6d854ef2d8debbccfbc29feb8eb36912e3b4498"
+        }
+      ]
+    },
+    {
+      "id": "white_oak_autumn",
+      "category": "leaves",
+      "title": "White oak, autumn",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/white_oak_autumn-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1231892,
+          "sha256": "65bdd48f99cf591e0e9f8222042c85d85ca0147c3c668886feac57583c4ad1f1"
+        },
+        {
+          "path": "leaves/white_oak_autumn-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 616396,
+          "sha256": "856e920a17a56cdb6b468dae6f9ae2075cbe0ff8898c5218ada868c86ed4fa94"
+        }
+      ]
+    },
+    {
+      "id": "white_oak",
+      "category": "leaves",
+      "title": "White oak",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/white_oak-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1113778,
+          "sha256": "470b600ba33fd69e3302f693270045dde850579f20092f83fd5179c542933c4e"
+        },
+        {
+          "path": "leaves/white_oak-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 616396,
+          "sha256": "e2b328bbbce9c08b8300829939ec6f62860f9388b5b9a2937856ea8e88582373"
+        }
+      ]
+    },
+    {
+      "id": "white_oak_dead",
+      "category": "leaves",
+      "title": "White oak, dead leaves",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/white_oak_dead-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1091682,
+          "sha256": "f12d2f4c2e135be9bd3782db97fd5861e8398b9661315efee5846d8fbc85945d"
+        },
+        {
+          "path": "leaves/white_oak_dead-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 616396,
+          "sha256": "56d77ebf191822a6154f69dcd683afc246fcf10157674d21b5fd3945072af51b"
+        }
+      ]
+    }
+  ]
+}

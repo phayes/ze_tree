@@ -222,7 +222,8 @@ impl Grower<'_> {
         }
 
         // A deciduous tip carries a continuation branch at the next level, or one
-        // terminal leaf when no deeper level remains.
+        // terminal leaf when no deeper level remains. A tip tapered to a point
+        // ends the branch, as evergreen tips do.
         let tip = *sections.last().expect("a branch has at least two sections");
         let tip_attachment = Attachment {
             branch: index,
@@ -230,7 +231,7 @@ impl Grower<'_> {
             t: 0.0,
         };
         if options.tree_type == TreeType::Deciduous {
-            if level < levels {
+            if level < levels && tip.radius > 0.0 {
                 self.queue.push_back(Bud {
                     origin: tip.origin,
                     orientation: tip.orientation,
@@ -242,7 +243,7 @@ impl Grower<'_> {
                     segment_count: bud.segment_count,
                     parent: Some(tip_attachment),
                 });
-            } else {
+            } else if level == levels {
                 self.record_leaf(tip_attachment, tip.origin, tip.orientation);
             }
         }

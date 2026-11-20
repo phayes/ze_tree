@@ -1,0 +1,36 @@
+# Bark textures to download and prepare for tree bark.
+# Every texture listed here is CC0: free to use, including in commercial projects.
+# Add one texture per line as `<source> <id>`, where source is:
+#   polyhaven  https://polyhaven.com/a/<id>
+#   ambientcg  https://ambientcg.com/view?id=<id>
+# Choose textures that provide 2k JPEG colour, OpenGL normal, and roughness maps.
+# Ids must be unique across both sources.
+polyhaven bark_brown_02
+polyhaven bark_brown_01
+polyhaven bark_willow
+polyhaven bark_willow_02
+polyhaven pine_bark
+polyhaven tree_bark_03
+polyhaven palm_tree_bark
+polyhaven sakura_bark
+polyhaven japanese_sycamore
+polyhaven japanese_hackberry_bark
+polyhaven chinese_cedar_bark
+polyhaven japanese_zelkova_bark
+polyhaven japanese_camphor_bark
+polyhaven knotted_pine_bark
+polyhaven jolcham_oak_bark_01
+polyhaven eucalyptus_bark
+polyhaven trident_maple_bark
+polyhaven palm_bark
+polyhaven japanese_cedar_bark
+polyhaven bark_platanus
+polyhaven bark_bluegum
+polyhaven metasequoia_bark
+polyhaven chinese_hackberry_bark
+ambientcg Bark001
+ambientcg Bark002
+ambientcg Bark003
+ambientcg Bark009
+ambientcg Bark014
+ambientcg Bark016

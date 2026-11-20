@@ -112,10 +112,12 @@ fn glb_holds_each_part_with_its_vertex_data() {
             assert_eq!(bounds.min[axis], min);
         }
 
-        // Check surface data: bark has tangents for lighting; leaves use a transparency cutoff.
+        // Both bark and leaves must retain the tangents used for normal-map lighting.
+        // Leaves also need an alpha cutoff to hide pixels outside their outline.
         let material = primitive.material();
         if part.is_leaves() {
-            assert!(reader.read_tangents().is_none());
+            let tangents: Vec<[f32; 4]> = reader.read_tangents().unwrap().collect();
+            assert_eq!(tangents, expected.tangents);
             assert_eq!(material.name(), Some("leaves"));
             assert_eq!(material.alpha_mode(), gltf::material::AlphaMode::Mask);
             assert_eq!(
@@ -298,7 +300,7 @@ fn embedded_and_referenced_textures() {
     let tree = Tree::from_preset(TreePreset::OakSmall);
     let mesh = std::slice::from_ref(tree.mesh());
     let embed = |t: TextureRef<'_>| {
-        let format = if t.map == TextureMap::Leaf {
+        let format = if t.map == TextureMap::LeafColor {
             ImageFormat::Png
         } else {
             ImageFormat::Jpeg
@@ -334,9 +336,11 @@ fn embedded_and_referenced_textures() {
             (format!("{bark}:BarkColor"), "image/jpeg"),
             (format!("{bark}:BarkRoughness"), "image/jpeg"),
             (format!("{bark}:BarkNormal"), "image/jpeg"),
-            (format!("{leaf}:Leaf"), "image/png"),
+            (format!("{leaf}:LeafColor"), "image/png"),
         ]
     );
+    // The colour-only "oak" texture must not create a leaf normal-map reference.
+    assert!(gltf.materials().nth(1).unwrap().normal_texture().is_none());
 
     // Check the image assigned to each material input and the leaf edge sampling mode.
     let materials: Vec<gltf::Material> = gltf.materials().collect();
@@ -382,6 +386,41 @@ fn embedded_and_referenced_textures() {
     assert_eq!(uris, [format!("textures/{leaf}.png")]);
 }
 
+/// Checks that a leaf kind with a normal map exports both the material's lighting
+/// texture and one tangent per leaf vertex to orient that lighting detail.
+#[test]
+fn leaf_normal_maps_and_tangents() {
+    let mut options = TreePreset::OakSmall.options();
+    options.leaves.kind = "white_oak".to_owned();
+    let tree = Tree::new(options).unwrap();
+    let uri = |t: TextureRef<'_>| Some(format!("{}:{:?}", t.kind, t.map));
+    let gltf_options = GltfOptions {
+        textures: GltfTextures::Uri(&uri),
+        ..GltfOptions::default()
+    };
+    let gltf = read(
+        &to_glb(
+            std::slice::from_ref(tree.mesh()),
+            tree.options(),
+            &gltf_options,
+        )
+        .unwrap(),
+    );
+
+    let leaves = gltf.materials().find(|m| m.name() == Some("leaves")).unwrap();
+    let normal = leaves.normal_texture().unwrap().texture();
+    assert_eq!(normal.name(), Some("white_oak_normal"));
+    assert!(matches!(
+        normal.source().source(),
+        gltf::image::Source::Uri { uri: "white_oak:LeafNormal", .. }
+    ));
+
+    let leaf_mesh = gltf.meshes().find(|m| m.name() == Some("leaves")).unwrap();
+    let primitive = leaf_mesh.primitives().next().unwrap();
+    let tangents = primitive.get(&Semantic::Tangents).unwrap();
+    assert_eq!(tangents.count(), tree.mesh().leaves.vertex_count());
+}
+
 #[test]
 fn gltf_with_separate_binary_file() {
     let tree = Tree::from_preset(TreePreset::Bush1);
@@ -419,8 +458,8 @@ fn no_meshes_is_an_error() {
     ));
 }
 
-/// Flat-shaded bark has no normals or tangents, so viewers shade it per face;
-/// leaves keep their normals.
+/// Checks that flat-shaded bark omits normals and tangents so viewers calculate
+/// a normal for each triangle. Leaf normals and tangents must remain available.
 #[test]
 fn flat_shaded_bark_omits_normals_and_tangents() {
     let mut options = TreePreset::OakSmall.options();
@@ -439,7 +478,95 @@ fn flat_shaded_bark_omits_normals_and_tangents() {
         let primitive = mesh.primitives().next().unwrap();
         let leaves = mesh.name() == Some("leaves");
         assert_eq!(primitive.get(&Semantic::Normals).is_some(), leaves);
-        assert!(primitive.get(&Semantic::Tangents).is_none());
+        assert_eq!(primitive.get(&Semantic::Tangents).is_some(), leaves);
     }
     assert_eq!(mesh_names(&gltf), ["trunk", "branches", "leaves"]);
+}
+
+/// A small tree with fruit and flowers, flat-shaded bark, and a rig to export.
+fn fruiting_tree() -> Tree {
+    let mut options = TreePreset::AshSmall.options();
+    for (placement, cluster) in [
+        (&mut options.fruit.placement, &mut options.fruit.cluster),
+        (&mut options.flowers.placement, &mut options.flowers.cluster),
+    ] {
+        placement.count = 2;
+        placement.min_level = 2;
+        cluster.kind = ze_tree::ClusterKind::Umbel;
+        cluster.items = 5;
+    }
+    options.bark.flat_shading = true;
+    Tree::new(options).unwrap()
+}
+
+/// Fruit and flowers are their own parts, coloured per vertex, with smooth
+/// normals even when the bark is flat-shaded, and outside the rig.
+#[test]
+fn fruit_and_flowers_are_exported_with_their_colours() {
+    let tree = fruiting_tree();
+    let rig = tree.rig(&RigOptions::default()).unwrap();
+    let options = GltfOptions {
+        rig: Some(&rig),
+        ..GltfOptions::default()
+    };
+    let glb = to_glb(std::slice::from_ref(tree.mesh()), tree.options(), &options).unwrap();
+    let gltf = read(&glb);
+    let blob = gltf.blob.as_deref();
+    assert_eq!(
+        mesh_names(&gltf),
+        ["trunk", "branches", "leaves", "fruit", "flowers"]
+    );
+
+    for node in gltf.nodes().filter(|n| n.mesh().is_some()) {
+        let mesh = node.mesh().unwrap();
+        let part = match mesh.name().unwrap() {
+            "fruit" => MeshPart::Fruit,
+            "flowers" => MeshPart::Flowers,
+            _ => {
+                // Bark and leaves stay on the rig.
+                assert!(node.skin().is_some());
+                continue;
+            }
+        };
+        let expected = tree.mesh().part(part).buffers;
+        let primitive = mesh.primitives().next().unwrap();
+        let reader = primitive.reader(|_| blob);
+
+        // Geometry, smooth normals and linear vertex colours come through unchanged.
+        let positions: Vec<[f32; 3]> = reader.read_positions().unwrap().collect();
+        assert_eq!(positions, expected.positions);
+        let normals: Vec<[f32; 3]> = reader.read_normals().unwrap().collect();
+        assert_eq!(normals, expected.normals);
+        let colors: Vec<[f32; 4]> = reader.read_colors(0).unwrap().into_rgba_f32().collect();
+        assert_eq!(colors, expected.colors);
+        let uvs: Vec<[f32; 2]> = reader.read_tex_coords(0).unwrap().into_f32().collect();
+        for (uv, original) in uvs.iter().zip(&expected.uvs) {
+            assert_eq!(*uv, [original[0], 1.0 - original[1]]);
+        }
+
+        // A white material lets the vertex colours show; no joints are attached.
+        let material = primitive.material();
+        assert_eq!(material.name(), Some(mesh.name().unwrap()));
+        assert_eq!(material.pbr_metallic_roughness().base_color_factor(), [1.0; 4]);
+        assert!(material.double_sided());
+        assert!(node.skin().is_none());
+        assert!(reader.read_joints(0).is_none());
+    }
+}
+
+/// A tree without fruit or flowers gets no materials for them.
+#[test]
+fn trees_without_fruit_get_no_fruit_material() {
+    let tree = Tree::from_preset(TreePreset::OakSmall);
+    let glb = to_glb(
+        std::slice::from_ref(tree.mesh()),
+        tree.options(),
+        &GltfOptions::default(),
+    )
+    .unwrap();
+    let names: Vec<_> = read(&glb)
+        .materials()
+        .map(|m| m.name().unwrap().to_owned())
+        .collect();
+    assert_eq!(names, ["bark", "leaves"]);
 }

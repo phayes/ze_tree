@@ -1,0 +1,13 @@
+{
+  "name": "ze-tree-golden",
+  "private": true,
+  "description": "Generates reference fixtures for ze_tree by running the unmodified ez-tree JavaScript in prior_art/.",
+  "type": "module",
+  "scripts": {
+    "gen": "node gen.mjs"
+  },
+  "devDependencies": {
+    "esbuild": "0.24.2",
+    "three": "0.167.1"
+  }
+}

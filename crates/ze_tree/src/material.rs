@@ -1,64 +1,8 @@
-//! Bark and leaf settings to apply in your renderer, with helpers for locating
-//! the repository's textures. KTX2 files package compressed images for GPU use.
+//! Settings for the appearance of bark, leaves, and trellis guide wires.
+//! Apply these settings in your renderer, and use [`BARK_KINDS`] and [`LEAF_KINDS`]
+//! to choose textures from the repository's `assets/textures/` folder.
 
-use crate::{BarkOptions, LeafOptions};
-
-/// The texture encoding to load from the repository's `assets/textures/` folder.
-///
-/// Both sets contain the same images in KTX2 files. Each includes smaller image
-/// versions (mipmaps) for rendering distant surfaces and uses Zstandard (zstd)
-/// compression to reduce file size. The files are not included in the published crate.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum TextureSet {
-    /// Basis Universal UASTC, a compressed format that a compatible loader
-    /// converts to a format supported by the target GPU. Use it for portability
-    /// or glTF with `KHR_texture_basisu`. Bevy requires its `basis-universal` feature.
-    Uastc,
-    /// BC7, a compressed format that supported GPUs can use directly. Check
-    /// your target hardware and loader: support is common on desktop GPUs, but
-    /// limited on mobile devices and in glTF viewers.
-    Bc7,
-}
-
-impl TextureSet {
-    /// Returns `"uastc"` or `"bc7"`, the subfolder under `assets/textures/`.
-    pub fn dir(self) -> &'static str {
-        match self {
-            Self::Uastc => "uastc",
-            Self::Bc7 => "bc7",
-        }
-    }
-}
-
-/// The type of bark texture to load: colour, surface detail, or roughness.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum BarkMap {
-    /// Surface colour in sRGB, the colour encoding commonly used for images.
-    /// Load it as an sRGB texture so the renderer converts colours for lighting.
-    Color,
-    /// Surface lighting detail without extra geometry. Load as linear data,
-    /// using the OpenGL normal-map convention: green points along increasing
-    /// texture `v`. This is also the convention used by glTF and Bevy.
-    Normal,
-    /// How matte the surface looks; larger values mean less shiny. Load as
-    /// linear data. Red, green, and blue contain the same value. For a glTF or
-    /// Bevy metallic-roughness texture, keep the material metallic factor at
-    /// zero so the blue channel does not make the bark metallic.
-    Roughness,
-}
-
-impl BarkMap {
-    /// All three bark texture types, ordered as colour, normal, then roughness.
-    pub const ALL: [Self; 3] = [Self::Color, Self::Normal, Self::Roughness];
-
-    fn file_stem(self) -> &'static str {
-        match self {
-            Self::Color => "color",
-            Self::Normal => "normal",
-            Self::Roughness => "roughness",
-        }
-    }
-}
+use crate::{BarkOptions, LeafOptions, TrellisOptions};
 
 /// Available bark texture names. Use these values for [`BarkOptions::kind`];
 /// they cover all built-in presets.
@@ -67,26 +11,6 @@ pub const BARK_KINDS: [&str; 3] = ["Bark001", "Bark002", "Bark003"];
 /// Available leaf texture names. Use these values for [`LeafOptions::kind`];
 /// they cover all built-in presets.
 pub const LEAF_KINDS: [&str; 4] = ["ash", "aspen", "oak", "pine"];
-
-/// Returns a bark texture path relative to `assets/textures/`, such as
-/// `"bc7/bark/Bark001/normal.ktx2"`.
-///
-/// Pass the encoding, a kind from [`BARK_KINDS`] (or [`BarkOptions::kind`]), and
-/// the texture type. This only builds a path; it does not check or load the file.
-pub fn bark_texture_path(set: TextureSet, kind: &str, map: BarkMap) -> String {
-    format!("{}/bark/{kind}/{}.ktx2", set.dir(), map.file_stem())
-}
-
-/// Returns a leaf texture path relative to `assets/textures/`, such as
-/// `"uastc/leaves/oak.ktx2"`.
-///
-/// Pass the encoding and a kind from [`LEAF_KINDS`] (or [`LeafOptions::kind`]).
-/// This only builds a path; it does not check or load the file. Load leaf colours
-/// as sRGB. Their alpha stores transparency separately from colour (straight,
-/// not premultiplied, alpha).
-pub fn leaf_texture_path(set: TextureSet, kind: &str) -> String {
-    format!("{}/leaves/{kind}.ktx2", set.dir())
-}
 
 /// Bark shading settings for your renderer, matching ez-tree's appearance.
 /// Creating these settings does not load textures or configure a renderer.
@@ -166,6 +90,33 @@ impl LeafMaterial {
     }
 }
 
+/// Appearance settings for drawing the guide wires from [`TrellisOptions::wires`].
+/// Apply these settings in your renderer; no texture is needed.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct TrellisMaterial {
+    /// Wire colour as red, green, and blue values from 0 to 1, in the linear
+    /// colour space used for lighting.
+    pub base_color: [f32; 3],
+    /// How metallic the surface looks: 0 for nonmetal, 1 for metal.
+    /// [`Self::new`] sets this to 0.
+    pub metallic: f32,
+    /// How rough the surface looks: 0 is smooth and shiny, 1 is matte.
+    /// [`Self::new`] sets this to 0.8.
+    pub roughness: f32,
+}
+
+impl TrellisMaterial {
+    /// Prepares the trellis colour for lighting and sets a matte, nonmetal appearance.
+    /// The colour is converted from the options' sRGB value to linear RGB.
+    pub fn new(options: &TrellisOptions) -> Self {
+        Self {
+            base_color: srgb_hex_to_linear(options.color),
+            metallic: 0.0,
+            roughness: 0.8,
+        }
+    }
+}
+
 /// Converts the lower three bytes of `hex` from an sRGB `0xRRGGBB` colour
 /// to linear RGB values in 0–1, suitable for lighting calculations.
 fn srgb_hex_to_linear(hex: u32) -> [f32; 3] {
@@ -194,17 +145,5 @@ mod tests {
         // Very dark sRGB values use the linear part of the conversion curve.
         let [r, _, _] = srgb_hex_to_linear(0x0a_00_00);
         assert!((r - 10.0 / 255.0 / 12.92).abs() < 1e-9, "{r}");
-    }
-
-    #[test]
-    fn paths_follow_the_asset_layout() {
-        assert_eq!(
-            bark_texture_path(TextureSet::Bc7, "Bark001", BarkMap::Normal),
-            "bc7/bark/Bark001/normal.ktx2"
-        );
-        assert_eq!(
-            leaf_texture_path(TextureSet::Uastc, "oak"),
-            "uastc/leaves/oak.ktx2"
-        );
     }
 }

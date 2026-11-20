@@ -5,9 +5,29 @@
 use std::path::PathBuf;
 
 use ze_tree::{
-    BARK_KINDS, BarkMap, BarkMaterial, LEAF_KINDS, LeafMaterial, TextureSet, TreeOptions,
-    TreePreset, bark_texture_path, leaf_texture_path,
+    BARK_KINDS, BarkMaterial, LEAF_KINDS, LeafMaterial, TreeOptions, TreePreset, TrellisMaterial,
 };
+
+/// The two versions of the textures checked by these tests in `assets/textures/`:
+/// UASTC for conversion by a Basis Universal loader, and BC7 for direct GPU use.
+#[derive(Clone, Copy)]
+enum TextureSet {
+    Uastc,
+    Bc7,
+}
+
+impl TextureSet {
+    fn dir(self) -> &'static str {
+        match self {
+            Self::Uastc => "uastc",
+            Self::Bc7 => "bc7",
+        }
+    }
+}
+
+/// Bark texture filenames without `.ktx2`, paired with their expected colour handling.
+/// `true` means sRGB colour; `false` means linear values for surface bumps or roughness.
+const BARK_MAPS: [(&str, bool); 3] = [("color", true), ("normal", false), ("roughness", false)];
 
 const KTX2_IDENTIFIER: [u8; 12] = *b"\xabKTX 20\xbb\r\n\x1a\n";
 const VK_FORMAT_UNDEFINED: u32 = 0;
@@ -108,14 +128,14 @@ fn every_preset_texture_kind_is_provided() {
 #[test]
 fn texture_files_have_the_documented_formats() {
     for set in [TextureSet::Uastc, TextureSet::Bc7] {
+        let dir = set.dir();
         for kind in BARK_KINDS {
-            for map in BarkMap::ALL {
-                let srgb = map == BarkMap::Color;
-                check_texture(set, &bark_texture_path(set, kind, map), srgb);
+            for (map, srgb) in BARK_MAPS {
+                check_texture(set, &format!("{dir}/bark/{kind}/{map}.ktx2"), srgb);
             }
         }
         for kind in LEAF_KINDS {
-            check_texture(set, &leaf_texture_path(set, kind), true);
+            check_texture(set, &format!("{dir}/leaves/{kind}.ktx2"), true);
         }
     }
 }
@@ -139,4 +159,9 @@ fn materials_follow_the_options() {
     assert_eq!(leaf.base_color, [1.0, 1.0, 1.0]);
     assert_eq!(leaf.alpha_cutoff, 0.25);
     assert!(leaf.double_sided && !leaf.rounded_normals);
+
+    options.trellis.color = 0x00_ff_00;
+    let trellis = TrellisMaterial::new(&options.trellis);
+    assert_eq!(trellis.base_color, [0.0, 1.0, 0.0]);
+    assert_eq!((trellis.metallic, trellis.roughness), (0.0, 0.8));
 }

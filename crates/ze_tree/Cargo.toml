@@ -4,7 +4,27 @@ version = "0.1.0"
 description = "Procedural tree generator, a Rust port of ez-tree"
 edition.workspace = true
 
+[features]
+# Export OBJ mesh text and an MTL material file without additional dependencies.
+export-obj = []
+# Export glTF scene files (.gltf + .bin or .glb), optionally with animation joints
+# and simpler mesh variants for distant viewing.
+export-gltf = ["dep:gltf-json"]
+
 [dependencies]
 glam = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+gltf-json = { version = "1.4.1", optional = true, features = ["names", "extras"] }
+
+[dev-dependencies]
+gltf = { version = "1.4.1", default-features = false, features = ["utils", "names", "extras"] }
+naga = { version = "30", features = ["wgsl-in"] }
+wesl = { version = "0.6", features = ["eval"] }
+
+[[example]]
+name = "export"
+required-features = ["export-obj", "export-gltf"]
+
+[package.metadata.docs.rs]
+all-features = true

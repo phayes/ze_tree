@@ -13,8 +13,8 @@ mod common;
 use glam::{Quat, Vec3};
 use serde_json::Value;
 use ze_tree::{
-    BarkUvMode, LodDetail, LodLevel, MeshBuffers, Section, Skeleton, SkeletonLeaf, TreeOptions,
-    TreePreset, default_lod_levels,
+    BarkUvMode, Billboard, LodDetail, LodLevel, MeshBuffers, Section, Skeleton, SkeletonLeaf,
+    TreeOptions, TreePreset, default_lod_levels,
 };
 
 /// Allowed differences when Rust meshes the saved ez-tree skeleton.
@@ -341,6 +341,25 @@ fn continuous_uvs_change_only_v() {
                 }
             }
         }
+    }
+}
+
+/// Checks that rounded leaf normals stay unit length on double billboards at
+/// leaf size 2, where one corner's offset nearly cancels the face normal.
+#[test]
+fn rounded_leaf_normals_are_unit_at_size_two() {
+    let mut options = TreeOptions::default();
+    options.leaves.billboard = Billboard::Double;
+    options.leaves.rounded_normals = true;
+    let mut skeleton = Skeleton::generate(&options).unwrap();
+    for leaf in &mut skeleton.leaves {
+        leaf.size = 2.0;
+    }
+    let mesh = skeleton.mesh(&options, &LodDetail::default());
+    assert!(!mesh.leaves.normals.is_empty());
+    for n in &mesh.leaves.normals {
+        let n = Vec3::from_array(*n);
+        assert!(n.is_finite() && (n.length() - 1.0).abs() < 1e-5, "{n:?}");
     }
 }
 

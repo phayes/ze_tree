@@ -2,7 +2,10 @@
 
 use std::fmt;
 
-use crate::{LodDetail, LodLevel, OptionsError, Skeleton, TreeMesh, TreeOptions, TreePreset};
+use crate::{
+    LodDetail, LodLevel, OptionsError, Rig, RigError, RigOptions, Skeleton, TreeMesh, TreeOptions,
+    TreePreset,
+};
 
 /// A generated tree with settings, a branch and leaf layout, and triangles for rendering.
 ///
@@ -115,6 +118,20 @@ impl Tree {
                 (level, mesh)
             })
             .collect()
+    }
+
+    /// Creates movable joints for this tree within the limits in `options`.
+    ///
+    /// Call [`Rig::skin`] with [`Tree::mesh`] or a mesh from [`Tree::lod_meshes`]
+    /// to assign vertices to the joints. A renderer can then bend the tree by
+    /// moving those joints; this method does not create animation clips.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`RigError`] if the joint limit is invalid or fixed joint spacing
+    /// exceeds it. See [`Rig::new`] for the allowed settings.
+    pub fn rig(&self, options: &RigOptions) -> Result<Rig, RigError> {
+        Rig::new(&self.skeleton, options)
     }
 
     /// Returns the total number of vertices (points) in the full-detail bark and leaf meshes.

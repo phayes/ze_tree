@@ -2,9 +2,9 @@
 
 A Rust port of [ez-tree](https://github.com/dgreenheck/ez-tree), a procedural tree
 generator. This crate is the **core**. It covers options, presets, the seeded RNG,
-skeleton growth, meshing and LOD meshing, and it has no engine dependency. A
-`ze_tree_bevy` crate comes later for materials, the wind shader, textures, LOD
-switching and trellis meshes.
+skeleton growth, meshing and LOD meshing, and it has no engine dependency. The
+`ze_tree_bevy` crate adds materials, the wind shader, textures, LOD switching and
+trellis meshes for bevy 0.20.
 
 Reference source: `prior_art/ez-tree`, a shallow clone of commit
 `dcf309bd86bd521083d9c70f01f2de45fdc7c457` (v2.0.0, 2026-07-16). The library lives in
@@ -24,13 +24,15 @@ Reference source: `prior_art/ez-tree`, a shallow clone of commit
 | 4 — Tree wrapper, trellis layout, material params, WESL wind | ✅ Done (trellis wires and WESL wind uncommitted) |
 | 5 — Exports (glTF, OBJ, rig) | ✅ Done (uncommitted) |
 | 6 — Polish | Not started |
+| `ze_tree_bevy` | ✅ Done 2026-11-20 (uncommitted) |
 
 Where things stand:
 - `cargo build`, `cargo clippy --all-targets --all-features` (and with each export
   feature alone), `cargo test --all-features` (35 unit, 13 options, 1 RNG,
-  5 skeleton, 8 mesh, 7 tree, 3 material, 6 wind, 7 rig, 5 OBJ export, 10 glTF export
+  5 skeleton, 8 mesh, 7 tree, 3 material, 7 wind, 7 rig, 5 OBJ export, 10 glTF export
   tests, 1 doctest), `cargo doc --all-features` and the doctests all pass with no
-  warnings. The export tests need `--all-features` (or the matching feature).
+  warnings. `ze_tree_bevy`: 2 unit, 6 conversion tests and 1 doctest (compile only);
+  clippy clean. The export tests need `--all-features` (or the matching feature).
   Phases 0–3 and the `Tree` wrapper and textures are committed; the trellis wires,
   the wind work and Phase 5 are not.
 - All fixtures from the verification section are generated (7.8 MB) and all are used
@@ -277,7 +279,7 @@ test.
 | D11 | `sections == 0` divides by zero. | `validate()` rejects it for levels 0..=`levels` (`OptionsError::ZeroSections`). |
 | D9 | A fractional seed in JS is added to the RNG constants *before* the int32 wrap, so `seed: 0.5` and `seed: 0` give different streams. | `seed` is `ToInt32`-converted once on load (Decision 3), so fractional seeds behave like their truncated value. Integer seeds, which is all the JS app produces, match exactly. |
 | D12 | `Trellis.generate` counts wires as `floor(extent / spacing) + 1` in f64, so float rounding can drop the far-edge wire (0.3 / 0.1 gives 3 wires, not 4); zero spacing loops forever. | `TrellisOptions::wires` counts a ratio within 1e-4 below a whole number as that number, so whole multiples always get a far-edge wire (idiomatic over exact). Zero or non-finite counts give no wires. Rendering only; no fixture depends on it. |
-| D13 | Leaf wind moves only leaves; weight is `uv.y`; noise uses object-space position, so every copy of a tree sways in step. | Layered `wind_offset` (trunk bend, branch sway, leaf flutter) with a dedicated `flutter` attribute and an `anchor` input. Defaults keep ez-tree's leaf-only motion. |
+| D13 | Leaf wind moves only leaves; weight is `uv.y`; noise uses object-space position, so every copy of a tree sways in step. | Layered `wind_offset` (trunk bend, branch sway, leaf flutter) with a dedicated `flutter` attribute and an `anchor` input. Defaults add gentle trunk bend and branch sway; `WindParams::LEAVES_ONLY` keeps ez-tree's leaf-only motion. |
 
 ---
 
@@ -583,27 +585,43 @@ Each format is an optional cargo feature, off by default (`export-obj`,
 ### Phase 6 — Polish
 - Crate docs and a README with a feature map against ez-tree.
 
-### Deferred: `ze_tree_bevy` (not in this plan)
-- A bark `StandardMaterial`: tint, flat shading, texture maps and Y repeat, built from
-  `BarkMaterial` and the KTX2 assets. Use the BC7 set by default (no transcoder); the
-  UASTC set needs bevy's `basis-universal` feature (C++ build). bevy 0.20 has no ETC1S
-  transcoder. Use `BarkUvMode::Continuous` and the core tangents for normal maps.
-- A leaf material: alpha mask, double-sided, a vertex shader that imports core's
-  `wind.wesl` (bevy 0.20 loads WESL natively), and the custom-normals flag that skips
-  the backface normal flip. The bark material needs the same vertex shader so trunk
-  bend and branch sway move bark and leaves together. Upload `MeshBuffers::wind` as a
-  custom vertex attribute and pass the instance's world origin as `anchor`.
-- Decide the leaf/bark texture v orientation: ez-tree's leaf tip is `uv.y = 1`, which
-  three.js (flipY) shows as the image top, but wgpu's `v = 0` is the top row. Flip v
-  when meshing or flip the images in `convert.sh`.
-- LOD switching with bevy `VisibilityRange` or a custom distance-and-hysteresis
-  system.
-- Trellis cylinder meshes built from `TrellisOptions::wires()` and `TrellisMaterial`.
-- Tune and turn on `WindParams` trunk bend and branch sway by default (moved from the
-  core open items): pick nonzero defaults by eye, then update the `WindParams` docs and
-  the `defaults_only_move_leaf_tips` test.
+### `ze_tree_bevy` ✅ Done (2026-11-20)
+Built for bevy 0.20.1 (`crates/ze_tree_bevy`, Decision 19):
+- `ZeTreePlugin` + `ZeTree` component (`Options(Arc<TreeOptions>)` or
+  `Asset(Handle<TreeOptionsAsset>)` from `.tree.json`, hot-reloaded). Generation runs
+  on `AsyncComputeTaskPool` (one skeleton, one mesh per LOD level); trees with the same
+  options JSON share meshes and materials through a cache that is pruned when no tree
+  uses an entry. Child entities carry a `TreePart { lod, kind }` marker.
+- `TreeMaterial = ExtendedMaterial<StandardMaterial, WindExtension>`. Bark: tint,
+  colour + roughness maps, normal map only with `BarkUvMode::Continuous`, flat shading
+  by duplicating vertices and regenerating tangents (mikktspace). Leaves: alpha mask,
+  no culling, `double_sided` off for rounded normals (no back-face flip).
+- Wind: vertex shaders for the main pass and the prepass (depth, shadows, deferred,
+  motion vectors with last frame's wind) import core's `wind.wesl` as `ze_tree::wind`.
+  `ATTRIBUTE_WIND` is appended at shader location 8 in `specialize`. The anchor is the
+  instance's world translation; leaf flutter uses local position + anchor. The `Wind`
+  resource is copied into every `TreeMaterial`.
+- Texture v orientation: flipped in the Bevy mesh conversion (`1 - v`, after the bark
+  repeat), the same as the glTF export. Core and OBJ keep ez-tree's bottom-left origin.
+- LOD: one `VisibilityRange` per level, cross-fading over `distance × hysteresis`.
+- Textures: BC7 KTX2 from `<texture_root>/…` (default `ze_tree/textures/bc7`, copied
+  by the user); bark images load with a repeating sampler.
+- Trellis: one shared unit cylinder, scaled and rotated per wire, `StandardMaterial`.
+- Wind defaults (moved from core open items): `WindParams::default()` now has
+  `trunk_bend: 2.0`, `branch_sway: 0.05`; `WindParams::LEAVES_ONLY` keeps ez-tree's
+  motion. Picked from measured branch weights (tip weight ≈ branch length: 10–54 on the
+  presets), not tuned by watching motion; adjust in the viewer (Space toggles).
+- `examples/viewer.rs`: preset cycling, 7 × 7 forest for LOD, wind and normal-map
+  toggles, free camera, `--screenshot` for headless checks.
+- Verified on Apple M1 Max / Metal: textures, alpha cut-outs, shadows, normal maps,
+  trellis and LOD forest render; two runs differ only through wind motion.
+
+Still deferred:
+- A `basis-universal` feature to load the UASTC set.
 - If a consumer needs it, a `GltfTextures` option that references the KTX2 UASTC set
   through `KHR_texture_basisu` (Blender cannot read it, so never the default).
+- No automated GPU test: the conversion tests run without a renderer; the shaders are
+  checked only by running the viewer.
 
 ---
 
@@ -683,3 +701,10 @@ Each format is an optional cargo feature, off by default (`export-obj`,
     OBJ writes one `vn` per bark triangle with `s off`: Blender's OBJ importer
     smooths normal-less objects when any object in the file has normals, so leaving
     out `vn` was not enough. Leaves keep their vertex normals in both formats.
+19. **Bevy integration:** a separate `ze_tree_bevy` crate on bevy 0.20.1 with
+    `default-features = false`. Wind uses `ExtendedMaterial<StandardMaterial, _>` with
+    replacement vertex shaders (main and prepass) instead of a custom material, so all
+    of bevy's PBR lighting and shadows stay available. Generated assets are shared per
+    options JSON. Texture v is flipped in the Bevy conversion, not in core, because
+    OBJ shares core's bottom-left origin. Textures are loaded from the user's asset
+    folder rather than embedded, to keep binaries small (BC7 set ≈ 10 MB).

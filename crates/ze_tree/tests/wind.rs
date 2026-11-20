@@ -254,15 +254,23 @@ fn cases() -> Vec<Case> {
         branch_sway: 0.15,
     };
     vec![
-        // Default settings animate this leaf tip as in ez-tree.
+        // A leaf tip flutters with the leaf-only settings.
         Case {
             position: Vec3::new(3.2, 11.5, -4.75),
             wind: Vec4::new(0.6, 2.5, 0.3, 1.0),
             anchor: Vec3::ZERO,
             time: 12.25,
-            params: WindParams::default(),
+            params: WindParams::LEAVES_ONLY,
         },
-        // Default settings leave the leaf base still: its flutter weight is zero.
+        // A leaf base has zero flutter weight and stays still with leaf-only wind.
+        Case {
+            position: Vec3::new(-1.0, 6.0, 2.0),
+            wind: Vec4::new(0.3, 1.0, 0.7, 0.0),
+            anchor: Vec3::ZERO,
+            time: 3.0,
+            params: WindParams::LEAVES_ONLY,
+        },
+        // Default wind moves the same leaf base through trunk and branch motion.
         Case {
             position: Vec3::new(-1.0, 6.0, 2.0),
             wind: Vec4::new(0.3, 1.0, 0.7, 0.0),
@@ -270,7 +278,7 @@ fn cases() -> Vec<Case> {
             time: 3.0,
             params: WindParams::default(),
         },
-        // Enable trunk, branch, and leaf motion with a nonzero tree anchor.
+        // Exercise all three motions for a tree positioned away from the origin.
         Case {
             position: Vec3::new(0.4, 7.9, 1.1),
             wind: Vec4::new(0.45, 3.2, 0.81, 1.0),
@@ -278,7 +286,7 @@ fn cases() -> Vec<Case> {
             time: 47.5,
             params: layered,
         },
-        // Bark follows trunk and branch motion, with no leaf flutter.
+        // A bark vertex moves with the trunk and branches, but has no leaf flutter.
         Case {
             position: Vec3::new(1.5, 4.0, -0.5),
             wind: Vec4::new(0.2, 1.4, 0.12, 0.0),
@@ -301,11 +309,19 @@ fn shader_matches_cpu_port() {
     }
 }
 
+/// Leaf-only wind moves the tip while leaving the base fixed.
 #[test]
-fn defaults_only_move_leaf_tips() {
+fn leaves_only_moves_only_leaf_tips() {
     let cases = cases();
     assert_ne!(cpu_offset(&cases[0]), Vec3::ZERO);
     assert_eq!(shader_offset(&cases[1]), Vec3::ZERO);
+}
+
+/// Default wind carries a leaf base along even though its flutter weight is zero.
+#[test]
+fn defaults_move_trunk_and_branches() {
+    let cases = cases();
+    assert_ne!(shader_offset(&cases[2]), Vec3::ZERO);
 }
 
 #[test]

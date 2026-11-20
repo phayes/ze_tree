@@ -1,0 +1,25 @@
+[package]
+name = "ze_tree_bevy"
+version = "0.1.0"
+description = "Bevy plugin for ze_tree procedural trees: meshes, materials, wind and LOD"
+edition.workspace = true
+
+[dependencies]
+ze_tree = { path = "../ze_tree" }
+serde_json = { workspace = true }
+bevy = { version = "0.20.1", default-features = false, features = [
+    "std",
+    "async_executor",
+    "bevy_asset",
+    "bevy_log",
+    "bevy_pbr",
+    "bevy_mikktspace",
+    "ktx2",
+    "zstd_rust",
+] }
+
+[dev-dependencies]
+bevy = { version = "0.20.1", features = ["free_camera"] }
+
+[package.metadata.docs.rs]
+all-features = true

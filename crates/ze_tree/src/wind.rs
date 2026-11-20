@@ -14,15 +14,14 @@ use crate::{Attachment, Skeleton};
 /// provide the time and a uniform binding for the module's `WindParams` settings.
 pub const WIND_WESL: &str = include_str!("../shaders/wind.wesl");
 
-/// Controls how the trunk, branches, and leaves move in the wind.
+/// Controls the direction, speed and amount of tree movement in the wind.
 ///
-/// Trunk bend makes the tree lean, with more movement near the top. Branch sway
-/// moves longer branches more, with movement increasing toward their tips. Leaf
-/// flutter moves leaf tips while keeping their bases attached.
+/// The default enables three motions: the trunk leans more near the top,
+/// branches sway more toward their tips, and leaves flutter while their bases
+/// follow the branches. Use [`Self::LEAVES_ONLY`] to keep the trunk and branches
+/// still, as in ez-tree. Set [`strength`](Self::strength) to zero to stop all motion.
 ///
-/// The defaults match ez-tree: only leaves move. Increase `trunk_bend` and
-/// `branch_sway` to enable the other motions. Use [`Self::to_uniform`] to prepare
-/// these settings for the shader.
+/// Use [`Self::to_uniform`] to pack these settings for a shader uniform buffer.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct WindParams {
     /// Direction and size of the wind motion, in tree coordinates. Leaf-tip
@@ -35,23 +34,35 @@ pub struct WindParams {
     /// Distance over which the wind pattern varies, in tree units. Larger values
     /// make motion vary more gradually across the tree. Must be nonzero; defaults to 70.
     pub scale: f32,
-    /// Trunk movement multiplier. At 1, the highest section moves by up to
-    /// [`strength`](Self::strength). Defaults to 0, which disables trunk bend.
+    /// Amount of trunk bend, multiplied by [`strength`](Self::strength).
+    /// At 1, the highest section's trunk movement reaches up to that vector's
+    /// length. Defaults to 2. Set to 0 to disable this motion.
     pub trunk_bend: f32,
-    /// Branch movement multiplier, applied to [`strength`](Self::strength) and
-    /// each vertex's branch weight. Longer branches and points nearer branch tips
-    /// have greater weights. Defaults to 0, which disables branch sway.
+    /// Amount of branch sway, multiplied by [`strength`](Self::strength) and
+    /// the mesh's movement weights. Longer branches and points nearer their
+    /// tips move more; child branches also inherit movement from their parents.
+    /// Defaults to 0.05. Set to 0 to disable branch sway.
     pub branch_sway: f32,
+}
+
+impl WindParams {
+    /// Leaf-only wind, as in ez-tree: leaf tips flutter while leaf bases, trunks
+    /// and branches stay still. Uses the default strength, speed and scale.
+    pub const LEAVES_ONLY: Self = Self {
+        strength: Vec3::new(0.5, 0.0, 0.5),
+        frequency: 0.5,
+        scale: 70.0,
+        trunk_bend: 0.0,
+        branch_sway: 0.0,
+    };
 }
 
 impl Default for WindParams {
     fn default() -> Self {
         Self {
-            strength: Vec3::new(0.5, 0.0, 0.5),
-            frequency: 0.5,
-            scale: 70.0,
-            trunk_bend: 0.0,
-            branch_sway: 0.0,
+            trunk_bend: 2.0,
+            branch_sway: 0.05,
+            ..Self::LEAVES_ONLY
         }
     }
 }

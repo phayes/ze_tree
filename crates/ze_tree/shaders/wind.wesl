@@ -1,10 +1,10 @@
-// Wind animation for ze_tree meshes.
+// Animates ze_tree trunks, branches and leaves in a vertex shader.
 //
-// In a vertex shader, add `wind_offset` to the vertex position before applying
-// transforms. It combines trunk bend, branch sway, and leaf flutter. The default
-// Rust WindParams matches ez-tree: only leaves move.
-//
-// The returned displacement follows `strength` and uses tree units.
+// Call `wind_offset` with a vertex's wind data and add the returned displacement
+// to its position before applying transforms. Movement follows `strength` and
+// is measured in tree units. Supply Rust's WindParams::LEAVES_ONLY to flutter
+// leaves while keeping trunks and branches still, as in ez-tree.
+// Use zero strength to stop all wind movement.
 
 /// Wind controls, laid out for the 32-byte buffer from Rust's `WindParams::to_uniform`.
 struct WindParams {

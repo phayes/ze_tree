@@ -193,7 +193,7 @@ fn flat_shaded_bark_gets_face_normals() {
     }
 }
 
-/// Converts a linear colour channel to sRGB, as OBJ vertex colours are stored.
+/// Calculates the expected sRGB value for one exported colour component.
 fn srgb(c: f32) -> f32 {
     if c <= 0.003_130_8 {
         c * 12.92
@@ -202,8 +202,8 @@ fn srgb(c: f32) -> f32 {
     }
 }
 
-/// Fruit and flowers are their own objects and materials, with sRGB colours on
-/// their vertices; bark and leaf vertices have none.
+/// Checks that fruit and flowers have separate objects and materials, with
+/// sRGB colours stored on their vertices. Bark and leaf vertices carry no colours.
 #[test]
 fn fruit_and_flowers_carry_vertex_colours() {
     let mut options = TreePreset::AshSmall.options();
@@ -221,7 +221,8 @@ fn fruit_and_flowers_carry_vertex_colours() {
     let files = to_obj(mesh, tree.options(), &ObjOptions::default());
     let obj = &files.obj;
 
-    // Every vertex and triangle is written, in parts named after their materials.
+    // Preserve all vertices and triangles, with named objects using the
+    // appropriate bark, leaf, fruit or flower material.
     assert_eq!(count(obj, "v"), mesh.vertex_count());
     assert_eq!(count(obj, "f"), mesh.triangle_count());
     let objects: Vec<&str> = obj.lines().filter_map(|l| l.strip_prefix("o ")).collect();
@@ -234,7 +235,8 @@ fn fruit_and_flowers_carry_vertex_colours() {
     assert!(files.mtl.contains("\nnewmtl fruit\nKd 1 1 1\n"));
     assert!(files.mtl.contains("\nnewmtl flowers\nKd 1 1 1\n"));
 
-    // Coloured vertices come last, in fruit then flower order, as sRGB.
+    // Fruit vertices follow bark and leaves, with flower vertices last.
+    // Both fruit and flower colours must be converted to sRGB.
     let vertices: Vec<Vec<f32>> = obj
         .lines()
         .filter_map(|l| l.strip_prefix("v "))
@@ -257,7 +259,7 @@ fn fruit_and_flowers_carry_vertex_colours() {
     }
 }
 
-/// A tree without fruit or flowers gets no materials for them.
+/// Checks that trees without fruit or flowers have no corresponding materials.
 #[test]
 fn trees_without_fruit_get_no_fruit_material() {
     let tree = Tree::from_preset(TreePreset::OakSmall);

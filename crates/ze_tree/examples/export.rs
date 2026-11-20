@@ -1,26 +1,27 @@
-//! Save every built-in tree preset as OBJ and GLB files to open in a 3D tool.
+//! Export every built-in tree preset as OBJ and GLB files for other 3D tools.
 //!
 //! ```text
 //! cargo run -p ze_tree --example export --features export-obj,export-gltf -- [OUT_DIR] [TEXTURE_DIR]
 //! ```
 //!
-//! `OUT_DIR` defaults to the workspace's `target/ze_tree_export`. Images are
-//! optional. `TEXTURE_DIR` holds the export images named by
-//! [`TextureRef::image_path`]; the 1k bark images are used. It defaults to the
-//! workspace's `assets/textures/images`, which `tools/textures/images.sh` fills,
-//! or download the files listed in its `images_manifest.json`. Missing or
-//! unreadable images are omitted, leaving the corresponding material colours or
-//! surface settings.
+//! Files are saved in `OUT_DIR`, which defaults to `target/ze_tree_export` in
+//! this workspace. Each preset produces:
 //!
-//! Each preset produces:
+//! - `<preset>.obj` and `<preset>.mtl`: the full-detail model and its material
+//!   description. Available texture images are copied to `OUT_DIR/textures/`.
+//!   Keep these files together when moving or sharing the export.
+//! - `<preset>.glb`: one file containing three detail levels, available texture
+//!   images and a rig of up to 64 joints for animating bark and leaves. Animation
+//!   clips are not included, and fruit and flowers do not move with the joints.
 //!
-//! - `<preset>.obj` and `<preset>.mtl`: full-detail geometry and material text.
-//!   Available images are copied to `OUT_DIR/textures/` and referenced by relative path.
-//! - `<preset>.glb`: three mesh detail levels, a rig of at most 64 joints, and any
-//!   available images embedded in the file. No animation clips are included.
+//! `TEXTURE_DIR` is optional and defaults to `assets/textures/images` in this
+//! workspace. It must contain the paths given by [`TextureRef::image_path`];
+//! this example uses 1k bark images. Populate it with `tools/textures/images.sh`
+//! or download the images listed in its `images_manifest.json`. Missing images
+//! are omitted, leaving the material colours or surface settings in use.
 //!
-//! A viewer may show all three GLB detail levels at once; select one to display,
-//! or configure distance-based switching in the receiving tool.
+//! Some viewers display all three GLB detail levels together. Select one version,
+//! or configure the receiving tool to switch versions with viewing distance.
 
 use std::error::Error;
 use std::fs;

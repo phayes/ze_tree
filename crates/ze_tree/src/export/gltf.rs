@@ -214,12 +214,13 @@ pub fn to_glb(
 /// The bark roughness image supplies the green channel of glTF's combined
 /// metallic-roughness texture; a zero metallic factor keeps bark non-metallic.
 ///
-/// Fruit and flowers, when the tree has them, are the `fruit` and `flowers` parts,
-/// coloured per vertex (`COLOR_0`) rather than by an image.
+/// Fruit and flowers are exported as separate `fruit` and `flowers` parts.
+/// Their colours are stored at points on the model (vertex colours, `COLOR_0`),
+/// so no texture images are needed for them.
 ///
-/// A supplied rig adds joint nodes and their connections to the bark and leaf
-/// meshes, but no animation clips. Fruit and flowers are not connected to it, so
-/// they stay in place if the joints are animated.
+/// A supplied rig adds joints that can move the bark and leaves in another tool.
+/// It includes no animation clips. Fruit and flowers are not attached to these
+/// joints and remain in place when the joints move.
 ///
 /// # Errors
 ///
@@ -274,7 +275,7 @@ fn build(
 
     let bark = b.bark_material(options);
     let leaves = b.leaf_material(options);
-    // Fruit and flower materials only when some mesh has them.
+    // Add fruit and flower materials only if at least one exported mesh needs them.
     let has = |part: MeshPart| {
         meshes
             .iter()
@@ -295,7 +296,7 @@ fn build(
     });
     let mut scene = Vec::new();
 
-    // Add the rig's root joint as a separate scene root when the rig is nonempty.
+    // Include the joint hierarchy in the scene if the rig contains any joints.
     let rig = gltf.rig.filter(|rig| rig.joint_count() > 0);
     let skin = rig.map(|rig| {
         let (skin, root_joint) = b.skin(rig);
@@ -318,7 +319,7 @@ fn build(
                 MeshPart::Flowers => flowers.expect("flower material exists for flower parts"),
                 MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => bark,
             };
-            // The rig moves bark and leaves only; fruit and flowers stay unskinned.
+            // Attach only bark and leaves to animation joints; fruit and flowers remain fixed.
             let skinned = part.is_bark() || part.is_leaves();
             let mesh_index = b.part_mesh(
                 &name,
@@ -522,7 +523,8 @@ impl Builder<'_> {
             let accessor = self.floats(&buffers.wind, Type::Vec4);
             attributes.insert(Valid(Semantic::Extras("WIND".to_owned())), accessor);
         }
-        // Fruit and flowers take their colour from the vertices, in linear RGBA.
+        // Preserve fruit and flower colours on each vertex, including opacity,
+        // in the linear colour format required by glTF.
         if !buffers.colors.is_empty() {
             attributes.insert(
                 Valid(Semantic::Colors(0)),
@@ -530,8 +532,8 @@ impl Builder<'_> {
             );
         }
 
-        // Use original vertex indices to copy joint assignments into the extracted part.
-        // Only bark and leaves have them.
+        // Copy joint assignments using each vertex's position in the original mesh.
+        // Only bark and leaves are attached to the rig.
         if let Some(skin) = skin.filter(|_| part.is_bark() || part.is_leaves()) {
             let source = if part.is_leaves() {
                 &skin.leaves
@@ -623,7 +625,8 @@ impl Builder<'_> {
         })
     }
 
-    /// Adds an untextured material whose colour comes from each vertex's `COLOR_0`.
+    /// Creates a material that uses the model's vertex colours (`COLOR_0`)
+    /// without requiring a texture image.
     fn colored_material(
         &mut self,
         name: &str,

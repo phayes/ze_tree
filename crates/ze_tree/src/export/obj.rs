@@ -69,12 +69,12 @@ pub struct ObjFiles {
 /// With [`BarkOptions::flat_shading`](crate::BarkOptions::flat_shading), trunk and
 /// branch objects get one normal per triangle, so importers shade each face flat.
 ///
-/// Fruit and flowers, when the tree has them, are the `fruit` and `flowers`
-/// objects with white materials of the same names. Their colours are written per
-/// vertex in sRGB as `v x y z r g b`, a common extension. Blender and MeshLab read
-/// these colours, but MTL cannot tell an importer to use them, so Blender shows
-/// the fruit white until the colour attribute is connected to its material.
-/// Prefer glTF for coloured fruit and flowers.
+/// Fruit and flowers are separate `fruit` and `flowers` objects. Their colours
+/// are stored at points on the model using the OBJ vertex-colour extension
+/// (`v x y z r g b`, with sRGB colours). Support depends on the receiving tool.
+/// The companion materials are white: in Blender, connect the imported colour
+/// attribute to the material to display these colours. Prefer glTF when fruit
+/// and flower colours should work without this extra setup.
 ///
 /// Material colours are linear RGB. Roughness (how matte a surface looks) and
 /// metalness use MTL extensions `Pr`, `Pm`, and `map_Pr`, which not every importer
@@ -132,7 +132,8 @@ fn write_part(
     normal_offset: usize,
     flat: bool,
 ) -> usize {
-    // Coloured parts add sRGB vertex colours after each position.
+    // For parts with vertex colours, append sRGB red, green and blue values
+    // to each vertex position using the OBJ colour extension.
     for (i, [x, y, z]) in buffers.positions.iter().enumerate() {
         match buffers.colors.get(i) {
             Some(&[r, g, b, _]) => {
@@ -182,7 +183,8 @@ fn face_normal(buffers: &MeshBuffers, triangle: &[u32; 3]) -> [f32; 3] {
     (b - a).cross(c - a).normalize_or(fallback).to_array()
 }
 
-/// Converts a linear colour channel in 0–1 to sRGB, as OBJ vertex colours are stored.
+/// Converts one colour component from linear values to sRGB for OBJ vertex
+/// colours, clamping it to the supported 0–1 range first.
 fn linear_to_srgb(c: f32) -> f32 {
     let c = c.clamp(0.0, 1.0);
     if c <= 0.003_130_8 {
@@ -192,9 +194,9 @@ fn linear_to_srgb(c: f32) -> f32 {
     }
 }
 
-/// Builds the bark and leaf material text, including any paths returned by `textures`,
-/// and a white material for each coloured part in `parts`.
-/// Does not request bark images when bark texturing is disabled.
+/// Creates the material file with bark and leaf colours and available image paths.
+/// Adds neutral white materials for fruit and flower parts that are present,
+/// so their vertex colours are not tinted. Skips bark images when texturing is off.
 fn material_library(
     options: &TreeOptions,
     textures: Option<TexturePathFn<'_>>,
@@ -242,7 +244,8 @@ fn material_library(
         let _ = writeln!(out, "map_Bump {p}");
     }
 
-    // Fruit and flowers are white, so their vertex colours show unchanged.
+    // Use white materials to avoid tinting fruit and flower vertex colours
+    // when the receiving application uses those colours.
     let fruit = FruitMaterial::default();
     let flower = FlowerMaterial::default();
     for (part, name, roughness, metallic) in [

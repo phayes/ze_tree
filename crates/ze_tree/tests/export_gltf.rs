@@ -483,7 +483,7 @@ fn flat_shaded_bark_omits_normals_and_tangents() {
     assert_eq!(mesh_names(&gltf), ["trunk", "branches", "leaves"]);
 }
 
-/// A small tree with fruit and flowers, flat-shaded bark, and a rig to export.
+/// Creates a small test tree with fruit, flowers and flat-shaded bark.
 fn fruiting_tree() -> Tree {
     let mut options = TreePreset::AshSmall.options();
     for (placement, cluster) in [
@@ -499,8 +499,8 @@ fn fruiting_tree() -> Tree {
     Tree::new(options).unwrap()
 }
 
-/// Fruit and flowers are their own parts, coloured per vertex, with smooth
-/// normals even when the bark is flat-shaded, and outside the rig.
+/// Checks that fruit and flowers retain their colours and smooth shading,
+/// even with flat-shaded bark, and remain separate from the animation joints.
 #[test]
 fn fruit_and_flowers_are_exported_with_their_colours() {
     let tree = fruiting_tree();
@@ -523,7 +523,7 @@ fn fruit_and_flowers_are_exported_with_their_colours() {
             "fruit" => MeshPart::Fruit,
             "flowers" => MeshPart::Flowers,
             _ => {
-                // Bark and leaves stay on the rig.
+                // Bark and leaves must remain attached to the animation joints.
                 assert!(node.skin().is_some());
                 continue;
             }
@@ -532,7 +532,7 @@ fn fruit_and_flowers_are_exported_with_their_colours() {
         let primitive = mesh.primitives().next().unwrap();
         let reader = primitive.reader(|_| blob);
 
-        // Geometry, smooth normals and linear vertex colours come through unchanged.
+        // Preserve the shape, smooth shading and colours of fruit and flowers.
         let positions: Vec<[f32; 3]> = reader.read_positions().unwrap().collect();
         assert_eq!(positions, expected.positions);
         let normals: Vec<[f32; 3]> = reader.read_normals().unwrap().collect();
@@ -544,7 +544,8 @@ fn fruit_and_flowers_are_exported_with_their_colours() {
             assert_eq!(*uv, [original[0], 1.0 - original[1]]);
         }
 
-        // A white material lets the vertex colours show; no joints are attached.
+        // A neutral white material preserves vertex colours. Fruit and flowers
+        // must have no joint assignments or connection to the rig.
         let material = primitive.material();
         assert_eq!(material.name(), Some(mesh.name().unwrap()));
         assert_eq!(material.pbr_metallic_roughness().base_color_factor(), [1.0; 4]);
@@ -554,7 +555,7 @@ fn fruit_and_flowers_are_exported_with_their_colours() {
     }
 }
 
-/// A tree without fruit or flowers gets no materials for them.
+/// Checks that unused fruit and flower materials are omitted.
 #[test]
 fn trees_without_fruit_get_no_fruit_material() {
     let tree = Tree::from_preset(TreePreset::OakSmall);

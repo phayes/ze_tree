@@ -1,23 +1,25 @@
-//! Export trees as 3D model data for a renderer or modelling tool.
+//! Export trees for use in other 3D applications.
 //!
-//! Enable the Cargo feature for the desired format:
+//! Enable the Cargo feature for the format the receiving application supports:
 //!
-//! - `export-obj`: the `obj` module produces Wavefront OBJ mesh text and an MTL
-//!   file describing colours and textures. It exports one mesh without animation data.
-//! - `export-gltf`: the `gltf` module produces glTF 2.0, a scene format supporting
-//!   materials and animation rigs. Choose a JSON `.gltf` file plus binary `.bin`
-//!   data, or a single binary `.glb` file.
+//! - `export-obj` provides an OBJ model and a companion MTL file describing its
+//!   colours and textures. It exports one version of the tree without animation joints.
+//! - `export-gltf` supports materials and a rig: joints that can be animated in
+//!   another tool. Choose a `.gltf` file with a separate `.bin` data file, or a
+//!   single `.glb` file.
 //!
-//! Both exporters return data for the caller to save. They separate trunk, branches,
-//! leaves, fruit and flowers; [`BranchGrouping`] controls
-//! branch grouping. Bark texture repetition is included in the exported texture
-//! coordinates. Fruit and flowers are coloured per vertex and need no images.
+//! Both exporters return file contents for the caller to save. Trunk, branches,
+//! leaves, fruit and flowers are separate parts; [`BranchGrouping`] controls how
+//! branches are grouped. Bark texture coordinates already include how often the
+//! bark image repeats, so no extra scaling is needed. Fruit and flower
+//! colours are stored on the model itself and do not require images.
 //!
-//! Texture images are not bundled with the crate. Supply a callback that maps each
-//! [`TextureRef`] to an image path or, for glTF, image bytes to embed.
-//! [`TextureRef::image_path`] names the JPEG and PNG images published for export
-//! at `https://storage.googleapis.com/ze_textures/tree/images/`, which the repository's
-//! `assets/textures/images/images_manifest.json` lists with their checksums.
+//! Bark and leaf images are supplied separately. Provide a callback that returns
+//! an image path for each [`TextureRef`], or image contents to embed in glTF.
+//! [`TextureRef::image_path`] gives paths relative to
+//! `https://storage.googleapis.com/ze_textures/tree/images/`. The repository's
+//! `assets/textures/images/images_manifest.json` lists the available files and
+//! checksums for verifying their contents.
 
 #[cfg(feature = "export-gltf")]
 pub mod gltf;
@@ -82,8 +84,8 @@ pub enum TextureMap {
     LeafNormal,
 }
 
-/// The parts both exporters write: `grouping`'s bark and leaf parts, then
-/// fruit and flowers when the mesh has them.
+/// Lists the bark and leaf parts using the chosen branch grouping, followed
+/// by fruit and flower parts only when they contain geometry.
 fn export_parts(grouping: BranchGrouping, mesh: &TreeMesh) -> Vec<MeshPart> {
     let mut parts = grouping.parts(mesh);
     for (part, buffers) in [

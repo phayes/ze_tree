@@ -8,11 +8,14 @@
 //! - F: switch between one tree and a 7 × 7 forest to inspect detail transitions.
 //! - Space: turn trunk and branch movement on or off; leaves keep fluttering.
 //! - N: switch bark normal maps on or off by changing texture coordinates.
+//! - J: turn shape variation on or off so trees of the same preset can look different.
+//! - R: generate new tree shapes while variation is on.
 //! - Hold the left mouse button to look around; use WASD and Q / E to fly.
 //!
 //! Pass options after `--`, for example:
 //! `cargo run -p ze_tree_bevy --example viewer -- --preset oak_medium --forest`.
-//! Use `--still` for leaf-only wind or `--flat` for mirrored bark coordinates
+//! Use `--vary` to start with shape variation enabled,
+//! `--still` for leaf-only wind or `--flat` for mirrored bark coordinates
 //! without normal maps (this does not enable flat shading). Set camera positions
 //! with `--eye x y z` and `--target x y z`. Use `--screenshot <file.png>` to
 //! capture a frame after a loading delay and exit.
@@ -20,13 +23,15 @@
 use bevy::camera_controller::free_camera::{FreeCamera, FreeCameraPlugin};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
-use ze_tree::{BarkUvMode, TreeOptions, TreePreset, WindParams};
+use ze_tree::{BarkUvMode, Rng, TreeOptions, TreePreset, WindParams};
 use ze_tree_bevy::{TreePart, Wind, ZeTree, ZeTreePlugin};
 
 /// Distance between neighbouring trees in the forest, in world units.
 const FOREST_SPACING: f32 = 45.0;
 /// Number of rows and columns in the square forest.
 const FOREST_SIZE: i32 = 7;
+/// Vary shape settings by up to 15% either way, then round branch and leaf counts.
+const JIGGLE: f32 = 0.15;
 
 #[derive(Resource)]
 struct Viewer {
@@ -34,6 +39,9 @@ struct Viewer {
     forest: bool,
     sway: bool,
     continuous: bool,
+    vary: bool,
+    /// Selects a new set of tree variations each time R is pressed.
+    roll: i32,
     screenshot: Option<String>,
 }
 
@@ -49,6 +57,8 @@ fn main() {
         forest: false,
         sway: true,
         continuous: true,
+        vary: false,
+        roll: 0,
         screenshot: None,
     };
     let mut eye = Vec3::new(0.0, 30.0, 110.0);
@@ -72,6 +82,7 @@ fn main() {
                 i += 1;
             }
             "--forest" => viewer.forest = true,
+            "--vary" => viewer.vary = true,
             "--still" => viewer.sway = false,
             "--flat" => viewer.continuous = false,
             "--eye" => {
@@ -167,6 +178,12 @@ fn controls(keys: Res<ButtonInput<KeyCode>>, mut viewer: ResMut<Viewer>) {
     if keys.just_pressed(KeyCode::KeyN) {
         viewer.continuous = !viewer.continuous;
     }
+    if keys.just_pressed(KeyCode::KeyJ) {
+        viewer.vary = !viewer.vary;
+    }
+    if keys.just_pressed(KeyCode::KeyR) && viewer.vary {
+        viewer.roll += 1;
+    }
 }
 
 /// Rebuilds the displayed trees and applies wind settings when viewer controls change.
@@ -194,20 +211,31 @@ fn show_trees(
         options.bark.uv_mode = BarkUvMode::Continuous;
     }
     info!(
-        "{} (bark normal maps {}, sway {})",
+        "{} (bark normal maps {}, sway {}, variation {})",
         preset.name(),
         if viewer.continuous { "on" } else { "off" },
         if viewer.sway { "on" } else { "off" },
+        if viewer.vary { "on" } else { "off" },
     );
-    let tree = ZeTree::new(options);
+    let tree = ZeTree::new(options.clone());
     let half = if viewer.forest { FOREST_SIZE / 2 } else { 0 };
     for x in -half..=half {
         for z in -half..=half {
             let position = Vec3::new(x as f32, 0.0, -z as f32) * FOREST_SPACING;
             // Vary each copy's rotation to make the repeated tree shape less obvious.
             let turn = Quat::from_rotation_y((x * 7 + z * 13) as f32);
+            // Give each forest position a repeatable variation; pressing R selects a new set.
+            let tree = if viewer.vary {
+                let cell = (x + half) * FOREST_SIZE + (z + half);
+                let mut rng = Rng::new(viewer.roll.wrapping_mul(1000).wrapping_add(cell));
+                let mut varied = options.clone();
+                varied.jiggle(JIGGLE, &mut rng);
+                ZeTree::new(varied)
+            } else {
+                tree.clone()
+            };
             commands.spawn((
-                tree.clone(),
+                tree,
                 Transform::from_translation(position).with_rotation(turn),
                 Shown,
             ));

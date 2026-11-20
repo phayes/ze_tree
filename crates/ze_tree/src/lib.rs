@@ -75,6 +75,7 @@
 
 #[cfg(any(feature = "export-obj", feature = "export-gltf"))]
 pub mod export;
+mod jiggle;
 mod material;
 mod mesh;
 mod options;

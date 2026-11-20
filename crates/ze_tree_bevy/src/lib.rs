@@ -1,62 +1,193 @@
-//! Generate and display [`ze_tree`] trees in Bevy.
+//! # ze_tree_bevy
 //!
-//! Add [`ZeTreePlugin`] after Bevy's default plugins, then spawn a [`ZeTree`]
-//! component. Trees generate in the background and appear as child entities for
-//! bark, leaves and optional trellis support wires. The plugin creates several
-//! levels of detail (LOD): simpler meshes for trees farther from the camera.
-//! Bevy fades between these levels. Identical tree options share meshes and materials.
+//! Display procedural trees in Bevy with background generation, textured materials,
+//! wind animation, and distance-based mesh detail. Built on `ze_tree`, this crate
+//! targets Bevy 0.20.1.
+//!
+//! ## Display a tree
+//!
+//! Add `ZeTreePlugin` after Bevy's default plugins, then spawn a `ZeTree` component.
+//! This complete example includes a camera and light and runs without texture files:
 //!
 //! ```no_run
 //! use bevy::prelude::*;
-//! use ze_tree_bevy::{Wind, ZeTree, ZeTreePlugin};
-//! use ze_tree::{TreePreset, WindParams};
+//! use ze_tree::TreePreset;
+//! use ze_tree_bevy::{ZeTree, ZeTreePlugin};
 //!
-//! fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-//!     // Spawn a built-in preset and load another tree from the asset directory.
-//!     commands.spawn((ZeTree::preset(TreePreset::OakMedium), Transform::default()));
-//!     commands.spawn((
-//!         ZeTree::Asset(asset_server.load("trees/my_tree.tree.json")),
-//!         Transform::from_xyz(40.0, 0.0, 0.0),
-//!     ));
-//!     // Keep trunks and branches still while leaves flutter.
-//!     commands.insert_resource(Wind(WindParams::LEAVES_ONLY));
+//! fn main() {
+//!     App::new()
+//!         .add_plugins((
+//!             DefaultPlugins,
+//!             ZeTreePlugin {
+//!                 texture_root: None,
+//!                 ..default()
+//!             },
+//!         ))
+//!         .add_systems(Startup, setup)
+//!         .run();
 //! }
 //!
-//! App::new()
-//!     .add_plugins((DefaultPlugins, ZeTreePlugin::default()))
-//!     .add_systems(Startup, setup)
-//!     .run();
+//! fn setup(mut commands: Commands) {
+//!     commands.spawn(ZeTree::preset(TreePreset::OakSmall));
+//!     commands.spawn((
+//!         Camera3d::default(),
+//!         Transform::from_xyz(35.0, 25.0, 55.0)
+//!             .looking_at(Vec3::new(0.0, 10.0, 0.0), Vec3::Y),
+//!     ));
+//!     commands.spawn((
+//!         DirectionalLight {
+//!             illuminance: 12_000.0,
+//!             shadow_maps_enabled: true,
+//!             ..default()
+//!         },
+//!         Transform::from_xyz(30.0, 50.0, 30.0).looking_at(Vec3::ZERO, Vec3::Y),
+//!     ));
+//! }
 //! ```
 //!
-//! # Textures
+//! The tree appears when background generation finishes. Bark, leaves, and any
+//! visible trellis support wires are spawned as child entities. Trees with identical
+//! options share meshes and materials.
 //!
-//! Textures are supplied separately. Copy the repository's `assets/textures/bc7`
-//! folder to `assets/ze_tree/textures/bc7` in an app using Bevy's default asset
-//! directory. For another location, set [`ZeTreePlugin::texture_root`] to the
-//! path relative to your asset directory. Missing files cause asset-loading errors;
-//! set `texture_root` to `None` to use tint colours without textures. Untextured
-//! leaves appear as solid rectangles because no image supplies their outline.
+//! With `texture_root: None`, trees use material colours and leaves are solid
+//! rectangles. Add textures to give leaves their outline and bark its surface detail.
 //!
-//! The BC7 textures require GPU support for that compression format. The `uastc`
-//! set is an alternative for other GPUs and requires Bevy's `basis-universal` feature.
-//! Bark normal maps add surface detail only with
-//! [`BarkUvMode::Continuous`](ze_tree::BarkUvMode::Continuous). Built-in presets
-//! use mirrored texture coordinates, so their bark normal maps are disabled.
+//! ## Add textures
 //!
-//! # Wind
+//! Copy the repository's `assets/textures/bc7` directory to
+//! `assets/ze_tree/textures/bc7` in your app, then use `ZeTreePlugin::default()`.
+//! The default texture root is `ze_tree/textures/bc7`, relative to Bevy's asset
+//! directory. Set `texture_root` to another path if you store textures elsewhere.
+//! Missing textures cause asset-loading errors.
 //!
-//! Change the [`Wind`] resource to control movement for all tree materials.
-//! By default, trunks bend, branches sway and leaves flutter. Animation runs on
-//! the GPU using [`MeshBuffers::wind`](ze_tree::MeshBuffers::wind); shadows and
-//! motion vectors include this movement. Each tree's position varies the animation
-//! timing so copies do not all move together.
+//! BC7 requires GPU support for that compression format. For other GPUs, use the
+//! repository's `uastc` set, enable Bevy's `basis-universal` feature, and point
+//! `texture_root` at the copied UASTC directory.
 //!
-//! # Lower-level use
+//! Bark normal maps require `BarkUvMode::Continuous`, as in the next example.
+//! Built-in presets use mirrored texture coordinates, so their bark normal maps
+//! are disabled unless you change that setting.
 //!
-//! To create your own entities, use [`bark_mesh`] and [`leaf_mesh`] with
-//! [`bark_material`] and [`leaf_material`], then attach the meshes and
-//! `MeshMaterial3d<TreeMaterial>` to those entities. Keep [`ZeTreePlugin`] installed
-//! to register the shaders and synchronize materials with the global wind.
+//! ## Customize and position trees
+//!
+//! Edit a preset's options and wrap them with `ZeTree::new`. Add a `Transform` to
+//! position each tree. Register this function as a startup system in your app:
+//!
+//! ```no_run
+//! use bevy::prelude::*;
+//! use ze_tree::{BarkUvMode, TreePreset};
+//! use ze_tree_bevy::ZeTree;
+//!
+//! fn plant_trees(mut commands: Commands) {
+//!     for i in 0..5 {
+//!         let mut options = TreePreset::OakSmall.options();
+//!         options.seed = i;
+//!         options.branch.length[0] = 12.0; // Trunk length.
+//!         options.bark.uv_mode = BarkUvMode::Continuous;
+//!
+//!         commands.spawn((
+//!             ZeTree::new(options),
+//!             Transform::from_xyz(i as f32 * 20.0, 0.0, 0.0),
+//!         ));
+//!     }
+//! }
+//! ```
+//!
+//! The same options and seed produce the same shape. Changing a tree's `ZeTree`
+//! component rebuilds its generated parts; removing the component removes those
+//! children. Moving the parent entity moves the whole tree.
+//!
+//! ## Load settings from JSON
+//!
+//! Save full or partial ez-tree settings to `assets/trees/oak.tree.json`. Missing
+//! fields use defaults. For example:
+//!
+//! ```json
+//! {
+//!   "seed": 42,
+//!   "branch": { "length": { "0": 12.0 } }
+//! }
+//! ```
+//!
+//! Load the file through Bevy's asset server in a startup system:
+//!
+//! ```no_run
+//! use bevy::prelude::*;
+//! use ze_tree_bevy::ZeTree;
+//!
+//! fn load_tree(mut commands: Commands, asset_server: Res<AssetServer>) {
+//!     commands.spawn((
+//!         ZeTree::Asset(asset_server.load("trees/oak.tree.json")),
+//!         Transform::from_xyz(20.0, 0.0, 0.0),
+//!     ));
+//! }
+//! ```
+//!
+//! The filename must end in `.tree.json`. The tree waits for the asset to load,
+//! then generates in the background. It rebuilds when Bevy reports that the asset
+//! has changed; detecting live file edits requires Bevy asset watching to be enabled.
+//!
+//! ## Control wind
+//!
+//! By default, trunks bend, branches sway, and leaves flutter. Change the global
+//! `Wind` resource to update all tree materials. For example, register this startup
+//! system to keep trunks and branches still while leaves flutter:
+//!
+//! ```no_run
+//! use bevy::prelude::*;
+//! use ze_tree::WindParams;
+//! use ze_tree_bevy::Wind;
+//!
+//! fn set_wind(mut wind: ResMut<Wind>) {
+//!     wind.0 = WindParams::LEAVES_ONLY;
+//! }
+//! ```
+//!
+//! Wind animation runs on the GPU and is included in shadows and motion vectors.
+//! Each tree's position varies the timing so copies do not all move together.
+//! The plugin synchronizes every `TreeMaterial` with the global resource, including
+//! materials you create yourself.
+//!
+//! ## Choose mesh detail
+//!
+//! The plugin generates three mesh detail levels by default, with simpler meshes
+//! starting at camera distances of 100 and 250 world units. Bevy fades between them.
+//! Set `ZeTreePlugin::lod_levels` when adding the plugin to choose your own levels.
+//! For a single full-detail mesh with no distance switching:
+//!
+//! ```rust
+//! use ze_tree::LodLevel;
+//! use ze_tree_bevy::ZeTreePlugin;
+//!
+//! let plugin = ZeTreePlugin {
+//!     lod_levels: vec![LodLevel::default()],
+//!     ..Default::default()
+//! };
+//! ```
+//!
+//! An empty list produces no bark or leaf meshes. Generated children have a
+//! `TreePart` component identifying their detail level and whether they draw bark,
+//! leaves, or a trellis wire.
+//!
+//! ## Try the viewer
+//!
+//! From the repository, run:
+//!
+//! ```sh
+//! cargo run -p ze_tree_bevy --example viewer
+//! ```
+//!
+//! The viewer uses the repository's textures. Press Left/Right to switch presets,
+//! F to toggle a forest, Space to toggle trunk and branch movement, and N to toggle
+//! bark normal maps. Hold the left mouse button to look around and use WASD and Q/E
+//! to fly. Press J to toggle shape variation and R to generate new variations.
+//!
+//! ## Build your own entities
+//!
+//! For direct control, convert a `ze_tree::TreeMesh` with `bark_mesh` and `leaf_mesh`,
+//! create materials with `bark_material` and `leaf_material`, and attach the mesh
+//! handles and `MeshMaterial3d<TreeMaterial>` to your entities. Keep `ZeTreePlugin`
+//! installed to register shaders and synchronize wind settings.
 
 mod material;
 mod mesh;

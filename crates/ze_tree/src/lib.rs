@@ -1,77 +1,178 @@
-//! Tree settings and repeatable random numbers for a Rust port of
-//! [ez-tree](https://github.com/dgreenheck/ez-tree), which generates tree shapes
-//! from settings such as branch length and leaf count.
+//! # ze_tree
 //!
-//! Start with [`TreeOptions::default()`] and adjust the settings, or use a
-//! ready-made preset such as `TreePreset::OakSmall.options()`.
-//! [`TreeOptions::from_json`] loads full or partial ez-tree JSON, keeping defaults
-//! for omitted fields. [`TreeOptions::to_json`] saves all settings as JSON.
-//! JSON and serde support are always available; no Cargo feature is needed.
-//! Deserializing [`TreeOptions`] directly with serde requires every field.
+//! Generate procedural trees in Rust, from small bushes to branching oaks and pines.
+//! A port of [ez-tree](https://github.com/dgreenheck/ez-tree), `ze_tree` produces
+//! branch and leaf meshes, repeatable shapes from a seed, and simpler meshes for
+//! distant trees. Your application supplies the renderer.
 //!
-//! Pass settings to [`Skeleton::generate`] to get branch shapes and leaf placements.
-//! Each branch is a sequence of circular slices describing its position and thickness;
-//! each leaf has a position, orientation, and size. The same settings, including the
-//! seed, produce the same skeleton. Generation returns an error if
-//! [`TreeOptions::validate`] rejects the branch depth or section counts.
+//! ## Generate a tree
 //!
-//! A skeleton describes the tree's shape. To get triangles for rendering, call
-//! [`Skeleton::mesh`] with the tree options and [`LodDetail::default()`] for full detail.
-//! A level of detail is a simpler or more detailed version of the same tree mesh:
-//! simpler versions cost less to draw at a distance. [`default_lod_levels`] provides
-//! ez-tree's three standard settings. You can mesh one skeleton at several detail
-//! levels without changing its shape data or making new random choices.
+//! Start with a built-in preset:
 //!
-//! [`Tree`] generates both the tree's layout and its full-detail mesh in one call,
-//! using custom settings, a preset, or JSON. It gives you access to the settings
-//! and generated shape, and can create simpler meshes for distant trees.
+//! ```rust
+//! use ze_tree::{Tree, TreePreset};
 //!
-//! To render a tree, upload the bark and leaf buffers from [`TreeMesh`] to your
-//! renderer and apply the appearance settings from [`BarkMaterial`] and
-//! [`LeafMaterial`]. Choose simpler meshes as the tree moves farther from the camera.
+//! let tree = Tree::from_preset(TreePreset::OakSmall);
+//! let mesh = tree.mesh();
 //!
-//! The repository's `assets/textures/` folder contains KTX2 texture files:
-//! compressed images with smaller versions (mipmaps) for rendering at a distance.
-//! These files are not included in the published crate. To use them:
+//! println!("{} triangles", tree.triangle_count());
+//! println!("{} bark vertices", mesh.branches.positions.len());
+//! println!("{} leaf vertices", mesh.leaves.positions.len());
+//! ```
 //!
-//! - Choose `uastc/` for textures that a Basis Universal loader can convert for
-//!   any GPU. In Bevy, enable the `basis-universal` feature to load them.
-//!   Choose `bc7/` for textures that most desktop GPUs can use directly.
-//! - Inside either folder, bark textures are at
-//!   `bark/<kind>/{color,normal,roughness}.ktx2`, and leaf textures are at
-//!   `leaves/<kind>.ktx2`. Use [`BarkOptions::kind`] from [`BARK_KINDS`] and
-//!   [`LeafOptions::kind`] from [`LEAF_KINDS`] to select the textures.
-//! - Load bark colour and leaf textures as sRGB so their colours display correctly.
-//!   Load normal maps (surface bump directions) and roughness maps (how matte the
-//!   surface looks) as linear data so their values are used without colour conversion.
-//! - Normal maps use the OpenGL/glTF convention: the green channel points along
-//!   increasing `v`, the second texture coordinate.
-//! - Roughness is stored in all three colour channels. If your renderer uses this
-//!   as a combined metallic-roughness texture, keep the metallic factor at 0 so
-//!   the bark does not look metallic.
-//! - Leaf alpha controls transparency and is straight, not premultiplied: the
-//!   stored colours have not been multiplied by alpha.
+//! `mesh.branches` and `mesh.leaves` contain positions, normals, texture coordinates,
+//! and triangle indices. Upload these buffers to your renderer and give each mesh
+//! its own material. Presets include ash, aspen, oak, pine, bushes, and a tree trained
+//! along a trellis. `TreePreset::ALL` lists them all.
 //!
-//! To light bark with normal maps, set [`BarkOptions::uv_mode`] to
-//! [`BarkUvMode::Continuous`] and supply [`MeshBuffers::tangents`] to your renderer.
+//! ## Customize the shape
 //!
-//! Animate bark and leaves with the [`WIND_WESL`] shader module. Pass
-//! [`MeshBuffers::wind`] as per-vertex data and [`WindParams`] as the shared wind
-//! settings, then add `wind_offset` to each vertex's position in your shader.
-//! To display a trellis (the guide wires that shape growth), use
-//! [`TrellisOptions::wires`] for wire endpoints and [`TrellisMaterial`] for appearance.
+//! Edit a preset's options, then generate a new tree. The same options and seed
+//! produce the same shape; change the seed for another variation.
 //!
-//! To draw or export trunk, branches, and leaves separately, list nonempty parts
-//! with [`BranchGrouping::parts`] and copy each into its own mesh with [`TreeMesh::part`].
+//! ```rust
+//! use ze_tree::{BarkUvMode, Tree, TreePreset};
 //!
-//! To prepare a tree for bending animation, use [`Tree::rig`] to create movable
-//! joints along its branches. [`Rig::skin`] supplies weights describing how strongly
-//! each joint moves each vertex. Apply joint movement in your renderer or 3D tool.
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let mut options = TreePreset::OakSmall.options();
+//!     options.seed = 42;
+//!     options.branch.length[0] = 12.0; // Trunk length, in tree units.
+//!     options.leaves.size = 1.5;
+//!     options.bark.uv_mode = BarkUvMode::Continuous;
 //!
-//! To save model files, enable `export-obj` for Wavefront OBJ mesh and material text,
-//! or `export-gltf` for glTF scene data, and use the `export` module. These functions
-//! return file contents for you to save. glTF can include the rig and simpler mesh
-//! variants for distant viewing; the receiving tool controls animation and detail switching.
+//!     let tree = Tree::new(options)?;
+//!     println!("{} triangles", tree.triangle_count());
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Branch settings use index `0` for the trunk and indices `1` through `3` for
+//! successive branch levels. You can also start with `TreeOptions::default()`.
+//! `Tree::new` checks branch depth and section counts; it does not validate every
+//! numeric setting, so use sensible dimensions and counts.
+//!
+//! ## Load and save JSON
+//!
+//! Load full ez-tree settings or a partial JSON object. Missing fields, including
+//! nested fields, use defaults. JSON support is always enabled.
+//!
+//! ```rust
+//! use ze_tree::Tree;
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let tree = Tree::from_json(r#"{
+//!         "seed": 42,
+//!         "branch": { "length": { "0": 12.0 } }
+//!     }"#)?;
+//!
+//!     let json = tree.options().to_json();
+//!     let restored = Tree::from_json(&json)?;
+//!     assert_eq!(tree, restored);
+//!     Ok(())
+//! }
+//! ```
+//!
+//! Use `TreeOptions::from_json` if you only need settings. Unlike this helper,
+//! deserializing `TreeOptions` directly with serde requires every field.
+//!
+//! ## Create simpler meshes
+//!
+//! Generate several levels of detail (LOD) from the same tree. Your renderer chooses
+//! which mesh to show based on camera distance.
+//!
+//! ```rust
+//! use ze_tree::{Tree, TreePreset, default_lod_levels};
+//!
+//! let tree = Tree::from_preset(TreePreset::AshSmall);
+//! for (level, mesh) in tree.lod_meshes(&default_lod_levels()) {
+//!     println!(
+//!         "From distance {}: {} triangles",
+//!         level.distance,
+//!         mesh.triangle_count(),
+//!     );
+//! }
+//! ```
+//!
+//! The defaults provide three levels, starting at distances 0, 100, and 250 in tree
+//! units. For your own settings, pass a `LodDetail` to `Tree::mesh_with_detail`.
+//! If you only need branch shapes and leaf placements, use `Skeleton::generate`
+//! without building a mesh.
+//!
+//! ## Export a model
+//!
+//! Optional Cargo features enable file export:
+//!
+//! - `export-obj`: Wavefront OBJ geometry and MTL materials.
+//! - `export-gltf`: glTF (`.gltf` and `.bin`) or a single binary `.glb` file.
+//!
+//! With `export-gltf` enabled, save a tree as GLB:
+//!
+//! ```no_run
+//! # #[cfg(feature = "export-gltf")]
+//! # fn main() -> Result<(), Box<dyn std::error::Error>> {
+//! use ze_tree::{Tree, TreePreset};
+//! use ze_tree::export::gltf::{GltfOptions, to_glb};
+//!
+//! fn main() -> Result<(), Box<dyn std::error::Error>> {
+//!     let tree = Tree::from_preset(TreePreset::PineSmall);
+//!     let bytes = to_glb(
+//!         std::slice::from_ref(tree.mesh()),
+//!         tree.options(),
+//!         &GltfOptions::default(),
+//!     )?;
+//!     std::fs::write("pine.glb", bytes)?;
+//!     Ok(())
+//! }
+//! # main()
+//! # }
+//! # #[cfg(not(feature = "export-gltf"))]
+//! # fn main() {}
+//! ```
+//!
+//! Exporters return file contents for you to save. By default, exports use material
+//! colours without images; leaves appear as rectangles without a texture supplying
+//! their outline. Use `GltfOptions::textures` to reference or embed PNG/JPEG images.
+//! An optional rig prepares a model for bending animation, but does not add animation
+//! clips. Exported LOD meshes require the receiving tool to choose which to display.
+//!
+//! To export every preset as OBJ and GLB from this repository:
+//!
+//! ```sh
+//! cargo run -p ze_tree --example export --features export-obj,export-gltf
+//! ```
+//!
+//! Files are written to `target/ze_tree_export` by default. The example accepts an
+//! output directory and an optional source texture directory as positional arguments.
+//!
+//! ## Materials and animation
+//!
+//! `BarkMaterial` and `LeafMaterial` describe the appearance settings for a renderer.
+//! The repository's `assets/textures/` directory supplies separate KTX2 texture sets
+//! (these assets are not included in the crate):
+//!
+//! - `bc7/` for GPUs that support BC7 compression, including most desktop GPUs.
+//! - `uastc/` for a Basis Universal loader to transcode to a supported GPU format.
+//!
+//! Inside either set, bark maps are `bark/<kind>/{color,normal,roughness}.ktx2` and
+//! leaf images are `leaves/<kind>.ktx2`. The options' `bark.kind` and `leaves.kind`
+//! select the texture names. Load colour images as sRGB and normal/roughness maps as
+//! linear data. Normal maps use the OpenGL/glTF convention; leaf alpha is straight,
+//! not premultiplied. Keep the metallic factor at zero if using the roughness image
+//! as a combined metallic-roughness texture.
+//!
+//! For bark normal maps, use `BarkUvMode::Continuous` and the mesh's tangents.
+//! For GPU wind, pass `MeshBuffers::wind` and `WindParams` to the `WIND_WESL` shader
+//! module and add its `wind_offset` to vertex positions. For joint-based animation,
+//! create joints with `Tree::rig` and vertex weights with `Rig::skin`.
+//! `BranchGrouping::parts` and `TreeMesh::part` let you extract separate tree parts.
+//! `TrellisOptions::wires` and `TrellisMaterial` describe the optional support wires.
+//!
+//! ## Bevy integration
+//!
+//! The workspace also includes `ze_tree_bevy`. Add its `ZeTreePlugin` after Bevy's
+//! default plugins and spawn a `ZeTree` component to generate and display trees.
+//! It handles background generation, materials, wind, and mesh detail switching.
+//! See that crate's documentation for setup and texture paths.
 
 #[cfg(any(feature = "export-obj", feature = "export-gltf"))]
 pub mod export;

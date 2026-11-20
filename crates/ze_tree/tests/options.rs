@@ -178,3 +178,16 @@ fn too_many_levels_is_rejected() {
     options.branch.levels = 3;
     assert_eq!(options.validate(), Ok(()));
 }
+
+#[test]
+fn zero_sections_is_rejected_only_for_levels_in_use() {
+    let mut options = TreeOptions::default();
+    options.branch.levels = 1;
+    options.branch.sections[1] = 0;
+    assert_eq!(options.validate(), Err(OptionsError::ZeroSections { level: 1 }));
+
+    // With levels 0 and 1 configured, a zero section count at level 2 is ignored.
+    options.branch.sections[1] = 5;
+    options.branch.sections[2] = 0;
+    assert_eq!(options.validate(), Ok(()));
+}

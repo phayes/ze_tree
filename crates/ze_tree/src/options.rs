@@ -143,8 +143,11 @@ pub struct BranchOptions {
     /// radius where a side branch starts; 0.7 makes it 70% as thick.
     /// Tip continuations inherit the parent tip radius instead.
     pub radius: PerLevel<f32>,
-    /// Number of lengthwise divisions per branch. More divisions allow finer bends.
-    /// Use at least 1 for each active level; validation does not check this.
+    /// Number of lengthwise intervals per branch; 12 gives 13 cross-sections.
+    /// More intervals allow finer bends. Deciduous tip continuations inherit the
+    /// parent's count rather than this level's setting.
+    /// [`TreeOptions::validate`] requires at least 1 for levels 0 through `levels`,
+    /// even if no branches will grow at a configured level.
     pub sections: PerLevel<u32>,
     /// Number of sides around a branch cross-section; more sides look rounder.
     pub segments: PerLevel<u32>,
@@ -332,6 +335,11 @@ pub enum OptionsError {
         /// Number of levels above the trunk requested by the caller.
         levels: u32,
     },
+    /// A level from 0 through `branch.levels` requests zero lengthwise intervals.
+    ZeroSections {
+        /// Index of the zero entry in `branch.sections`; 0 identifies the trunk.
+        level: u32,
+    },
 }
 
 impl fmt::Display for OptionsError {
@@ -341,6 +349,10 @@ impl fmt::Display for OptionsError {
                 f,
                 "branch.levels is {levels}, but at most {MAX_LEVELS} levels are supported"
             ),
+            Self::ZeroSections { level } => write!(
+                f,
+                "branch.sections[{level}] is 0, but every level in use needs at least 1 section"
+            ),
         }
     }
 }
@@ -348,20 +360,28 @@ impl fmt::Display for OptionsError {
 impl std::error::Error for OptionsError {}
 
 impl TreeOptions {
-    /// Checks that the branch level does not exceed [`MAX_LEVELS`].
+    /// Checks the supported branch depth and required section counts.
     ///
-    /// This is not a complete validity check: dimensions, counts, and floating-point
-    /// values are not checked.
+    /// Checks every level from the trunk through `branch.levels`, even when child
+    /// counts would leave a level empty. Section counts for higher levels are ignored.
+    /// Success does not guarantee usable geometry: dimensions, floating-point values,
+    /// and other settings are not checked.
     ///
     /// # Errors
     ///
-    /// Returns [`OptionsError::TooManyLevels`] if `branch.levels` is greater than
-    /// [`MAX_LEVELS`].
+    /// Returns [`OptionsError::TooManyLevels`] if `branch.levels` exceeds [`MAX_LEVELS`].
+    /// Otherwise, returns [`OptionsError::ZeroSections`] for the first zero entry in
+    /// `branch.sections` from level 0 through `branch.levels`, inclusive.
     pub fn validate(&self) -> Result<(), OptionsError> {
         if self.branch.levels > MAX_LEVELS {
             return Err(OptionsError::TooManyLevels {
                 levels: self.branch.levels,
             });
+        }
+        for level in 0..=self.branch.levels {
+            if self.branch.sections[level as usize] == 0 {
+                return Err(OptionsError::ZeroSections { level });
+            }
         }
         Ok(())
     }

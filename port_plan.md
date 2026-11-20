@@ -19,29 +19,33 @@ Reference source: `prior_art/ez-tree`, a shallow clone of commit
 |---|---|
 | 0 — Scaffolding | ✅ Done |
 | 1 — Foundations (golden harness, `rng`, `options` + `presets`) | ✅ Done |
-| 2 — Skeleton growth | ⏭ Next |
-| 3 — Meshing and LOD | Not started (can start from fixture skeletons) |
+| 2 — Skeleton growth | ✅ Done (uncommitted) |
+| 3 — Meshing and LOD | ⏭ Next |
 | 4 — Tree wrapper, trellis layout, material params, WESL wind | Not started |
 | 5 — Exports (glTF, OBJ, rig) | Not started |
 | 6 — Polish | Not started |
 
 Where things stand:
-- `cargo build`, `cargo clippy --all-targets`, `cargo test` (5 unit tests, 11 options
-  tests, 1 RNG test), `cargo doc --all-features` and the doctests all pass with no
-  warnings. Nothing is committed yet.
-- All fixtures from the verification section are generated (7.8 MB): RNG, options,
-  LOD levels, 24 skeleton cases and 9 mesh cases. Only the RNG and options fixtures
-  are used by tests so far; skeletons and meshes are for Phases 2 and 3.
-- `skeleton`, `mesh`, `tree`, `trellis` and `material` are still empty modules.
+- `cargo build`, `cargo clippy --all-targets`, `cargo test` (14 unit, 12 options,
+  1 RNG, 5 skeleton tests), `cargo doc --all-features` and the doctests all pass with
+  no warnings. Phases 0–1 are committed; Phase 2 is not.
+- All fixtures from the verification section are generated (7.8 MB). RNG, options and
+  all 24 skeleton fixtures are used by tests; the 9 mesh fixtures are for Phase 3.
+- `skeleton` and the trellis pull (`TrellisOptions::nearest_point` / `pull`) are
+  implemented. `mesh`, `tree` and `material` are still empty modules.
 
 Open items carried forward:
 - **D9:** fractional seeds act like their truncated value. Accepted as documented;
   revisit only if someone needs JS-identical fractional seeds.
-- **Validation:** `TreeOptions::validate()` only checks `branch.levels` (D3).
-  `sections == 0` would divide by zero in growth; add that check in Phase 2.
 - **f32 options vs f64 preset literals:** preset files contain values such as
   `0.6199999999999999` that f32 stores as `0.62`. The JSON-format test compares
   fractional values at f32 precision for this reason (D4).
+- **Thin evergreen branches are chaotic (Phase 2 finding):** see "Phase 2 tolerance"
+  below. One fixture (`evergreen_seed_42`) has a documented, larger tolerance. Doing
+  the whole growth in f64 might remove this; not done (see Decision 7).
+- **`cargo fmt`:** the Phase 0–1 files (`options.rs`, `tests/options.rs`,
+  `tests/rng.rs`) are not rustfmt-clean. The Phase 2 files are. Run `cargo fmt` once
+  as its own commit.
 
 ---
 
@@ -115,12 +119,20 @@ pub struct Rng;  impl Rng { pub fn new(seed: i32); pub fn next_u32(&mut self);
 // Use next_f64 where the result is floored into an index (Fisher–Yates), so f32
 // rounding cannot produce k+1.
 
-// skeleton.rs
+// skeleton.rs   (implemented)
 pub struct Skeleton { pub branches: Vec<SkeletonBranch>, pub leaves: Vec<SkeletonLeaf> }
-pub struct SkeletonBranch { pub sections: Vec<Section>, pub segment_count: u32, pub base_radius: f32 }
+pub struct SkeletonBranch { pub level: u32, pub parent: Option<Attachment>,
+                            pub sections: Vec<Section>, pub segment_count: u32, pub base_radius: f32 }
 pub struct Section { pub origin: Vec3, pub orientation: Quat, pub radius: f32 }
-pub struct SkeletonLeaf { pub origin: Vec3, pub orientation: Quat, pub size: f32 }
+pub struct SkeletonLeaf { pub parent: Attachment, pub origin: Vec3, pub orientation: Quat, pub size: f32 }
+pub struct Attachment { pub branch: usize, pub section: usize, pub t: f32 }  // t: 0..1 toward section+1
 impl Skeleton { pub fn generate(opts: &TreeOptions) -> Result<Skeleton, OptionsError>; }
+pub enum OptionsError { TooManyLevels { levels }, ZeroSections { level } }
+
+// trellis.rs   (pull implemented; layout is Phase 4)
+impl TrellisOptions { pub fn nearest_point(&self, Vec3) -> Vec3;
+                      pub fn pull(&self, position: Vec3, radius: f32) -> Option<TrellisPull>; }
+pub struct TrellisPull { pub direction: Vec3, pub strength: f32 }
 
 // mesh.rs
 pub struct LodDetail { pub section_stride: u32, pub segment_factor: f32,
@@ -137,8 +149,7 @@ pub struct Tree { options, skeleton, mesh }
 impl Tree { new, from_preset, generate, create_geometry(&LodDetail), generate_lods(&[LodLevel]),
             vertex_count, triangle_count }
 
-// trellis.rs
-pub fn nearest_trellis_point(..) -> Vec3; pub fn trellis_force(..) -> Option<(Vec3, f32)>;
+// trellis.rs (Phase 4)
 pub fn trellis_layout(&TrellisOptions) -> TrellisLayout  // line positions, lengths, radius, colour
 
 // material.rs — engine-agnostic material and wind parameters
@@ -165,9 +176,11 @@ test.
 | K3 | Branches grow breadth-first from a FIFO queue, and that order decides RNG use. | `#generateSkeleton` | `VecDeque`. |
 | K4 | `radialOffset` is drawn even when `count == 0`, and the shuffle draws `count-1` values. | `generateChildBranches`, `generateLeaves`, `shuffledIndices` | Same draws in the same order. |
 | K5 | RNG draw order inside a section: gnarliness x, then z. Per child or leaf: start jitter, then radial jitter. Leaf size is drawn at record time. | throughout | Same order, with a comment wherever the order isn't obvious. |
-| K6 | Gnarliness adds random offsets to the **Euler XYZ** x and z angles of the section orientation. | `#growBranch` | `Quat::to_euler(EulerRot::XYZ)`, offset x and z, then `Quat::from_euler`. Test once that glam's XYZ convention matches three's (`q = qx·qy·qz`, middle angle from `asin`). |
+| K6 | Gnarliness adds random offsets to the **Euler XYZ** x and z angles of the section orientation. | `#growBranch` | Decompose with a private `euler_xyz` that copies three's `setFromRotationMatrix` XYZ case (`asin` middle angle, 0.9999999 gimbal threshold, z = 0 at lock), offset x and z, then `Quat::from_euler(EulerRot::XYZ)`. glam's `to_euler` uses a different method that splits x/z differently at gimbal lock, and that split changes the result of the offsets. Tested: glam's `from_euler(XYZ)` equals three's `qx·qy·qz`. |
 | K7 | The evergreen tip has radius 0, so gnarliness `1/sqrt(0)` is ∞ and the force step `strength/0` is ±∞ (then clamped). | `#growBranch` | The orientation computed after the last section is never used. Skip that work explicitly instead of producing NaN or ∞. The result is the same, and the code is clearer. |
-| K8 | Child and leaf placement uses `floor(t * (n-1))` section lookup with lerp/slerp between sections. Note that `qB.slerp(qA, alpha)` slerps *from B toward A* by alpha. | placement | Keep exactly, including the B→A slerp direction. This is an algorithmic detail, not jitter. |
+| K8 | Child and leaf placement uses `floor(t * (n-1))` section lookup with lerp/slerp between sections. Note that `qB.slerp(qA, alpha)` slerps *from B toward A* by alpha, while position lerps A→B: at alpha 0 the position is A's but the orientation is B's. | placement | Keep exactly, including the B→A slerp direction. This is an algorithmic detail, not jitter. |
+| K9 | The trellis snaps to the nearest multiple of `spacing` from the grid's min corner, then clamps to the grid edge. When `width` or `height` is not a multiple of `spacing`, a point near the far edge can be pulled toward the edge itself, where there is no wire. | `getNearestTrellisPoint` | Kept; it decides the trellis preset's shape. |
+| K10 | `rotateTowards` returns unchanged only when the angle is exactly 0, and `setFromUnitVectors(+Y, −Y)` is a half turn about +Z. | growth force, trellis | Private `rotate_towards` and `rotation_from_y` follow three. glam's `rotate_towards` snaps to the target within 1e-4 rad and clamps negative steps, and `from_rotation_arc` picks another axis at 180°. |
 
 **Dropped or changed:**
 
@@ -181,6 +194,8 @@ test.
 | D6 | The trellis nearest-point code is duplicated in `tree.js` and `trellis.js`. | One function. |
 | D7 | `bark.maps` and `leaves.map` hold THREE textures. | Omitted from `TreeOptions`; texture choice belongs to the engine crate. `bark.type` / `leaves.type` are kept as `kind` strings. |
 | D8 | Per-level maps only have the keys that are used: `angle` and `start` have `1..3`, `children` has `0..2`. | `PerLevel<T>([T; 4])` for every field; unused slots default to 0. JSON output therefore has all four keys; ez-tree ignores the extra ones on load. |
+| D10 | A child or leaf `start` outside 0..1 indexes past the section array and crashes with `undefined`. | The section index is clamped to the array, so the point extrapolates below the base or stays at the tip. `validate()` does not check `start`. |
+| D11 | `sections == 0` divides by zero. | `validate()` rejects it for levels 0..=`levels` (`OptionsError::ZeroSections`). |
 | D9 | A fractional seed in JS is added to the RNG constants *before* the int32 wrap, so `seed: 0.5` and `seed: 0` give different streams. | `seed` is `ToInt32`-converted once on load (Decision 3), so fractional seeds behave like their truncated value. Integer seeds, which is all the JS app produces, match exactly. |
 
 ---
@@ -258,7 +273,33 @@ the user's CLAUDE.md.
     strict, so deserializing `TreeOptions` through serde directly (for example when
     embedded in another type) needs complete options, as written by `to_json`.
 
-### Phase 2 — Skeleton growth ⏭ Next
+### Phase 2 — Skeleton growth ✅ Done
+All 24 skeleton fixtures match: structure exactly (branch, section, leaf and segment
+counts), floats within the tolerance below. Also tested: the hierarchy (parents come
+first, levels step by one, every branch and leaf starts exactly at its `Attachment`),
+repeatability, tip behaviour and validation.
+
+**Phase 2 tolerance (set from evidence, `tests/skeleton.rs`).** Floats are compared by
+how far they would move a mesh vertex, relative to the tree's extent: origins by
+their distance; branch rings by orientation angle × radius; leaf quads by angle ×
+leaf size. The limit is **1e-4**. The worst seen is 4.8e-5 (a leaf on a thin bush_3
+branch), and most cases are below 1e-5. Radius and leaf size: **1e-6** relative
+(worst about 3e-7).
+- Raw angles are not compared. On branches thinner than about 1/1000 of the trunk,
+  bending is scaled by `1/sqrt(radius)` (×170 at r = 3.5e-5), the growth force
+  (`strength / radius`) turns each section fully upright, and the XYZ Euler angles sit
+  near gimbal lock. Tiny float differences then change the branch's roll by up to
+  0.05 rad. This is jitter point 3 below, made chaotic by thin radii.
+- **Known exception:** `evergreen_seed_42` gets 1e-3. Branch 274 (level 3, radius
+  3.5e-5) rolls up to 0.05 rad differently, and its leaves inherit that roll; the worst
+  leaf moves 4.2e-4 of the extent.
+- Doing only the placement maths (`start`, `alpha`, interpolated radius) in f64 was
+  tried. It improved bush_3 (4.8e-5 → 2.2e-6) but worsened evergreen_levels_2
+  (9.5e-6 → 5.1e-5), so it was reverted. Full-f64 growth is the remaining option.
+  Decision 7's trigger ("drift beyond ε on the largest presets") is not met: the
+  largest presets stay at or below 1e-6.
+
+Original task list:
 - Extend `validate()` to reject `branch.sections == 0` (see Status).
 - Record the hierarchy that Phase 5 needs: each branch's `level` and `parent`, and
   each leaf's parent (see Phase 5 prerequisites).
@@ -271,8 +312,11 @@ the user's CLAUDE.md.
 - Tests: skeleton fixtures match for every preset and seed, structure exactly and
   floats within ε. Set and record ε in this phase.
 
-### Phase 3 — Meshing and LOD
-Can start from fixture skeletons before Phase 2 is done.
+### Phase 3 — Meshing and LOD ⏭ Next
+To mesh a fixture skeleton on its own, build a `Skeleton` from the fixture in the
+test. The fixtures have no `level` / `parent` / leaf `parent`. Fill them from a Rust
+`Skeleton::generate` of the same options (the structure matches exactly) rather than
+regenerating the fixtures.
 - `mesh_branch`: ring sampling with stride that always keeps the first and last rings,
   `segments = max(3, round(n*factor))`, `wraps_x`, the duplicated seam vertex, and the
   index winding `v1,v3,v2,v2,v3,v4`.

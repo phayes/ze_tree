@@ -9,8 +9,14 @@
 //! JSON and serde support are always available; no Cargo feature is needed.
 //! Deserializing [`TreeOptions`] directly with serde requires every field.
 //!
-//! Tree growth, mesh generation, and rendering are not yet implemented.
-//! See `port_plan.md` at the repository root for the remaining work.
+//! Pass settings to [`Skeleton::generate`] to get branch shapes and leaf placements.
+//! Each branch is a sequence of circular slices describing its position and thickness;
+//! each leaf has a position, orientation, and size. The same settings, including the
+//! seed, produce the same skeleton. Generation returns an error if
+//! [`TreeOptions::validate`] rejects the branch depth or section counts.
+//!
+//! A skeleton is shape data, not a drawable mesh. Mesh generation and rendering are
+//! not yet implemented; see `port_plan.md` at the repository root for planned work.
 
 mod material;
 mod mesh;
@@ -27,3 +33,5 @@ pub use options::{
 };
 pub use presets::TreePreset;
 pub use rng::Rng;
+pub use skeleton::{Attachment, Section, Skeleton, SkeletonBranch, SkeletonLeaf};
+pub use trellis::TrellisPull;

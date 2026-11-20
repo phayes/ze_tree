@@ -1,22 +1,37 @@
-//! Generate branch shapes and leaf placements without building a drawable mesh.
+//! Generate a tree's branch structure and placements for leaves, fruit, and flowers.
+//! The resulting skeleton describes shapes and positions, without drawable surfaces.
 
 use std::collections::VecDeque;
 use std::f32::consts::TAU;
 
 use glam::{EulerRot, Mat3, Quat, Vec3};
 
+use crate::cluster::{SkeletonCluster, grow_clusters};
 use crate::{OptionsError, Rng, TreeOptions, TreeType};
 
-/// A tree shape described by branch cross-sections and leaf placements.
+/// Combines with the tree seed to give fruit its own repeatable random sequence.
+const FRUIT_SALT: i32 = 0x2f6b_3c1d;
+/// Combines with the tree seed to give flowers a separate repeatable random sequence.
+const FLOWER_SALT: i32 = 0x5a1e_7b93;
+
+/// A tree's branch structure, with positions for leaves, fruit, and flowers.
 ///
-/// Use [`Skeleton::generate`] to create a repeatable shape from tree settings,
-/// including a random seed. This contains no mesh vertices or rendering data.
+/// Branches are described by circular slices along their length. Fruit and
+/// flower clusters include supporting stalks and individual item placements.
+/// Use [`Skeleton::generate`] to create this structure from settings and a seed;
+/// the result contains no drawable surfaces.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Skeleton {
     /// Generated branches, with the trunk first and each parent before its children.
     pub branches: Vec<SkeletonBranch>,
     /// Generated leaves, in the order they were placed.
     pub leaves: Vec<SkeletonLeaf>,
+    /// Fruit clusters ordered by their supporting branch. Empty when fruit
+    /// placement is disabled or no eligible positions receive a cluster.
+    pub fruit: Vec<SkeletonCluster>,
+    /// Flower clusters ordered by their supporting branch. Empty when flower
+    /// placement is disabled or no eligible positions receive a cluster.
+    pub flowers: Vec<SkeletonCluster>,
 }
 
 /// A branch represented by a sequence of circular cross-sections from base to tip.
@@ -73,16 +88,21 @@ pub struct Attachment {
 }
 
 impl Skeleton {
-    /// Creates branch shapes and leaf placements from `options`, including its seed.
-    /// Reusing the same options produces the same skeleton.
+    /// Generates branches and placements for leaves, fruit, and flowers.
+    /// The same settings and seed produce the same skeleton. Changing fruit
+    /// settings does not move flowers, branches, or leaves; changing flower
+    /// settings does not move fruit, branches, or leaves.
     ///
-    /// Checks [`TreeOptions::validate`] before growing. That check does not cover
-    /// dimensions or floating-point values; invalid values can produce non-finite results.
+    /// Fruit and flower appearance and maturity do not affect this skeleton.
+    /// Settings are checked with [`TreeOptions::validate`] first. That check
+    /// does not cover branch or leaf dimensions, so invalid dimensions can
+    /// still produce non-finite coordinates.
     ///
     /// # Errors
     ///
-    /// Returns [`OptionsError`] for too many branch levels or zero section counts
-    /// at any configured level.
+    /// Returns the first [`OptionsError`] found by validation: unsupported branch
+    /// depth, a zero section count at a configured level, or an invalid fruit
+    /// or flower setting, even if fruit or flowers are disabled.
     pub fn generate(options: &TreeOptions) -> Result<Self, OptionsError> {
         options.validate()?;
 
@@ -110,7 +130,25 @@ impl Skeleton {
             grower.grow_branch(bud);
         }
 
-        Ok(grower.skeleton)
+        // Use separate random sequences for fruit and flowers so changes to one
+        // do not alter the other or the already generated branches and leaves.
+        let mut skeleton = grower.skeleton;
+        let (fruit, flowers) = (&options.fruit, &options.flowers);
+        skeleton.fruit = grow_clusters(
+            &skeleton.branches,
+            options,
+            &fruit.placement,
+            &fruit.cluster,
+            Rng::new(options.seed ^ FRUIT_SALT),
+        );
+        skeleton.flowers = grow_clusters(
+            &skeleton.branches,
+            options,
+            &flowers.placement,
+            &flowers.cluster,
+            Rng::new(options.seed ^ FLOWER_SALT),
+        );
+        Ok(skeleton)
     }
 }
 
@@ -127,11 +165,11 @@ struct Bud {
 }
 
 /// An attachment position with the local radius and orientation used for new growth.
-struct Placement {
-    attachment: Attachment,
-    origin: Vec3,
-    orientation: Quat,
-    radius: f32,
+pub(crate) struct Placement {
+    pub(crate) attachment: Attachment,
+    pub(crate) origin: Vec3,
+    pub(crate) orientation: Quat,
+    pub(crate) radius: f32,
 }
 
 /// Options, random sequence, pending branches, and results for one generation run.
@@ -305,7 +343,7 @@ impl Grower<'_> {
         let radial_offset = self.rng.next_f32();
         let start_min = branch.start[level];
         let height_step = (1.0 - start_min) / count as f32;
-        let angle_slots = self.shuffled_indices(count);
+        let angle_slots = shuffled_indices(&mut self.rng, count);
 
         for (i, slot) in angle_slots.into_iter().enumerate() {
             // Randomly position the child within its lengthwise slot.
@@ -348,7 +386,7 @@ impl Grower<'_> {
         let count = leaves.count;
         let start_min = leaves.start;
         let height_step = (1.0 - start_min) / count as f32;
-        let angle_slots = self.shuffled_indices(count);
+        let angle_slots = shuffled_indices(&mut self.rng, count);
 
         for (i, slot) in angle_slots.into_iter().enumerate() {
             let start = start_min + (i as f32 + self.rng.next_f32()) * height_step;
@@ -376,23 +414,23 @@ impl Grower<'_> {
             size,
         });
     }
+}
 
-    /// Shuffles the indices from 0 up to, but excluding, `count` using Fisher–Yates.
-    fn shuffled_indices(&mut self, count: u32) -> Vec<u32> {
-        let mut indices: Vec<u32> = (0..count).collect();
-        for k in (1..count as usize).rev() {
-            // Keep the draw in f64: rounding to f32 could select the out-of-range index `k + 1`.
-            let r = (self.rng.next_f64() * (k + 1) as f64) as usize;
-            indices.swap(k, r);
-        }
-        indices
+/// Returns each index in `0..count` once, in a random order determined by `rng`.
+pub(crate) fn shuffled_indices(rng: &mut Rng, count: u32) -> Vec<u32> {
+    let mut indices: Vec<u32> = (0..count).collect();
+    for k in (1..count as usize).rev() {
+        // Preserve f64 precision so rounding cannot select index `k + 1`.
+        let r = (rng.next_f64() * (k + 1) as f64) as usize;
+        indices.swap(k, r);
     }
+    indices
 }
 
 /// Finds a placement along a branch with at least two sections.
 /// `t` runs from 0 at the base to 1 at the tip; `branch` identifies the parent.
 /// Negative `t` extrapolates from the first pair; values above 1 use the final section.
-fn place(sections: &[Section], t: f32, branch: usize) -> Placement {
+pub(crate) fn place(sections: &[Section], t: f32, branch: usize) -> Placement {
     // Map the length fraction to a section index and a fraction within that interval.
     let last = sections.len() - 1;
     let scaled = t * last as f32;
@@ -535,15 +573,9 @@ mod tests {
 
     #[test]
     fn shuffle_is_a_permutation() {
-        let options = TreeOptions::default();
-        let mut grower = Grower {
-            options: &options,
-            rng: Rng::new(5),
-            queue: VecDeque::new(),
-            skeleton: Skeleton::default(),
-        };
+        let mut rng = Rng::new(5);
         for count in [0, 1, 2, 7, 30] {
-            let mut v = grower.shuffled_indices(count);
+            let mut v = shuffled_indices(&mut rng, count);
             v.sort_unstable();
             assert_eq!(v, (0..count).collect::<Vec<_>>());
         }

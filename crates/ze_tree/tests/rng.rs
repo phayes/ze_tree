@@ -14,8 +14,8 @@ fn matches_ez_tree_streams() {
         // Import seeds through the options API to cover the conversion used by
         // presets, including values outside the signed 32-bit range.
         let seed_json = &stream["seed"];
-        let options = TreeOptions::from_json(&format!(r#"{{"seed": {seed_json}}}"#))
-            .expect("seed parses");
+        let options =
+            TreeOptions::from_json(&format!(r#"{{"seed": {seed_json}}}"#)).expect("seed parses");
         let mut rng = Rng::new(options.seed);
 
         let expected = stream["values"].as_array().expect("values array");

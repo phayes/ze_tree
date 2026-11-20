@@ -4,7 +4,10 @@ mod common;
 
 use glam::Vec3;
 use serde_json::Value;
-use ze_tree::{BarkUvMode, OptionsError, TreeOptions, TreePreset};
+use ze_tree::{
+    BarkUvMode, ClusterKind, Facing, FlowerOptions, FruitOptions, OptionsError, TreeOptions,
+    TreePreset,
+};
 
 /// Converts a display name to the file stem shared by presets and fixtures,
 /// for example `"Ash Small"` to `"ash_small"`.
@@ -47,7 +50,9 @@ fn assert_contains(expected: &Value, actual: &Value, path: &str) {
         Value::Number(n) => {
             // Expected whole numbers must match exactly. For fractional values,
             // compare at f32 precision to allow for rounding in float settings.
-            let actual = actual.as_f64().unwrap_or_else(|| panic!("{path} is not a number"));
+            let actual = actual
+                .as_f64()
+                .unwrap_or_else(|| panic!("{path} is not a number"));
             let expected = n.as_f64().unwrap();
             if expected.fract() == 0.0 {
                 assert_eq!(actual, expected, "{path}");
@@ -77,7 +82,9 @@ fn presets_match_ez_tree_merge() {
     let merged = common::fixture_json("options/presets_merged.json");
     for preset in TreePreset::ALL {
         let stem = preset_stem(preset);
-        let expected = merged.get(&stem).unwrap_or_else(|| panic!("no fixture for {stem}"));
+        let expected = merged
+            .get(&stem)
+            .unwrap_or_else(|| panic!("no fixture for {stem}"));
         let expected = TreeOptions::from_json(&expected.to_string()).unwrap();
         assert_eq!(preset.options(), expected, "{stem}");
 
@@ -105,7 +112,12 @@ fn presets_are_valid_and_round_trip() {
     for preset in TreePreset::ALL {
         let options = preset.options();
         assert_eq!(options.validate(), Ok(()), "{}", preset.name());
-        assert_eq!(TreeOptions::from_json(&options.to_json()).unwrap(), options, "{}", preset.name());
+        assert_eq!(
+            TreeOptions::from_json(&options.to_json()).unwrap(),
+            options,
+            "{}",
+            preset.name()
+        );
         assert_eq!(TreePreset::from_name(preset.name()), Some(preset));
     }
     assert_eq!(TreePreset::from_name("Maple"), None);
@@ -183,7 +195,10 @@ fn seed_is_converted_like_javascript() {
 fn too_many_levels_is_rejected() {
     let mut options = TreeOptions::default();
     options.branch.levels = 4;
-    assert_eq!(options.validate(), Err(OptionsError::TooManyLevels { levels: 4 }));
+    assert_eq!(
+        options.validate(),
+        Err(OptionsError::TooManyLevels { levels: 4 })
+    );
     options.branch.levels = 3;
     assert_eq!(options.validate(), Ok(()));
 }
@@ -193,10 +208,161 @@ fn zero_sections_is_rejected_only_for_levels_in_use() {
     let mut options = TreeOptions::default();
     options.branch.levels = 1;
     options.branch.sections[1] = 0;
-    assert_eq!(options.validate(), Err(OptionsError::ZeroSections { level: 1 }));
+    assert_eq!(
+        options.validate(),
+        Err(OptionsError::ZeroSections { level: 1 })
+    );
 
     // With levels 0 and 1 configured, a zero section count at level 2 is ignored.
     options.branch.sections[1] = 5;
     options.branch.sections[2] = 0;
     assert_eq!(options.validate(), Ok(()));
+}
+
+#[test]
+fn ez_tree_json_leaves_fruit_and_flowers_off() {
+    let options = TreeOptions::from_json(&common::fixture_text("options/default.json")).unwrap();
+    assert_eq!(options.fruit, FruitOptions::default());
+    assert_eq!(options.flowers, FlowerOptions::default());
+    for placement in [&options.fruit.placement, &options.flowers.placement] {
+        assert_eq!((placement.count, placement.tips), (0, 0.0));
+    }
+}
+
+#[test]
+fn partial_fruit_and_flower_json_keeps_nested_defaults() {
+    let options = TreeOptions::from_json(
+        r#"{
+            "fruit": { "cluster": { "kind": "panicle", "items": 40 }, "maturity": 0.25 },
+            "flowers": { "placement": { "facing": "up", "count": 3 }, "shape": { "petalCount": 6 } }
+        }"#,
+    )
+    .unwrap();
+
+    let mut expected = TreeOptions::default();
+    expected.fruit.cluster.kind = ClusterKind::Panicle;
+    expected.fruit.cluster.items = 40;
+    expected.fruit.maturity = 0.25;
+    expected.flowers.placement.facing = Facing::Up;
+    expected.flowers.placement.count = 3;
+    expected.flowers.shape.petal_count = 6;
+    assert_eq!(options, expected);
+}
+
+#[test]
+fn fruit_and_flower_settings_round_trip() {
+    let mut options = TreePreset::OakMedium.options();
+    options.fruit.placement.count = 4;
+    options.fruit.placement.facing = Facing::Outward;
+    options.fruit.cluster.kind = ClusterKind::Umbel;
+    options.fruit.shape.lobes = 5;
+    options.fruit.shape.calyx = false;
+    options.flowers.placement.tips = 0.5;
+    options.flowers.cluster.kind = ClusterKind::Catkin;
+    options.flowers.shape.fade_color = 0x123456;
+    options.flowers.maturity = 0.9;
+
+    let json = options.to_json();
+    assert_eq!(TreeOptions::from_json(&json).unwrap(), options);
+
+    // Serialized settings should use the documented JSON names and enum values.
+    let value: Value = serde_json::from_str(&json).unwrap();
+    assert_eq!(value["fruit"]["placement"]["facing"], "outward");
+    assert_eq!(value["fruit"]["cluster"]["kind"], "umbel");
+    assert_eq!(value["fruit"]["shape"]["calyx"], false);
+    assert_eq!(value["flowers"]["cluster"]["kind"], "catkin");
+    assert_eq!(value["flowers"]["shape"]["fadeColor"], 0x123456);
+    assert!(value["flowers"]["placement"]["sizeVariance"].is_number());
+}
+
+#[test]
+fn fruit_and_flower_defaults_are_valid() {
+    assert_eq!(TreeOptions::default().validate(), Ok(()));
+}
+
+#[test]
+fn out_of_range_fruit_and_flower_settings_are_rejected() {
+    let invalid = |field: &str, requirement: &'static str| OptionsError::InvalidSetting {
+        field: field.to_owned(),
+        requirement,
+    };
+    let check = |change: fn(&mut TreeOptions), error: OptionsError| {
+        let mut options = TreeOptions::default();
+        change(&mut options);
+        assert_eq!(options.validate(), Err(error));
+    };
+
+    check(
+        |o| o.fruit.maturity = 1.5,
+        invalid("fruit.maturity", "between 0 and 1"),
+    );
+    check(
+        |o| o.flowers.maturity = -0.1,
+        invalid("flowers.maturity", "between 0 and 1"),
+    );
+    check(
+        |o| o.fruit.maturity = f32::NAN,
+        invalid("fruit.maturity", "between 0 and 1"),
+    );
+    check(
+        |o| o.fruit.placement.size = -1.0,
+        invalid("fruit.placement.size", "a finite value of 0 or more"),
+    );
+    check(
+        |o| o.flowers.cluster.stalk_length = f32::INFINITY,
+        invalid("flowers.cluster.stalkLength", "a finite value of 0 or more"),
+    );
+    check(
+        |o| o.flowers.placement.size_variance = 1.5,
+        invalid("flowers.placement.sizeVariance", "between 0 and 1"),
+    );
+    check(
+        |o| o.fruit.cluster.side_stalks = 0,
+        invalid("fruit.cluster.sideStalks", "at least 1"),
+    );
+    check(
+        |o| o.fruit.shape.segments = 2,
+        invalid("fruit.shape.segments", "at least 3"),
+    );
+    check(
+        |o| o.fruit.shape.rings = 1,
+        invalid("fruit.shape.rings", "at least 2"),
+    );
+    check(
+        |o| o.fruit.shape.elongation = 0.0,
+        invalid("fruit.shape.elongation", "a finite value above 0"),
+    );
+    check(
+        |o| o.fruit.shape.lobe_depth = 1.0,
+        invalid("fruit.shape.lobeDepth", "at least 0 and below 1"),
+    );
+    check(
+        |o| o.flowers.shape.petal_count = 0,
+        invalid("flowers.shape.petalCount", "at least 1"),
+    );
+    check(
+        |o| o.flowers.shape.petal_segments = 0,
+        invalid("flowers.shape.petalSegments", "at least 1"),
+    );
+    check(
+        |o| o.flowers.shape.cup = 2.0,
+        invalid("flowers.shape.cup", "between 0 and 1"),
+    );
+
+    // An invalid branch depth should be reported before an invalid fruit setting.
+    check(
+        |o| {
+            o.branch.levels = 4;
+            o.fruit.maturity = 2.0;
+        },
+        OptionsError::TooManyLevels { levels: 4 },
+    );
+}
+
+#[test]
+fn invalid_setting_message_names_the_field() {
+    let mut options = TreeOptions::default();
+    options.fruit.cluster.droop = 3.0;
+    let message = options.validate().unwrap_err().to_string();
+    assert_eq!(message, "fruit.cluster.droop must be between 0 and 1");
 }

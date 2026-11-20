@@ -6539,6 +6539,7 @@ dependencies = [
  "naga",
  "serde",
  "serde_json",
+ "twox-hash",
  "wesl",
 ]
 

@@ -1,13 +1,14 @@
-//! Extract the trunk, branches, or leaves from a [`TreeMesh`] for separate drawing or export.
+//! Extract the trunk, branches, leaves, fruit, or flowers from a [`TreeMesh`] for
+//! separate drawing or export.
 
 use std::ops::Range;
 
 use crate::{MeshBuffers, TreeMesh};
 
-/// Selects which bark or leaves to copy from a [`TreeMesh`].
+/// Selects which bark, leaves, fruit, or flowers to copy from a [`TreeMesh`].
 ///
 /// Pass this to [`TreeMesh::part`] to get a separate mesh. To list the nonempty
-/// parts first, use [`BranchGrouping::parts`].
+/// bark and leaf parts first, use [`BranchGrouping::parts`].
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum MeshPart {
     /// Bark on the trunk, also called branch level 0.
@@ -19,23 +20,34 @@ pub enum MeshPart {
     BranchLevel(u32),
     /// Every leaf in the mesh.
     Leaves,
+    /// All fruit and their supporting stalks.
+    Fruit,
+    /// All flowers and their supporting stalks.
+    Flowers,
 }
 
 impl MeshPart {
-    /// Returns `trunk`, `branches`, `branches_<level>`, or `leaves`, according to
-    /// this selection. These names can be used for objects in exported files.
+    /// Returns a name suitable for an exported object: `trunk`, `branches`,
+    /// `branches_<level>`, `leaves`, `fruit`, or `flowers`.
     pub fn name(self) -> String {
         match self {
             Self::Trunk => "trunk".to_owned(),
             Self::Branches => "branches".to_owned(),
             Self::BranchLevel(level) => format!("branches_{level}"),
             Self::Leaves => "leaves".to_owned(),
+            Self::Fruit => "fruit".to_owned(),
+            Self::Flowers => "flowers".to_owned(),
         }
     }
 
-    /// Returns `true` if this selects leaves. All other selections use bark material.
+    /// Returns whether this part contains leaves.
     pub fn is_leaves(self) -> bool {
         self == Self::Leaves
+    }
+
+    /// Returns whether this part selects trunk or branch bark.
+    pub fn is_bark(self) -> bool {
+        matches!(self, Self::Trunk | Self::Branches | Self::BranchLevel(_))
     }
 
     /// Checks whether this selection includes bark at the given branch depth.
@@ -44,7 +56,7 @@ impl MeshPart {
             Self::Trunk => level == 0,
             Self::Branches => level > 0,
             Self::BranchLevel(l) => level == l,
-            Self::Leaves => false,
+            Self::Leaves | Self::Fruit | Self::Flowers => false,
         }
     }
 }
@@ -62,10 +74,11 @@ pub enum BranchGrouping {
 }
 
 impl BranchGrouping {
-    /// Returns the selections in `mesh` that have triangles.
+    /// Lists nonempty bark and leaf parts in `mesh`, with the trunk first and
+    /// leaves last. [`Self::PerLevel`] lists branches in increasing depth order.
     ///
-    /// The order is trunk, branches, then leaves. With [`Self::PerLevel`], branch
-    /// parts appear in increasing depth order. Empty parts are omitted.
+    /// Fruit and flowers are omitted. Request them separately with
+    /// [`TreeMesh::part`] and [`MeshPart::Fruit`] or [`MeshPart::Flowers`].
     pub fn parts(self, mesh: &TreeMesh) -> Vec<MeshPart> {
         // Ignore levels whose branches have no triangles.
         let has_triangles = |level: u32| {
@@ -106,38 +119,47 @@ pub struct PartMesh {
     /// Vertex data and triangles for this part. Triangle indices start at zero
     /// and refer to vertices in these buffers.
     pub buffers: MeshBuffers,
-    /// Original vertex index for each vertex in [`Self::buffers`].
+    /// Maps each vertex in [`Self::buffers`] to its index in the original mesh.
     ///
-    /// Indices refer to [`TreeMesh::leaves`] for a leaf part and
-    /// [`TreeMesh::branches`] for a bark part. Use them to copy matching data,
-    /// such as the joint weights returned by [`Rig::skin`](crate::Rig::skin).
+    /// For leaves, fruit, and flowers, indices refer to the corresponding
+    /// [`TreeMesh::leaves`], [`TreeMesh::fruit`], or [`TreeMesh::flowers`] buffer.
+    /// For bark, they refer to [`TreeMesh::branches`]. Use this mapping to copy
+    /// additional vertex data, such as joint weights from [`Rig::skin`](crate::Rig::skin).
     pub source_vertices: Vec<u32>,
 }
 
 impl TreeMesh {
-    /// Returns a copy of the selected bark or leaves with its own vertex indices.
+    /// Copies the selected part into independent buffers, with triangle indices
+    /// that refer to the copied vertices.
     ///
-    /// Bark branches retain their order in [`TreeMesh::branch_spans`]. Selecting
-    /// an absent branch level returns an empty part. Selecting leaves copies the
-    /// entire leaf buffer, which may be empty.
+    /// Bark follows the order in [`TreeMesh::branch_spans`]; an absent branch
+    /// level returns an empty part. Leaves, fruit, and flowers each copy their
+    /// entire buffer, including an empty buffer when none are present.
     ///
     /// # Panics
     ///
-    /// May panic if manually edited spans or buffers have invalid ranges or indices.
-    /// Use matching spans and buffers, as produced by [`Skeleton::mesh`](crate::Skeleton::mesh).
+    /// May panic if manually edited spans or buffers contain invalid ranges or
+    /// indices. Keep them consistent, as produced by [`Skeleton::mesh`](crate::Skeleton::mesh).
     pub fn part(&self, part: MeshPart) -> PartMesh {
+        // Copying an entire buffer preserves its vertex indices.
+        let whole = match part {
+            MeshPart::Leaves => Some(&self.leaves),
+            MeshPart::Fruit => Some(&self.fruit),
+            MeshPart::Flowers => Some(&self.flowers),
+            MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => None,
+        };
+        if let Some(buffers) = whole {
+            return PartMesh {
+                buffers: buffers.clone(),
+                source_vertices: (0..buffers.next_index()).collect(),
+            };
+        }
+
+        // Append selected branches in the order recorded by the mesh.
         let mut out = PartMesh::default();
-        if part.is_leaves() {
-            // Leaf indices already refer to the buffer being copied.
-            let count = self.leaves.next_index();
-            out.buffers = self.leaves.clone();
-            out.source_vertices = (0..count).collect();
-        } else {
-            // Keep matching branches in their original order.
-            for span in &self.branch_spans {
-                if part.includes_level(span.level) {
-                    out.append(&self.branches, span.vertices.clone(), span.indices.clone());
-                }
+        for span in &self.branch_spans {
+            if part.includes_level(span.level) {
+                out.append(&self.branches, span.vertices.clone(), span.indices.clone());
             }
         }
         out

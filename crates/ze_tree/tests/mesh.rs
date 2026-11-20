@@ -62,7 +62,17 @@ const CASES: [&str; 3] = ["aspen_small", "bush_2", "evergreen_levels_2"];
 fn default_lod_levels_match_ez_tree() {
     let expected: Vec<LodLevel> =
         serde_json::from_str(&common::fixture_text("lod_levels.json")).expect("lod levels parse");
-    assert_eq!(expected, default_lod_levels());
+    // The ez-tree fixture has no fruit or flower settings; exclude those from this comparison.
+    let ours = default_lod_levels().map(|mut level| {
+        let full = LodDetail::default();
+        level.detail.cluster_stride = full.cluster_stride;
+        level.detail.item_stride = full.item_stride;
+        level.detail.item_scale = full.item_scale;
+        level.detail.item_detail = full.item_detail;
+        level.detail.flat_item_size = full.flat_item_size;
+        level
+    });
+    assert_eq!(expected, ours);
 }
 
 /// Returns the case's options, a Rust-grown skeleton, and a skeleton using saved ez-tree shapes.
@@ -414,7 +424,7 @@ fn bark_tangents_follow_the_texture_coordinates() {
             segment_count: 8,
             base_radius: 0.5,
         }],
-        leaves: Vec::new(),
+        ..Skeleton::default()
     };
     let mut options = TreeOptions::default();
     options.bark.uv_mode = BarkUvMode::Continuous;

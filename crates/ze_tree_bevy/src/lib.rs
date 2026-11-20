@@ -205,7 +205,7 @@ pub use material::{
     load_leaf_texture, trellis_material,
 };
 pub use mesh::{ATTRIBUTE_WIND, bark_mesh, leaf_mesh};
-pub use spawn::{TreeOptionsAsset, TreePart, TreePartKind, ZeTree};
+pub use spawn::{TreeFinished, TreeGenerating, TreeOptionsAsset, TreePart, TreePartKind, ZeTree};
 pub use wind::Wind;
 
 use spawn::{SpawnSettings, TreeCache, TreeOptionsLoader};

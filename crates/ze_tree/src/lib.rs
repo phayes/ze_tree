@@ -174,6 +174,8 @@
 //! It handles background generation, materials, wind, and mesh detail switching.
 //! See that crate's documentation for setup and texture paths.
 
+mod cluster;
+mod cluster_mesh;
 #[cfg(any(feature = "export-obj", feature = "export-gltf"))]
 pub mod export;
 mod jiggle;
@@ -186,16 +188,23 @@ mod rig;
 mod rng;
 mod skeleton;
 mod tree;
+mod tree_id;
 mod trellis;
 mod wind;
 
-pub use material::{BARK_KINDS, BarkMaterial, LEAF_KINDS, LeafMaterial, TrellisMaterial};
+pub use cluster::{ClusterItem, ClusterStalk, SkeletonCluster};
+pub use material::{
+    BARK_KINDS, BarkMaterial, FlowerMaterial, FruitMaterial, LEAF_KINDS, LeafMaterial,
+    TrellisMaterial,
+};
 pub use mesh::{
-    BranchSpan, LeafSpan, LodDetail, LodLevel, MeshBuffers, TreeMesh, default_lod_levels,
+    BranchSpan, ClusterSpan, ItemDetail, LeafSpan, LodDetail, LodLevel, MeshBuffers, TreeMesh,
+    default_lod_levels,
 };
 pub use options::{
-    BarkOptions, BarkUvMode, Billboard, BranchOptions, GrowthForce, LeafOptions, MAX_LEVELS, OptionsError,
-    PerLevel, TreeOptions, TreeType, TrellisForce, TrellisOptions,
+    BarkOptions, BarkUvMode, Billboard, BranchOptions, ClusterKind, ClusterPlacement, ClusterShape,
+    Facing, FlowerOptions, FlowerShape, FruitOptions, FruitShape, GrowthForce, LeafOptions,
+    MAX_LEVELS, OptionsError, PerLevel, TreeOptions, TreeType, TrellisForce, TrellisOptions,
 };
 pub use part::{BranchGrouping, MeshPart, PartMesh};
 pub use presets::TreePreset;

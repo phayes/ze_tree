@@ -266,7 +266,7 @@ mod tests {
                     &[Vec3::new(2.0, 2.0, 0.0), Vec3::new(2.0, 3.0, 0.0)],
                 ),
             ],
-            leaves: vec![],
+            ..Skeleton::default()
         }
     }
 

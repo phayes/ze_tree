@@ -108,14 +108,32 @@ pub(crate) struct SpawnSettings {
     pub lod_levels: Vec<LodLevel>,
 }
 
-/// Serialized tree options used to find shared generation results. Entities with
-/// the same key reuse one [`Generated`] entry.
-#[derive(Component, Debug, Clone, PartialEq, Eq, Hash)]
-pub(crate) struct TreeKey(String);
+/// The tree's [`TreeOptions::tree_id`], used to find shared generation results.
+/// Entities with the same key reuse one [`Generated`] entry.
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub(crate) struct TreeKey(u64);
 
-/// Marks a tree waiting for its options, generation result or child entities.
+/// Present on a [`ZeTree`] entity while its tree is being prepared.
+///
+/// The plugin adds this whenever a tree is spawned or its [`ZeTree`] changes,
+/// and removes it once the tree's parts have been spawned or generation has
+/// failed. A [`TreeFinished`] event is triggered at the same moment. While a
+/// `.tree.json` asset has not loaded yet, the marker stays on.
 #[derive(Component, Debug, Default)]
-pub(crate) struct AwaitingParts;
+pub struct TreeGenerating;
+
+/// Triggered on a [`ZeTree`] entity when preparing its tree ends.
+///
+/// Observe it on the entity, or globally, to learn when a new or changed tree
+/// has appeared. On success the tree's [`TreePart`] children are queued with
+/// the same commands, so they exist once this frame's commands have run.
+#[derive(EntityEvent, Debug, Clone, PartialEq)]
+pub struct TreeFinished {
+    /// The tree entity.
+    pub entity: Entity,
+    /// `Ok` when the parts were spawned, or why the options were rejected.
+    pub result: Result<(), OptionsError>,
+}
 
 /// Bark and leaf meshes produced by a background task for one detail level.
 struct LevelMeshes {
@@ -150,7 +168,7 @@ struct Generated {
 enum Entry {
     Pending(Task<TaskOutput>, Arc<TreeOptions>),
     Ready(Arc<Generated>),
-    Failed,
+    Failed(OptionsError),
 }
 
 /// Caches generation tasks and results by tree options, and textures by bark or leaf kind.
@@ -182,12 +200,12 @@ pub(crate) fn reset_changed_trees(
         commands
             .entity(entity)
             .remove::<TreeKey>()
-            .insert(AwaitingParts);
+            .insert(TreeGenerating);
     }
     for entity in removed.read() {
         despawn_parts(&mut commands, children.get(entity).ok());
         if let Ok(mut entity) = commands.get_entity(entity) {
-            entity.remove::<(TreeKey, AwaitingParts)>();
+            entity.remove::<(TreeKey, TreeGenerating)>();
         }
     }
 }
@@ -209,7 +227,7 @@ pub(crate) fn reload_modified_options(
 }
 
 /// Selects trees still waiting for an options key, including assets that have not loaded.
-type AwaitingKey = (With<AwaitingParts>, Without<TreeKey>);
+type AwaitingKey = (With<TreeGenerating>, Without<TreeKey>);
 
 /// Assigns an options key to each waiting tree and starts a background task only
 /// when those options are not already cached.
@@ -228,8 +246,8 @@ pub(crate) fn start_generation(
                 None => continue,
             },
         };
-        let key = TreeKey(options.to_json());
-        cache.trees.entry(key.clone()).or_insert_with(|| {
+        let key = TreeKey(options.tree_id());
+        cache.trees.entry(key).or_insert_with(|| {
             let levels = settings.lod_levels.clone();
             let task_options = options.clone();
             let task =
@@ -283,7 +301,7 @@ pub(crate) fn finish_generation(
             Ok(levels) => levels,
             Err(error) => {
                 error!("ze_tree_bevy: cannot generate tree: {error}");
-                *entry = Entry::Failed;
+                *entry = Entry::Failed(error);
                 continue;
             }
         };
@@ -374,23 +392,23 @@ fn wire_transform(wire: &TrellisWire) -> Transform {
 }
 
 /// Adds child entities once a waiting tree's assets are ready.
-/// Stops waiting after a failed generation attempt.
+/// Stops waiting after a failed generation attempt. Either way, triggers [`TreeFinished`].
 pub(crate) fn spawn_parts(
     mut commands: Commands,
-    waiting: Query<(Entity, &TreeKey), With<AwaitingParts>>,
+    waiting: Query<(Entity, &TreeKey), With<TreeGenerating>>,
     cache: Res<TreeCache>,
 ) {
     for (entity, key) in &waiting {
-        match cache.trees.get(key) {
+        let result = match cache.trees.get(key) {
             Some(Entry::Ready(generated)) => {
-                commands.entity(entity).remove::<AwaitingParts>();
                 spawn_tree_parts(&mut commands, entity, generated);
+                Ok(())
             }
-            Some(Entry::Failed) => {
-                commands.entity(entity).remove::<AwaitingParts>();
-            }
-            Some(Entry::Pending(..)) | None => {}
-        }
+            Some(Entry::Failed(error)) => Err(error.clone()),
+            Some(Entry::Pending(..)) | None => continue,
+        };
+        commands.entity(entity).remove::<TreeGenerating>();
+        commands.trigger(TreeFinished { entity, result });
     }
 }
 
@@ -445,8 +463,118 @@ pub(crate) fn prune_cache(
 
 #[cfg(test)]
 mod tests {
+    use std::time::{Duration, Instant};
+
     use super::*;
     use ze_tree::default_lod_levels;
+
+    /// Results of every [`TreeFinished`] event, in order.
+    #[derive(Resource, Default)]
+    struct Finished(Vec<Result<(), OptionsError>>);
+
+    /// An app running only the spawn systems, without rendering or textures.
+    fn spawn_app() -> App {
+        let mut app = App::new();
+        app.add_plugins((MinimalPlugins, AssetPlugin::default()))
+            .init_asset::<Mesh>()
+            .init_asset::<Image>()
+            .init_asset::<StandardMaterial>()
+            .init_asset::<TreeMaterial>()
+            .init_asset::<TreeOptionsAsset>()
+            .init_resource::<Wind>()
+            .init_resource::<TreeCache>()
+            .init_resource::<Finished>()
+            .insert_resource(SpawnSettings {
+                texture_root: None,
+                lod_levels: vec![LodLevel::default()],
+            })
+            .add_systems(
+                Update,
+                (
+                    reset_changed_trees,
+                    start_generation,
+                    finish_generation,
+                    spawn_parts,
+                )
+                    .chain(),
+            )
+            .add_observer(|event: On<TreeFinished>, mut finished: ResMut<Finished>| {
+                finished.0.push(event.result.clone());
+            });
+        app
+    }
+
+    /// Updates the app until `tree` loses [`TreeGenerating`].
+    fn update_until_finished(app: &mut App, tree: Entity) {
+        let deadline = Instant::now() + Duration::from_secs(30);
+        app.update();
+        while app.world().entity(tree).contains::<TreeGenerating>() {
+            assert!(Instant::now() < deadline, "tree generation did not finish");
+            std::thread::sleep(Duration::from_millis(1));
+            app.update();
+        }
+    }
+
+    fn part_count(app: &mut App, tree: Entity) -> usize {
+        let mut parts = app.world_mut().query::<(&TreePart, &ChildOf)>();
+        parts
+            .iter(app.world())
+            .filter(|(_, parent)| parent.parent() == tree)
+            .count()
+    }
+
+    #[test]
+    fn generating_marker_lasts_until_parts_spawn() {
+        let mut app = spawn_app();
+        let tree = app
+            .world_mut()
+            .spawn(ZeTree::preset(TreePreset::OakSmall))
+            .id();
+
+        app.update();
+        assert!(app.world().entity(tree).contains::<TreeGenerating>());
+        assert_eq!(part_count(&mut app, tree), 0);
+
+        update_until_finished(&mut app, tree);
+        let parts = part_count(&mut app, tree);
+        assert!(parts > 0);
+        assert_eq!(app.world().resource::<Finished>().0, vec![Ok(())]);
+
+        // Touching the tree replaces its parts. The options are cached, so
+        // this finishes within one update.
+        app.world_mut()
+            .get_mut::<ZeTree>(tree)
+            .unwrap()
+            .set_changed();
+        app.update();
+        assert!(!app.world().entity(tree).contains::<TreeGenerating>());
+        assert_eq!(part_count(&mut app, tree), parts);
+        assert_eq!(app.world().resource::<Finished>().0, vec![Ok(()), Ok(())]);
+
+        // New options generate again.
+        let mut options = TreePreset::OakSmall.options();
+        options.seed += 1;
+        *app.world_mut().get_mut::<ZeTree>(tree).unwrap() = ZeTree::new(options);
+        app.update();
+        assert!(app.world().entity(tree).contains::<TreeGenerating>());
+        update_until_finished(&mut app, tree);
+        assert_eq!(app.world().resource::<Finished>().0.len(), 3);
+    }
+
+    #[test]
+    fn rejected_options_finish_with_their_error() {
+        let mut app = spawn_app();
+        let mut options = TreePreset::OakSmall.options();
+        options.branch.sections[0] = 0;
+        let tree = app.world_mut().spawn(ZeTree::new(options)).id();
+
+        update_until_finished(&mut app, tree);
+        assert_eq!(part_count(&mut app, tree), 0);
+        assert_eq!(
+            app.world().resource::<Finished>().0,
+            vec![Err(OptionsError::ZeroSections { level: 0 })]
+        );
+    }
 
     #[test]
     fn detail_levels_hand_over_at_their_distances() {

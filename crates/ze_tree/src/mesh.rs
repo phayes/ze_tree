@@ -1,4 +1,4 @@
-//! Build bark and leaf triangle meshes from a [`Skeleton`].
+//! Build bark, leaf, fruit and flower triangle meshes from a [`Skeleton`].
 //!
 //! Levels of detail let an application use simpler meshes for distant trees.
 //! Choose the mesh detail with [`LodDetail`]; camera-based switching is up to the application.
@@ -9,6 +9,7 @@ use std::ops::Range;
 use glam::{Quat, Vec3};
 use serde::{Deserialize, Serialize};
 
+use crate::cluster_mesh::{mesh_flowers, mesh_fruit};
 use crate::wind::{BranchWind, branch_winds, wind_at};
 use crate::{
     BarkOptions, BarkUvMode, Billboard, Skeleton, SkeletonBranch, SkeletonLeaf, TreeOptions,
@@ -40,6 +41,26 @@ pub struct LodDetail {
     /// `None` uses [`LeafOptions::billboard`](crate::LeafOptions::billboard).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub billboard: Option<Billboard>,
+    /// Keep every Nth group of fruit and every Nth group of flowers, starting
+    /// with group 0 in each skeleton list. Both 0 and 1 keep all groups.
+    pub cluster_stride: u32,
+    /// Keep every Nth fruit or flower in each retained cluster, starting with
+    /// item 0, plus its supporting stalks. Both 0 and 1 keep all items.
+    /// Ignored for catkins at [`ItemDetail::Minimal`].
+    pub item_stride: u32,
+    /// Multiply the dimensions of each retained fruit or flower by this value.
+    /// Values above 1 help fill gaps left by skipped items. Supporting cluster
+    /// stalks keep their size. Ignored for catkins at [`ItemDetail::Minimal`].
+    pub item_scale: f32,
+    /// Amount of shape detail to use for fruit, flowers, and their stalks.
+    pub item_detail: ItemDetail,
+    /// Draw fruit and flowers flat when their configured size
+    /// ([`ClusterPlacement::size`](crate::ClusterPlacement::size)) is below
+    /// this many tree units: each fruit becomes a rough disc and each flower a
+    /// single triangle. Flat items keep every item, ignoring
+    /// [`item_stride`](Self::item_stride), but are still resized by
+    /// [`item_scale`](Self::item_scale). Catkins are not affected. 0 turns this off.
+    pub flat_item_size: f32,
 }
 
 impl Default for LodDetail {
@@ -50,8 +71,35 @@ impl Default for LodDetail {
             leaf_stride: 1,
             leaf_scale: 1.0,
             billboard: None,
+            cluster_stride: 1,
+            item_stride: 1,
+            item_scale: 1.0,
+            item_detail: ItemDetail::Full,
+            flat_item_size: 0.0,
         }
     }
+}
+
+/// Controls how much geometry is used for fruit, flowers, and their stalks.
+///
+/// Lower detail uses fewer triangles for distant trees. It still uses the
+/// configured maturity and colours, but small features may disappear.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ItemDetail {
+    /// Use the full fruit and flower shape settings.
+    #[default]
+    Full,
+    /// Use fewer sides for fruit and stalks, and omit the calyx (the small
+    /// flower remains on a fruit). Flowers have one petal layer with at most
+    /// two divisions along each petal, and a cone-shaped centre.
+    Simple,
+    /// Use coarse fruit bodies without individual stems or calyxes, and a
+    /// single star-shaped surface for each flower. Stalks become flat strips
+    /// that face away from the trunk, so draw them two-sided. A catkin (a dense cluster
+    /// along one stem) becomes one tapered body; its size and shape ignore
+    /// [`LodDetail::item_stride`] and [`LodDetail::item_scale`].
+    Minimal,
 }
 
 /// A mesh detail setting and the camera distance at which an application should use it.
@@ -74,6 +122,10 @@ pub struct LodLevel {
 ///
 /// Full detail starts at distance 0; simpler meshes start at distances 100 and 250.
 /// The simpler levels keep fewer branch slices and leaves, with larger leaves to fill gaps.
+/// Fruit and flowers use [`ItemDetail::Simple`] at distance 100 and
+/// [`ItemDetail::Minimal`] at distance 250. The farthest level keeps every other
+/// fruit or flower and enlarges it by 25%; catkins instead become one body each.
+/// At that level, fruit and flowers smaller than 0.75 are drawn flat and all kept.
 /// Actual triangle counts depend on the skeleton. Applications handle switching between levels.
 pub fn default_lod_levels() -> [LodLevel; 3] {
     [
@@ -87,6 +139,8 @@ pub fn default_lod_levels() -> [LodLevel; 3] {
                 leaf_stride: 2,
                 leaf_scale: 1.25,
                 billboard: None,
+                item_detail: ItemDetail::Simple,
+                ..LodDetail::default()
             },
         },
         LodLevel {
@@ -98,6 +152,11 @@ pub fn default_lod_levels() -> [LodLevel; 3] {
                 leaf_stride: 2,
                 leaf_scale: 1.3,
                 billboard: Some(Billboard::Single),
+                cluster_stride: 1,
+                item_stride: 2,
+                item_scale: 1.25,
+                item_detail: ItemDetail::Minimal,
+                flat_item_size: 0.75,
             },
         },
     ]
@@ -140,6 +199,11 @@ pub struct MeshBuffers {
     /// Leaves inherit the first three values from their attachment points to follow
     /// their branches. Reducing mesh detail preserves the values at retained vertices.
     pub wind: Vec<[f32; 4]>,
+    /// Per-vertex `[red, green, blue, alpha]` colours in linear colour space,
+    /// ready for lighting. Fruit and flowers have one colour per position;
+    /// multiply these by the material’s base colour when rendering. Bark and
+    /// leaves have an empty buffer and use their textures instead.
+    pub colors: Vec<[f32; 4]>,
     /// Groups of three vertex indices, one group per triangle.
     /// Each index addresses `positions`, `normals`, and `uvs`. Vertices are ordered
     /// counter-clockwise when viewed from the front of a triangle.
@@ -169,30 +233,67 @@ impl MeshBuffers {
         self.uvs.push(uv);
         self.wind.push(wind);
     }
+
+    /// Appends a position, lighting normal, texture coordinates, wind values,
+    /// and linear RGBA colour. Use for buffers with one colour per vertex;
+    /// does not add triangle indices or tangents.
+    pub(crate) fn push_colored(
+        &mut self,
+        position: Vec3,
+        normal: Vec3,
+        uv: [f32; 2],
+        wind: [f32; 4],
+        color: [f32; 4],
+    ) {
+        self.push(position, normal, uv, wind);
+        self.colors.push(color);
+    }
 }
 
-/// Separate bark and leaf meshes for one skeleton at a chosen level of detail.
+/// Bark, leaf, fruit, and flower meshes for a skeleton, with ranges identifying
+/// the source branches, leaves, and clusters. Detail settings affect bark and
+/// leaves; fruit and flowers retain their full detail.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct TreeMesh {
     /// All branches as tubes with open ends, ready for a bark material.
     pub branches: MeshBuffers,
     /// All leaves retained by the detail settings, ready for a leaf material.
     pub leaves: MeshBuffers,
+    /// Fruit bodies and supporting stalks, with per-vertex colours. Catkin fruit
+    /// have no individual stems. Empty if the skeleton has no fruit clusters.
+    pub fruit: MeshBuffers,
+    /// Flowers and supporting stalks, with per-vertex colours. Empty if the
+    /// skeleton has no flower clusters. Render both sides of petals by disabling
+    /// back-face culling, since petals have no thickness.
+    pub flowers: MeshBuffers,
     /// Buffer ranges for each skeleton branch, in the order of [`Skeleton::branches`].
     pub branch_spans: Vec<BranchSpan>,
     /// Buffer ranges for retained leaves, in the order of [`Skeleton::leaves`].
     pub leaf_spans: Vec<LeafSpan>,
+    /// Ranges in [`fruit`](Self::fruit), one per cluster in [`Skeleton::fruit`]
+    /// and in the same order. A cluster that produces no surface has empty ranges.
+    pub fruit_spans: Vec<ClusterSpan>,
+    /// Ranges in [`flowers`](Self::flowers), one per cluster in [`Skeleton::flowers`]
+    /// and in the same order. A cluster that produces no surface has empty ranges.
+    pub flower_spans: Vec<ClusterSpan>,
 }
 
 impl TreeMesh {
-    /// Returns the combined vertex count of the bark and leaf meshes.
+    /// Counts vertices across bark, leaves, fruit, and flowers, including duplicates.
     pub fn vertex_count(&self) -> usize {
-        self.branches.vertex_count() + self.leaves.vertex_count()
+        self.branches.vertex_count()
+            + self.leaves.vertex_count()
+            + self.fruit.vertex_count()
+            + self.flowers.vertex_count()
     }
 
-    /// Returns the combined triangle count of the bark and leaf meshes.
+    /// Counts complete triangles across bark, leaves, fruit, and flowers.
+    /// Trailing indices in a manually edited buffer are not counted.
     pub fn triangle_count(&self) -> usize {
-        self.branches.triangle_count() + self.leaves.triangle_count()
+        self.branches.triangle_count()
+            + self.leaves.triangle_count()
+            + self.fruit.triangle_count()
+            + self.flowers.triangle_count()
     }
 }
 
@@ -231,24 +332,48 @@ pub struct LeafSpan {
     pub indices: Range<u32>,
 }
 
+/// Locates one cluster’s fruit or flowers and supporting stalks in the
+/// corresponding [`TreeMesh`] buffers. Ranges can be empty.
+#[derive(Debug, Clone, PartialEq)]
+pub struct ClusterSpan {
+    /// Index of the source cluster in [`Skeleton::fruit`] for fruit spans,
+    /// or [`Skeleton::flowers`] for flower spans.
+    pub cluster: usize,
+    /// Vertex offsets shared by the position, normal, UV, wind, and colour
+    /// buffers of the corresponding fruit or flower mesh. Includes the start
+    /// offset and excludes the end offset.
+    pub vertices: Range<u32>,
+    /// Entry offsets in the corresponding fruit or flower index buffer,
+    /// including the start and excluding the end. Each triangle uses three
+    /// entries; these offsets are not triangle numbers or vertex indices.
+    pub indices: Range<u32>,
+}
+
 impl Skeleton {
-    /// Builds bark and leaf triangle meshes using the supplied detail settings.
+    /// Builds bark, leaf, fruit, and flower triangle meshes from this skeleton.
     ///
-    /// Pass the options used to grow this skeleton and [`LodDetail::default()`] for full detail.
-    /// From `options`, this uses only `bark.texture_scale.x`, `bark.uv_mode`,
-    /// `leaves.billboard`, and `leaves.rounded_normals`; changing growth options
-    /// here does not reshape the skeleton.
-    /// A billboard override in `detail` takes precedence over the options.
+    /// Pass the options used to generate the skeleton and [`LodDetail::default()`]
+    /// for full detail. You can change fruit and flower shapes, maturity, and
+    /// cluster stalk colours before meshing to change their appearance. Cluster
+    /// kind selects catkin surfaces: rounded flowers and fruit without individual
+    /// stems. Changing placement or growth settings here does not move clusters
+    /// or reshape branches; generate a new skeleton for those changes.
     ///
-    /// Repeated calls with the same inputs produce the same mesh without changing the skeleton.
-    /// Use different detail settings to prepare meshes for different camera distances.
-    /// Settings are not validated here. With rounded normals on double billboards, one
-    /// corner's normal flips direction as the scaled leaf size passes 2; at exactly 2 that
-    /// corner uses the leaf's face normal.
+    /// Bark texture scale and UV mode, leaf billboard and normal settings also
+    /// affect the result. A billboard override in `detail` takes precedence.
+    /// Use `detail` to reduce geometry for bark, leaves, fruit, and flowers.
+    /// Each fruit or flower span identifies its original skeleton cluster,
+    /// even when the detail settings skip other clusters.
+    /// Repeated calls with identical inputs give identical meshes
+    /// and leave the skeleton unchanged.
+    ///
+    /// Settings are not validated here; pass validated options. With rounded
+    /// normals on double leaf billboards, one corner’s lighting direction flips
+    /// as the scaled leaf size passes 2; at exactly 2 it uses the face normal.
     ///
     /// # Panics
     ///
-    /// Panics if a branch has no sections; [`Skeleton::generate`] always supplies sections.
+    /// Panics if a branch has no sections; [`Skeleton::generate`] supplies them.
     /// Also panics if a vertex count or index-buffer length cannot fit in `u32`.
     pub fn mesh(&self, options: &TreeOptions, detail: &LodDetail) -> TreeMesh {
         let section_stride = detail.section_stride.max(1) as usize;
@@ -281,6 +406,14 @@ impl Skeleton {
             );
             mesh.leaf_spans.push(span);
         }
+        mesh.fruit_spans = mesh_fruit(&mut mesh.fruit, &self.fruit, &options.fruit, &winds, detail);
+        mesh.flower_spans = mesh_flowers(
+            &mut mesh.flowers,
+            &self.flowers,
+            &options.flowers,
+            &winds,
+            detail,
+        );
         mesh
     }
 }

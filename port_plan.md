@@ -13,28 +13,29 @@ Reference source: `prior_art/ez-tree`, a shallow clone of commit
 
 ---
 
-## Status (2026-11-19)
+## Status (2026-11-20)
 
 | Phase | State |
 |---|---|
 | 0 — Scaffolding | ✅ Done |
 | 1 — Foundations (golden harness, `rng`, `options` + `presets`) | ✅ Done |
 | 2 — Skeleton growth | ✅ Done |
-| 3 — Meshing and LOD | ✅ Done (uncommitted) |
-| 4 — Tree wrapper, trellis layout, material params, WESL wind | ✅ Done (trellis wires and WESL wind uncommitted) |
-| 5 — Exports (glTF, OBJ, rig) | ✅ Done (uncommitted) |
-| 6 — Polish | Not started |
-| `ze_tree_bevy` | ✅ Done 2026-11-20 (uncommitted) |
+| 3 — Meshing and LOD | ✅ Done |
+| 4 — Tree wrapper, trellis layout, material params, WESL wind | ✅ Done |
+| 5 — Exports (glTF, OBJ, rig) | ✅ Done |
+| 6 — Polish | 🟡 Mostly done (READMEs written; feature map, fmt pass, metadata left) |
+| `ze_tree_bevy` | ✅ Done 2026-11-20 |
+| Extra: `TreeOptions::jiggle` | ✅ Done 2026-11-20 |
 
 Where things stand:
-- `cargo build`, `cargo clippy --all-targets --all-features` (and with each export
-  feature alone), `cargo test --all-features` (35 unit, 13 options, 1 RNG,
-  5 skeleton, 8 mesh, 7 tree, 3 material, 7 wind, 7 rig, 5 OBJ export, 10 glTF export
-  tests, 1 doctest), `cargo doc --all-features` and the doctests all pass with no
-  warnings. `ze_tree_bevy`: 2 unit, 6 conversion tests and 1 doctest (compile only);
-  clippy clean. The export tests need `--all-features` (or the matching feature).
-  Phases 0–3 and the `Tree` wrapper and textures are committed; the trellis wires,
-  the wind work and Phase 5 are not.
+- Everything is committed (latest: `3266e06 docs`).
+- `cargo build`, `cargo clippy --workspace --all-targets --all-features` (and with
+  each export feature alone), `cargo test --workspace --all-features`,
+  `cargo doc --all-features` and the doctests all pass with no warnings.
+  `ze_tree`: 36 unit, 13 options, 1 RNG, 5 skeleton, 8 mesh, 7 tree, 3 material,
+  7 wind, 7 rig, 5 OBJ export, 10 glTF export, 5 jiggle tests and 6 doctests.
+  `ze_tree_bevy`: 2 unit, 6 conversion tests and 5 doctests (compile only).
+  The export tests need `--all-features` (or the matching feature).
 - All fixtures from the verification section are generated (7.8 MB) and all are used
   by tests.
 - `skeleton`, `mesh` (with `LodDetail` / `default_lod_levels`) and the trellis pull
@@ -582,8 +583,29 @@ Each format is an optional cargo feature, off by default (`export-obj`,
 - Out of scope for now: FBX (no maintained Rust writer) and USD (UsdSkel in hand-written
   USDA is possible later, if wanted).
 
-### Phase 6 — Polish
-- Crate docs and a README with a feature map against ez-tree.
+### Phase 6 — Polish 🟡 Mostly done
+- Done: crate-level docs (`lib.rs`), `README.md` for `ze_tree` and
+  `crates/ze_tree_bevy/README.md` (commit `docs`).
+- Left:
+  - A feature map against ez-tree in `README.md`: what is ported, changed (K1–K8,
+    D-decisions) and dropped. The "JS behaviour: kept vs dropped" table is the source.
+  - Mention `TreeOptions::jiggle` in the README's "Customize the shape" section.
+  - `cargo fmt` as its own commit (see Status open items).
+  - Crate metadata for publishing: `license`, `repository`, `readme`, `keywords`,
+    `categories` in both `Cargo.toml` files (needs the user's choices).
+
+### Extra: `TreeOptions::jiggle` ✅ Done (2026-11-20)
+- `jiggle(&mut self, amount: f32, rng: &mut Rng)` in `src/jiggle.rs`: new seed, then
+  each varied float is scaled by `1 + range(-amount, amount)` (zeros stay zero;
+  `start`/`taper` clamped to 0–1); child and leaf counts use stochastic rounding and
+  non-zero counts stay ≥ 1. Levels, sections, segments, force direction, tree type,
+  bark, leaf kind/billboard/tint and trellis are unchanged. Panics outside 0–1.
+- Tests: `tests/jiggle.rs` (every preset stays within the amount and generates;
+  determinism; zero amount changes only the seed; panics) plus one unit test.
+- Viewer: J toggles per-tree variation (0.15, seeded by grid cell), R rerolls,
+  `--vary` starts with it on. Varied trees don't share the mesh cache.
+- Possible follow-ups: a shared overall size factor so lengths and radii scale
+  together; optional leaf tint variation.
 
 ### `ze_tree_bevy` ✅ Done (2026-11-20)
 Built for bevy 0.20.1 (`crates/ze_tree_bevy`, Decision 19):

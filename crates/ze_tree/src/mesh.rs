@@ -12,7 +12,8 @@ use serde::{Deserialize, Serialize};
 use crate::cluster_mesh::{mesh_flowers, mesh_fruit};
 use crate::wind::{BranchWind, branch_winds, wind_at};
 use crate::{
-    BarkOptions, BarkUvMode, Billboard, Skeleton, SkeletonBranch, SkeletonLeaf, TreeOptions,
+    BarkOptions, BarkUvMode, Billboard, Section, Skeleton, SkeletonBranch, SkeletonLeaf,
+    TreeOptions,
 };
 
 /// Settings for the amount of geometry produced by [`Skeleton::mesh`].
@@ -27,9 +28,17 @@ pub struct LodDetail {
     /// The base and tip are always kept. For example, 2 skips every other interior slice.
     /// Both 0 and 1 keep every slice.
     pub section_stride: u32,
-    /// Multiply each branch's original side count by this value, then round to a whole number.
-    /// A value of 0.5 roughly halves the sides; each branch always has at least 3 sides.
+    /// Scale the number of sides used to draw tube branches. For example, 0.5
+    /// roughly halves the side count. The result is rounded, with at least three
+    /// sides per branch. Has no effect on [`BranchShape::Ribbons`].
     pub segment_factor: f32,
+    /// Branch surface: a round tube or two flat strips that cross at right angles.
+    pub branch_shape: BranchShape,
+    /// Minimum branch radius at the base, in tree units. Thinner branches are
+    /// omitted, but the trunk is always kept. This does not affect leaf selection.
+    /// Omitted branches still have an entry in [`TreeMesh::branch_spans`], with
+    /// empty buffer ranges. Set to 0 to keep all branches.
+    pub min_branch_radius: f32,
     /// Keep every Nth leaf in skeleton order, starting with leaf 0.
     /// For example, 2 keeps leaves 0, 2, 4, and so on. Both 0 and 1 keep every leaf.
     pub leaf_stride: u32,
@@ -61,6 +70,11 @@ pub struct LodDetail {
     /// [`item_stride`](Self::item_stride), but are still resized by
     /// [`item_scale`](Self::item_scale). Catkins are not affected. 0 turns this off.
     pub flat_item_size: f32,
+    /// Minimum configured fruit or flower size, in tree units. If
+    /// [`size`](crate::ClusterPlacement::size) is below this threshold, that
+    /// entire category is omitted, including stalks and catkins (hanging clusters).
+    /// Its [`TreeMesh`] buffer and span list are empty. Set to 0 to disable this filter.
+    pub min_item_size: f32,
 }
 
 impl Default for LodDetail {
@@ -68,6 +82,8 @@ impl Default for LodDetail {
         Self {
             section_stride: 1,
             segment_factor: 1.0,
+            branch_shape: BranchShape::Tube,
+            min_branch_radius: 0.0,
             leaf_stride: 1,
             leaf_scale: 1.0,
             billboard: None,
@@ -76,8 +92,22 @@ impl Default for LodDetail {
             item_scale: 1.0,
             item_detail: ItemDetail::Full,
             flat_item_size: 0.0,
+            min_item_size: 0.0,
         }
     }
+}
+
+/// How branch surfaces are drawn in [`TreeMesh::branches`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum BranchShape {
+    /// A round tube, open at both ends.
+    #[default]
+    Tube,
+    /// Two flat strips running along the branch and crossing at right angles.
+    /// Each is as wide as the branch. This uses fewer triangles than a tube
+    /// and is intended for distant trees. Render both sides of the strips.
+    Ribbons,
 }
 
 /// Controls how much geometry is used for fruit, flowers, and their stalks.
@@ -118,16 +148,24 @@ pub struct LodLevel {
     pub detail: LodDetail,
 }
 
-/// Returns ez-tree's three default detail levels, ordered from nearest to farthest.
+/// Returns four mesh detail levels, ordered from nearest to farthest.
 ///
-/// Full detail starts at distance 0; simpler meshes start at distances 100 and 250.
-/// The simpler levels keep fewer branch slices and leaves, with larger leaves to fill gaps.
-/// Fruit and flowers use [`ItemDetail::Simple`] at distance 100 and
-/// [`ItemDetail::Minimal`] at distance 250. The farthest level keeps every other
-/// fruit or flower and enlarges it by 25%; catkins instead become one body each.
-/// At that level, fruit and flowers smaller than 0.75 are drawn flat and all kept.
-/// Actual triangle counts depend on the skeleton. Applications handle switching between levels.
-pub fn default_lod_levels() -> [LodLevel; 3] {
+/// Switching distances are 0, 100, 250 and 500 tree units. The first three match
+/// ez-tree's branch and leaf settings: farther levels use fewer branch sections
+/// and fewer, larger leaves. Your application must handle switching between meshes.
+///
+/// Fruit and flowers use [`ItemDetail::Simple`] at 100 and [`ItemDetail::Minimal`]
+/// at 250. At 250, every other item is kept and enlarged by 25%; catkins become
+/// a single body. Except for catkins, items with a configured size below 0.75
+/// are drawn flat and are not skipped by the item stride.
+///
+/// At 500, branches use [`BranchShape::Ribbons`], which must be rendered on both
+/// sides. Branches with a base radius below 0.15 are omitted, except for the trunk.
+/// Every fourth leaf is kept at 1.8 times its original size, even on omitted branches.
+/// Fruit and flowers with a configured size below 0.5 are omitted. Larger ones
+/// use the settings at 250, with every other cluster kept, except that items
+/// with a configured size below 1.5 are drawn flat.
+pub fn default_lod_levels() -> [LodLevel; 4] {
     [
         LodLevel::default(),
         LodLevel {
@@ -157,6 +195,26 @@ pub fn default_lod_levels() -> [LodLevel; 3] {
                 item_scale: 1.25,
                 item_detail: ItemDetail::Minimal,
                 flat_item_size: 0.75,
+                ..LodDetail::default()
+            },
+        },
+        LodLevel {
+            distance: 500.0,
+            hysteresis: 0.05,
+            detail: LodDetail {
+                section_stride: 8,
+                branch_shape: BranchShape::Ribbons,
+                min_branch_radius: 0.15,
+                leaf_stride: 4,
+                leaf_scale: 1.8,
+                billboard: Some(Billboard::Single),
+                cluster_stride: 2,
+                item_stride: 2,
+                item_scale: 1.25,
+                item_detail: ItemDetail::Minimal,
+                min_item_size: 0.5,
+                flat_item_size: 1.5,
+                ..LodDetail::default()
             },
         },
     ]
@@ -305,11 +363,17 @@ impl TreeMesh {
     }
 }
 
-/// Buffer ranges and source information for one branch in [`TreeMesh::branches`].
+/// Identifies a source branch and its buffer ranges in [`TreeMesh::branches`].
 ///
-/// Vertices are grouped into rings from base to tip, one per retained section.
-/// Each ring has `segments + 1` vertices: the last repeats the first position with a
-/// different texture coordinate. This UV seam lets a texture wrap around the branch.
+/// Vertices are grouped by retained section, from base to tip. Each group (a
+/// ring) contains [`ring_vertices`](Self::ring_vertices) vertices. For tubes,
+/// the last vertex repeats the first position with a different texture coordinate
+/// to close the texture seam. For ribbons, the four vertices are the two edges
+/// of the first strip followed by the two edges of the second strip. Adjacent
+/// rings are connected by `segments * 2` triangles.
+///
+/// Branches omitted by [`LodDetail::min_branch_radius`] have empty buffer ranges
+/// and no retained sections.
 #[derive(Debug, Clone, PartialEq)]
 pub struct BranchSpan {
     /// Source branch index in [`Skeleton::branches`].
@@ -321,10 +385,24 @@ pub struct BranchSpan {
     /// Start-inclusive, end-exclusive range of entries in the bark index buffer.
     /// These are index-buffer offsets, not triangle numbers or vertex indices.
     pub indices: Range<u32>,
-    /// Number of sides around each ring, excluding the duplicated seam vertex.
+    /// Whether this branch uses a tube or crossed strips.
+    pub shape: BranchShape,
+    /// Number of tube sides, excluding the repeated vertex at the texture seam.
+    /// For ribbons, this counts strips instead and is always 2.
     pub segments: u32,
     /// Retained section indices within the source branch, in ring order from base to tip.
     pub sections: Vec<usize>,
+}
+
+impl BranchSpan {
+    /// Returns the vertex count per retained section: `segments + 1` for tubes,
+    /// or 4 for crossed ribbons. This describes the layout even for an omitted branch.
+    pub fn ring_vertices(&self) -> u32 {
+        match self.shape {
+            BranchShape::Tube => self.segments + 1,
+            BranchShape::Ribbons => self.segments * 2,
+        }
+    }
 }
 
 /// Buffer ranges for one retained leaf in [`TreeMesh::leaves`].
@@ -391,15 +469,20 @@ impl Skeleton {
         let winds = branch_winds(self);
         let mut mesh = TreeMesh::default();
         for (index, branch) in self.branches.iter().enumerate() {
-            let span = mesh_branch(
-                &mut mesh.branches,
-                branch,
-                index,
-                section_stride,
-                detail.segment_factor,
-                &options.bark,
-                &winds[index],
-            );
+            let shape = Shape::new(detail, branch);
+            let span = if branch.level > 0 && branch.base_radius < detail.min_branch_radius {
+                culled_branch(&mesh.branches, branch, index, shape)
+            } else {
+                mesh_branch(
+                    &mut mesh.branches,
+                    branch,
+                    index,
+                    section_stride,
+                    shape,
+                    &options.bark,
+                    &winds[index],
+                )
+            };
             mesh.branch_spans.push(span);
         }
         for (index, leaf) in self.leaves.iter().enumerate().step_by(leaf_stride) {
@@ -426,25 +509,72 @@ impl Skeleton {
     }
 }
 
-/// Appends an uncapped branch tube and returns its buffer ranges and retained sections.
-/// Requires at least one section and a nonzero `section_stride`.
+/// Branch surface type and the number of sides or strips to generate.
+#[derive(Debug, Clone, Copy)]
+struct Shape {
+    kind: BranchShape,
+    /// Number of tube sides or ribbon strips.
+    segments: u32,
+}
+
+impl Shape {
+    /// Selects the surface from `detail` and scales tube side counts, keeping at
+    /// least three sides. Ribbons always use two strips.
+    fn new(detail: &LodDetail, branch: &SkeletonBranch) -> Self {
+        match detail.branch_shape {
+            // Tip continuations have the same original side count as their parent,
+            // so scaling both counts equally keeps their connecting rings aligned.
+            BranchShape::Tube => Self {
+                kind: BranchShape::Tube,
+                segments: (branch.segment_count as f32 * detail.segment_factor)
+                    .round()
+                    .max(3.0) as u32,
+            },
+            BranchShape::Ribbons => Self {
+                kind: BranchShape::Ribbons,
+                segments: 2,
+            },
+        }
+    }
+}
+
+/// Records an omitted branch with empty ranges at the end of `out`.
+/// Preserves its source index and shape, but retains no sections.
+fn culled_branch(
+    out: &MeshBuffers,
+    branch: &SkeletonBranch,
+    index: usize,
+    shape: Shape,
+) -> BranchSpan {
+    let vertex = out.next_index();
+    let entry = index_range(out.indices.len(), out.indices.len());
+    BranchSpan {
+        branch: index,
+        level: branch.level,
+        vertices: vertex..vertex,
+        indices: entry,
+        shape: shape.kind,
+        segments: shape.segments,
+        sections: Vec::new(),
+    }
+}
+
+/// Appends a branch surface and returns its buffer ranges and source sections.
+/// `shape` selects an open-ended tube or crossed strips. `branch` must contain
+/// at least one section, and `section_stride` must be nonzero.
 fn mesh_branch(
     out: &mut MeshBuffers,
     branch: &SkeletonBranch,
     index: usize,
     section_stride: usize,
-    segment_factor: f32,
+    shape: Shape,
     bark: &BarkOptions,
     wind: &BranchWind,
 ) -> BranchSpan {
-    // A branch continuing its parent's tip inherits its side count. Applying the same
-    // multiplier preserves matching rings at their joint.
-    let segments = (branch.segment_count as f32 * segment_factor)
-        .round()
-        .max(3.0) as u32;
+    let segments = shape.segments;
 
-    // Repeat the bark texture a whole number of times around the branch. Wider bases
-    // get more repeats, keeping bark features roughly the same size across branches.
+    // Use more texture repeats on wider branches to keep bark features
+    // roughly the same size. Round to whole repeats for a matching tube seam.
     let wraps_x = (branch.base_radius * bark.texture_scale.x).round().max(1.0);
 
     // Always retain the tip, even when the stride would skip it.
@@ -454,8 +584,6 @@ fn mesh_branch(
         kept.push(last);
     }
 
-    // Duplicate the first vertex at each ring's texture seam: the same position needs
-    // both the starting u coordinate (0) and the ending one (wraps_x).
     let first_vertex = out.next_index();
     let first_index = out.indices.len();
     for (k, &s) in kept.iter().enumerate() {
@@ -466,38 +594,33 @@ fn mesh_branch(
             // Keep the original section coordinate when lower detail skips rings.
             BarkUvMode::Continuous => s as f32,
         };
-        // Move the ring as a whole using its section's wind data, with leaf flutter disabled.
+        // Give every vertex in this section the same wind motion, without leaf flutter.
         let ring_wind = [wind.bend[s], wind.weight[s], wind.phase, 0.0];
-        let mut seam = None;
-        for j in 0..segments {
-            let angle = TAU * j as f32 / segments as f32;
-            let (sin, cos) = angle.sin_cos();
-            let direction = section.orientation * Vec3::new(cos, 0.0, sin);
-            let position = direction * section.radius + section.origin;
-            let normal = direction.normalize();
-            out.push(
-                position,
-                normal,
-                [j as f32 / segments as f32 * wraps_x, v],
-                ring_wind,
-            );
-            // The tangent follows increasing u around the ring. With w = -1,
-            // cross(normal, tangent) * w points along the section's axis toward
-            // the tip. Mirrored UVs reverse v without reversing this direction.
-            let tangent = (section.orientation * Vec3::new(-sin, 0.0, cos)).normalize();
-            out.tangents.push(tangent.extend(-1.0).to_array());
-            seam.get_or_insert((position, normal, tangent));
+        match shape.kind {
+            BranchShape::Tube => push_tube_ring(out, section, segments, wraps_x, v, ring_wind),
+            BranchShape::Ribbons => push_ribbon_ring(out, section, wraps_x, v, ring_wind),
         }
-        let (position, normal, tangent) = seam.expect("a ring has at least 3 vertices");
-        out.push(position, normal, [wraps_x, v], ring_wind);
-        out.tangents.push(tangent.extend(-1.0).to_array());
     }
 
-    // Join each pair of neighboring rings with two triangles per side.
-    let ring = segments + 1;
-    for i in 0..kept.len() as u32 - 1 {
+    // Connect adjacent sections with two triangles per tube side or ribbon strip.
+    // Tube sides share vertices; each ribbon strip has its own two edges.
+    let span = BranchSpan {
+        branch: index,
+        level: branch.level,
+        vertices: first_vertex..first_vertex,
+        indices: 0..0,
+        shape: shape.kind,
+        segments,
+        sections: kept,
+    };
+    let ring = span.ring_vertices();
+    let side_start = |j: u32| match shape.kind {
+        BranchShape::Tube => j,
+        BranchShape::Ribbons => 2 * j,
+    };
+    for i in 0..span.sections.len() as u32 - 1 {
         for j in 0..segments {
-            let v1 = first_vertex + i * ring + j;
+            let v1 = first_vertex + i * ring + side_start(j);
             let v2 = v1 + 1;
             let v3 = v1 + ring;
             let v4 = v2 + ring;
@@ -506,12 +629,69 @@ fn mesh_branch(
     }
 
     BranchSpan {
-        branch: index,
-        level: branch.level,
         vertices: first_vertex..out.next_index(),
         indices: index_range(first_index, out.indices.len()),
-        segments,
-        sections: kept,
+        ..span
+    }
+}
+
+/// Appends a tube cross-section with `segments` sides and a repeated first vertex.
+/// The repeated position has a different texture coordinate so the bark image
+/// can wrap around the tube. `segments` must be nonzero.
+fn push_tube_ring(
+    out: &mut MeshBuffers,
+    section: &Section,
+    segments: u32,
+    wraps_x: f32,
+    v: f32,
+    ring_wind: [f32; 4],
+) {
+    let mut seam = None;
+    for j in 0..segments {
+        let angle = TAU * j as f32 / segments as f32;
+        let (sin, cos) = angle.sin_cos();
+        let direction = section.orientation * Vec3::new(cos, 0.0, sin);
+        let position = direction * section.radius + section.origin;
+        let normal = direction.normalize();
+        out.push(
+            position,
+            normal,
+            [j as f32 / segments as f32 * wraps_x, v],
+            ring_wind,
+        );
+        // The tangent points around the tube in the direction of increasing u.
+        // Its -1 handedness makes the bitangent point toward the branch tip,
+        // including where mirrored texture coordinates reverse v.
+        let tangent = (section.orientation * Vec3::new(-sin, 0.0, cos)).normalize();
+        out.tangents.push(tangent.extend(-1.0).to_array());
+        seam.get_or_insert((position, normal, tangent));
+    }
+    let (position, normal, tangent) = seam.expect("a ring has at least 3 vertices");
+    out.push(position, normal, [wraps_x, v], ring_wind);
+    out.tangents.push(tangent.extend(-1.0).to_array());
+}
+
+/// Appends four vertices: two edges for each of two perpendicular strips.
+/// Each strip spans the branch diameter along the section's local X or Z axis.
+/// Texture coordinates across each strip cover half of `wraps_x`.
+fn push_ribbon_ring(
+    out: &mut MeshBuffers,
+    section: &Section,
+    wraps_x: f32,
+    v: f32,
+    ring_wind: [f32; 4],
+) {
+    // Match normals to the triangle winding. As with tubes, tangent
+    // handedness is -1 so the bitangent points toward the branch tip.
+    for (width, face) in [(Vec3::X, Vec3::NEG_Z), (Vec3::Z, Vec3::X)] {
+        let across = (section.orientation * width).normalize();
+        let normal = (section.orientation * face).normalize();
+        let tangent = across.extend(-1.0).to_array();
+        for (side, u) in [(-1.0, 0.0), (1.0, wraps_x / 2.0)] {
+            let position = section.origin + across * (side * section.radius);
+            out.push(position, normal, [u, v], ring_wind);
+            out.tangents.push(tangent);
+        }
     }
 }
 
@@ -637,12 +817,31 @@ mod tests {
         bark
     }
 
+    /// Creates a tube shape for `branch` using the requested side-count multiplier.
+    fn tube(branch: &SkeletonBranch, segment_factor: f32) -> Shape {
+        let detail = LodDetail {
+            segment_factor,
+            ..LodDetail::default()
+        };
+        Shape::new(&detail, branch)
+    }
+
+    /// Creates a two-strip ribbon shape for `branch`.
+    fn ribbons(branch: &SkeletonBranch) -> Shape {
+        let detail = LodDetail {
+            branch_shape: BranchShape::Ribbons,
+            ..LodDetail::default()
+        };
+        Shape::new(&detail, branch)
+    }
+
     #[test]
     fn stride_keeps_first_and_last_sections() {
         let branch = straight_branch(8, 4);
         let mirrored = bark(1.0, BarkUvMode::Mirrored);
         let mut out = MeshBuffers::default();
-        let span = mesh_branch(&mut out, &branch, 0, 3, 1.0, &mirrored, &wind(&branch));
+        let shape = tube(&branch, 1.0);
+        let span = mesh_branch(&mut out, &branch, 0, 3, shape, &mirrored, &wind(&branch));
         assert_eq!(span.sections, vec![0, 3, 6, 7]);
         assert_eq!(span.vertices, 0..4 * 5);
         assert_eq!(span.indices, 0..3 * 4 * 6);
@@ -652,7 +851,8 @@ mod tests {
 
         // Retain the tip only once when the stride already includes it.
         let short = straight_branch(7, 4);
-        let span = mesh_branch(&mut out, &short, 1, 3, 1.0, &mirrored, &wind(&short));
+        let shape = tube(&short, 1.0);
+        let span = mesh_branch(&mut out, &short, 1, 3, shape, &mirrored, &wind(&short));
         assert_eq!(span.sections, vec![0, 3, 6]);
         assert_eq!(span.vertices, 20..35);
         assert_eq!(out.tangents.len(), out.positions.len());
@@ -664,8 +864,61 @@ mod tests {
         let mut out = MeshBuffers::default();
         let mirrored = bark(1.0, BarkUvMode::Mirrored);
         let branch = straight_branch(2, 5);
-        let span = mesh_branch(&mut out, &branch, 0, 1, 0.1, &mirrored, &wind(&branch));
+        let shape = tube(&branch, 0.1);
+        let span = mesh_branch(&mut out, &branch, 0, 1, shape, &mirrored, &wind(&branch));
         assert_eq!(span.segments, 3);
+    }
+
+    /// Checks ribbon vertex layout, surface directions, texture coordinates and wind data.
+    #[test]
+    fn ribbons_are_two_crossed_strips() {
+        let branch = straight_branch(8, 6);
+        let mut out = MeshBuffers::default();
+        let span = mesh_branch(
+            &mut out,
+            &branch,
+            0,
+            3,
+            ribbons(&branch),
+            &bark(2.6, BarkUvMode::Mirrored),
+            &wind(&branch),
+        );
+
+        // Four sections each have four vertices; each gap has two triangles per strip.
+        assert_eq!(span.shape, BranchShape::Ribbons);
+        assert_eq!((span.segments, span.ring_vertices()), (2, 4));
+        assert_eq!(span.sections, vec![0, 3, 6, 7]);
+        assert_eq!(span.vertices, 0..16);
+        assert_eq!(span.indices, 0..3 * 2 * 6);
+        assert_eq!(out.tangents.len(), 16);
+
+        // Both strips span the branch diameter and cross through its centre.
+        // All four vertices at a section receive the same wind data.
+        let p = |i: u32| Vec3::from_array(out.positions[i as usize]);
+        let ring = 4 * 2;
+        assert!((p(ring) - Vec3::new(-1.0, 6.0, 0.0)).length() < 1e-6);
+        assert!((p(ring + 1) - Vec3::new(1.0, 6.0, 0.0)).length() < 1e-6);
+        assert!((p(ring + 2) - Vec3::new(0.0, 6.0, -1.0)).length() < 1e-6);
+        assert!((p(ring + 3) - Vec3::new(0.0, 6.0, 1.0)).length() < 1e-6);
+        assert_eq!(out.wind[8..12], [[0.6, 6.0, 0.5, 0.0]; 4]);
+
+        // Each strip uses 1.5 texture repeats: half the tube's three repeats.
+        assert_eq!(out.uvs[0][0], 0.0);
+        assert_eq!(out.uvs[1][0], 1.5);
+
+        // Triangle winding agrees with the normals. Tangents are perpendicular
+        // to normals, and bitangents point toward the branch tip.
+        for tri in out.indices.chunks(3) {
+            let [a, b, c] = [tri[0], tri[1], tri[2]];
+            let facing = (p(b) - p(a)).cross(p(c) - p(a)).normalize();
+            let normal = Vec3::from_array(out.normals[a as usize]);
+            assert!(facing.dot(normal) > 0.999, "{facing} vs {normal}");
+        }
+        for (t, n) in out.tangents.iter().zip(&out.normals) {
+            let (tangent, n) = (Vec3::from_slice(t), Vec3::from_array(*n));
+            assert!(tangent.dot(n).abs() < 1e-6);
+            assert!((n.cross(tangent) * t[3]).abs_diff_eq(Vec3::Y, 1e-6));
+        }
     }
 
     /// Checks texture coordinates along a branch when some mesh rings are skipped.
@@ -679,7 +932,7 @@ mod tests {
                 &branch,
                 0,
                 3,
-                1.0,
+                tube(&branch, 1.0),
                 &bark(1.0, mode),
                 &wind(&branch),
             );
@@ -704,7 +957,7 @@ mod tests {
             &branch,
             0,
             1,
-            1.0,
+            tube(&branch, 1.0),
             &bark(2.6, BarkUvMode::Mirrored),
             &wind(&branch),
         );

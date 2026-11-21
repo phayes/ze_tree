@@ -72,9 +72,12 @@ Every texture comes in two formats. The default, BC7, requires GPU support for
 that compression format. For other GPUs, set `texture_compression` to
 `TextureCompression::Uastc` and enable Bevy's `basis-universal` feature.
 
-Bark normal maps require `BarkUvMode::Continuous`, as in the next example.
-Built-in presets use mirrored texture coordinates, so their bark normal maps
-are disabled unless you change that setting. Leaf normal maps are used
+Bark normal maps add lighting detail without extra geometry. Keep the default
+`BarkUvMode::Continuous` to use them. With `BarkUvMode::Mirrored`, Bevy omits
+the bark normal map to avoid reversed lighting detail on every other branch
+section.
+
+Leaf normal maps are used
 automatically for leaf kinds that have one, such as `white_oak`; see
 `ze_tree::leaf_has_normal_map`.
 
@@ -85,7 +88,7 @@ position each tree. Register this function as a startup system in your app:
 
 ```no_run
 use bevy::prelude::*;
-use ze_tree::{BarkUvMode, TreePreset};
+use ze_tree::TreePreset;
 use ze_tree_bevy::ZeTree;
 
 fn plant_trees(mut commands: Commands) {
@@ -93,7 +96,6 @@ fn plant_trees(mut commands: Commands) {
         let mut options = TreePreset::OakSmall.options();
         options.seed = i;
         options.branch.length[0] = 12.0; // Trunk length.
-        options.bark.uv_mode = BarkUvMode::Continuous;
 
         commands.spawn((
             ZeTree::new(options),
@@ -160,21 +162,25 @@ materials you create yourself.
 
 ## Choose mesh detail
 
-The plugin generates three mesh detail levels by default, with simpler meshes
-starting at camera distances of 100 and 250 world units. Bevy fades between them.
-The nearest level uses 1k bark textures and the two farther levels use 512.
-Set `ZeTreePlugin::lod_levels` when adding the plugin to choose your own levels
-and bark texture sizes. For a single full-detail mesh with 2k bark textures and
-no distance switching:
+The plugin generates four mesh detail levels. Bevy fades to simpler meshes at
+camera distances of 100, 250 and 500 world units. With a texture folder configured,
+the nearest level uses 1k bark textures and the next two use 512 textures.
+At the farthest level, branches become two flat strips crossing at right angles,
+with a single colour approximating the bark texture. Thin branches are omitted.
+Leaves use fewer, larger flat cards, each showing several leaves in a clump image.
+Set `ZeTreePlugin::lod_levels` when adding the plugin to choose mesh detail,
+switching distances, bark appearance and leaf images. For a single full-detail
+mesh with 2k bark textures and no distance switching:
 
 ```rust
 use ze_tree::{LodLevel, TextureSize};
-use ze_tree_bevy::{TreeLodLevel, ZeTreePlugin};
+use ze_tree_bevy::{BarkTexture, LeafTexture, TreeLodLevel, ZeTreePlugin};
 
 let plugin = ZeTreePlugin {
     lod_levels: vec![TreeLodLevel {
         level: LodLevel::default(),
-        bark_texture_size: TextureSize::Size2k,
+        bark: BarkTexture::Textured(TextureSize::Size2k),
+        leaves: LeafTexture::Leaf,
     }],
     ..Default::default()
 };

@@ -27,8 +27,8 @@ use json::{Index, Root};
 
 use super::{TextureMap, TextureRef, export_parts, scaled_bark_uvs};
 use crate::{
-    BarkMaterial, BranchGrouping, FlowerMaterial, FruitMaterial, LeafMaterial, MeshPart, MeshSkin,
-    Rig, TreeMesh, TreeOptions, leaf_has_normal_map,
+    BarkMaterial, BarkUvMode, BranchGrouping, BranchShape, FlowerMaterial, FruitMaterial,
+    LeafMaterial, MeshPart, MeshSkin, Rig, TreeMesh, TreeOptions, leaf_has_normal_map,
 };
 
 /// Callback returning a texture image URI, or `None` to omit that map.
@@ -207,10 +207,13 @@ pub fn to_glb(
 /// Each part has positions, normals, texture coordinates, and any available
 /// tangents. With [`BarkOptions::flat_shading`](crate::BarkOptions::flat_shading),
 /// trunk and branch parts have no normals or tangents, so glTF viewers shade each
-/// triangle flat and generate any tangents a normal map needs.
+/// triangle flat and generate any tangents a normal map needs. To include the bark
+/// normal map for surface lighting detail, use the default [`BarkUvMode::Continuous`].
 /// Wind attributes and joint assignments are optional. Bark texture
 /// coordinates already include the texture scale. Bark is opaque; leaves are
 /// visible from both sides and hide pixels below the configured alpha threshold.
+/// Meshes with [`BranchShape::Ribbons`] use the `bark_two_sided` material
+/// for bark, so the flat strips remain visible from either side.
 /// The bark roughness image supplies the green channel of glTF's combined
 /// metallic-roughness texture; a zero metallic factor keeps bark non-metallic.
 ///
@@ -274,6 +277,18 @@ fn build(
     });
 
     let bark = b.bark_material(options);
+    // Give ribbon meshes a two-sided copy of the bark material, reusing its textures.
+    let has_ribbons = |mesh: &TreeMesh| {
+        mesh.branch_spans
+            .iter()
+            .any(|span| span.shape == BranchShape::Ribbons)
+    };
+    let two_sided_bark = meshes.iter().any(has_ribbons).then(|| {
+        let mut material = b.root.materials[bark.value()].clone();
+        material.name = Some("bark_two_sided".to_owned());
+        material.double_sided = true;
+        b.root.push(material)
+    });
     let leaves = b.leaf_material(options);
     // Add fruit and flower materials only if at least one exported mesh needs them.
     let has = |part: MeshPart| {
@@ -317,7 +332,12 @@ fn build(
                 MeshPart::Leaves => leaves,
                 MeshPart::Fruit => fruit.expect("fruit material exists for fruit parts"),
                 MeshPart::Flowers => flowers.expect("flower material exists for flower parts"),
-                MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => bark,
+                MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => {
+                    match two_sided_bark.filter(|_| has_ribbons(mesh)) {
+                        Some(two_sided) => two_sided,
+                        None => bark,
+                    }
+                }
             };
             // Attach only bark and leaves to animation joints; fruit and flowers remain fixed.
             let skinned = part.is_bark() || part.is_leaves();
@@ -606,7 +626,13 @@ impl Builder<'_> {
         };
         let color = texture(self, TextureMap::BarkColor);
         let roughness = texture(self, TextureMap::BarkRoughness);
-        let normal = texture(self, TextureMap::BarkNormal);
+        // Omit the normal map in mirrored mode to avoid reversed lighting detail
+        // on every other branch section.
+        let normal = if options.bark.uv_mode == BarkUvMode::Continuous {
+            texture(self, TextureMap::BarkNormal)
+        } else {
+            None
+        };
 
         let [r, g, b] = bark.base_color;
         self.root.push(json::Material {

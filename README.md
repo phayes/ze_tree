@@ -31,14 +31,13 @@ Edit a preset's options, then generate a new tree. The same options and seed
 produce the same shape; change the seed for another variation.
 
 ```rust
-use ze_tree::{BarkUvMode, Tree, TreePreset};
+use ze_tree::{Tree, TreePreset};
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut options = TreePreset::OakSmall.options();
     options.seed = 42;
     options.branch.length[0] = 12.0; // Trunk length, in tree units.
     options.leaves.size = 1.5;
-    options.bark.uv_mode = BarkUvMode::Continuous;
 
     let tree = Tree::new(options)?;
     println!("{} triangles", tree.triangle_count());
@@ -93,8 +92,9 @@ for (level, mesh) in tree.lod_meshes(&default_lod_levels()) {
 }
 ```
 
-The defaults provide three levels, starting at distances 0, 100, and 250 in tree
-units. For your own settings, pass a `LodDetail` to `Tree::mesh_with_detail`.
+The four default levels use progressively simpler meshes at distances of 0, 100,
+250 and 500 tree units. To choose your own mesh detail, pass a `LodDetail` to
+`Tree::mesh_with_detail`.
 If you only need branch shapes and leaf placements, use `Skeleton::generate`
 without building a mesh.
 
@@ -154,13 +154,22 @@ directory, such as `bark/sakura_bark-1k-color-bc7.ktx2`. The options' `bark.kind
 and `leaves.kind` select the texture names; bark comes in three sizes.
 `LEAF_KINDS` lists 24 leaf textures: four single leaves from ez-tree, and 20
 leafy branch tips from Nobiax's CC0 packs, which also have normal maps
-(`leaf_has_normal_map`). `assets/textures/assets_manifest.json` lists every
+(`leaf_has_normal_map`). Every leaf kind also has a 256 × 256 clump image
+(`LeafMap::Clump`), showing several leaves on one flat card. Use it with fewer,
+larger cards for distant trees. For bark without texture images, multiply the
+linear RGB colour from `bark_average_color` by the bark tint to approximate
+the textured colour. `assets/textures/assets_manifest.json` lists every
 file with its download address. Load colour images as sRGB and normal/roughness maps as linear data. Normal maps use the OpenGL/glTF convention; leaf alpha is straight,
 not premultiplied. Keep the metallic factor at zero if using the roughness image
 as a combined metallic-roughness texture.
 
-For bark normal maps, use `BarkUvMode::Continuous` and the mesh's tangents.
-Leaf normal maps use the leaf mesh's tangents.
+Normal maps add lighting detail without extra geometry. Supply the directions
+in `MeshBuffers::tangents` from the corresponding bark or leaf mesh to orient
+that detail. For bark, keep the default `BarkUvMode::Continuous`.
+`BarkUvMode::Mirrored` matches the JavaScript ez-tree generator's texture layout
+but reverses normal-map lighting detail on every other branch section, so
+Bevy and glTF export omit bark normal maps in that mode.
+
 For GPU wind, pass `MeshBuffers::wind` and `WindParams` to the `WIND_WESL` shader
 module and add its `wind_offset` to vertex positions. For joint-based animation,
 create joints with `Tree::rig` and vertex weights with `Rig::skin`.

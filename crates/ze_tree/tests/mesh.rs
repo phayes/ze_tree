@@ -63,15 +63,20 @@ fn default_lod_levels_match_ez_tree() {
     let expected: Vec<LodLevel> =
         serde_json::from_str(&common::fixture_text("lod_levels.json")).expect("lod levels parse");
     // The ez-tree fixture has no fruit or flower settings; exclude those from this comparison.
-    let ours = default_lod_levels().map(|mut level| {
-        let full = LodDetail::default();
-        level.detail.cluster_stride = full.cluster_stride;
-        level.detail.item_stride = full.item_stride;
-        level.detail.item_scale = full.item_scale;
-        level.detail.item_detail = full.item_detail;
-        level.detail.flat_item_size = full.flat_item_size;
-        level
-    });
+    // Compare the first three levels with ez-tree; its fixture has no fourth level.
+    let ours: Vec<LodLevel> = default_lod_levels()
+        .into_iter()
+        .take(3)
+        .map(|mut level| {
+            let full = LodDetail::default();
+            level.detail.cluster_stride = full.cluster_stride;
+            level.detail.item_stride = full.item_stride;
+            level.detail.item_scale = full.item_scale;
+            level.detail.item_detail = full.item_detail;
+            level.detail.flat_item_size = full.flat_item_size;
+            level
+        })
+        .collect();
     assert_eq!(expected, ours);
 }
 
@@ -80,7 +85,10 @@ fn default_lod_levels_match_ez_tree() {
 /// Other data, including hierarchy and branch side counts, stays from the Rust-grown skeleton.
 fn load_skeletons(case: &str) -> (TreeOptions, Skeleton, Skeleton) {
     let fixture = common::fixture_json(&format!("skeletons/{case}.json"));
-    let options = TreeOptions::from_json(&fixture["options"].to_string()).expect("options");
+    let mut options = TreeOptions::from_json(&fixture["options"].to_string()).expect("options");
+    // Match the JavaScript ez-tree fixtures, which use mirrored bark images,
+    // instead of ze_tree's default continuous layout.
+    options.bark.uv_mode = BarkUvMode::Mirrored;
     let grown = Skeleton::generate(&options).expect("valid options");
 
     let mut reference = grown.clone();
@@ -272,8 +280,17 @@ fn spans_cover_the_buffers() {
             assert_eq!(span.branch, i);
             assert_eq!(span.level, skeleton.branches[i].level);
             assert_eq!((span.vertices.start, span.indices.start), (vertex, index));
+            assert_eq!(span.shape, level.detail.branch_shape);
+
+            // Omitted thin branches keep empty spans; the trunk is never omitted.
+            let branch = &skeleton.branches[i];
+            if branch.level > 0 && branch.base_radius < level.detail.min_branch_radius {
+                assert!(span.sections.is_empty());
+                assert!(span.vertices.is_empty() && span.indices.is_empty());
+                continue;
+            }
             let rings = span.sections.len() as u32;
-            assert_eq!(span.vertices.len() as u32, rings * (span.segments + 1));
+            assert_eq!(span.vertices.len() as u32, rings * span.ring_vertices());
             assert_eq!(span.indices.len() as u32, (rings - 1) * span.segments * 6);
             assert_eq!(span.sections.first(), Some(&0));
             assert_eq!(
@@ -343,7 +360,7 @@ fn continuous_uvs_change_only_v() {
         // All vertices in a ring keep the original section number as v,
         // including when lower detail skips intermediate sections.
         for span in &continuous.branch_spans {
-            let ring = span.segments as usize + 1;
+            let ring = span.ring_vertices() as usize;
             for (k, &section) in span.sections.iter().enumerate() {
                 let first = span.vertices.start as usize + k * ring;
                 for uv in &a.uvs[first..first + ring] {
@@ -457,5 +474,41 @@ fn bark_tangents_follow_the_texture_coordinates() {
                 );
             }
         }
+    }
+}
+
+/// Checks every preset at the farthest level: thin branches are omitted, the
+/// trunk and every fourth leaf remain, and triangle counts fall by more than half.
+#[test]
+fn farthest_level_culls_thin_branches_and_keeps_leaves() {
+    let [.., far, farthest] = default_lod_levels();
+    for preset in TreePreset::ALL {
+        let options = preset.options();
+        let skeleton = Skeleton::generate(&options).unwrap();
+        let mesh = skeleton.mesh(&options, &farthest.detail);
+        let name = preset.name();
+
+        // Keep the trunk and omit exactly those other branches below the radius threshold.
+        assert!(!mesh.branch_spans[0].indices.is_empty(), "{name}");
+        for (span, branch) in mesh.branch_spans.iter().zip(&skeleton.branches) {
+            let thin = branch.level > 0 && branch.base_radius < farthest.detail.min_branch_radius;
+            assert_eq!(
+                span.indices.is_empty(),
+                thin,
+                "{name} branch {}",
+                span.branch
+            );
+        }
+
+        // Branch removal must not reduce the number of leaves selected by leaf_stride.
+        let kept = skeleton
+            .leaves
+            .len()
+            .div_ceil(farthest.detail.leaf_stride as usize);
+        assert_eq!(mesh.leaf_spans.len(), kept, "{name}");
+
+        let before = skeleton.mesh(&options, &far.detail).triangle_count();
+        let after = mesh.triangle_count();
+        assert!(after * 2 < before, "{name}: {after} vs {before} triangles");
     }
 }

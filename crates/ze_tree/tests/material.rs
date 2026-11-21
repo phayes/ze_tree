@@ -12,8 +12,8 @@ use std::path::PathBuf;
 use serde_json::Value;
 use ze_tree::{
     BARK_KINDS, BarkMap, BarkMaterial, LEAF_KINDS, LeafMap, LeafMaterial, TextureCompression,
-    TextureSize, TreeOptions, TreePreset, TrellisMaterial, bark_texture_path, leaf_has_normal_map,
-    leaf_texture_path,
+    TextureSize, TreeOptions, TreePreset, TrellisMaterial, bark_average_color, bark_texture_path,
+    leaf_has_normal_map, leaf_texture_path,
 };
 
 const KTX2_IDENTIFIER: [u8; 12] = *b"\xabKTX 20\xbb\r\n\x1a\n";
@@ -158,12 +158,12 @@ fn leaf_map_from(name: &str) -> LeafMap {
         .unwrap_or_else(|| panic!("unknown leaf map {name}"))
 }
 
-/// Lists the maps expected for a built-in leaf kind: colour, plus a normal map
-/// when [`leaf_has_normal_map`] reports one.
+/// Returns the image types available for a built-in leaf kind. Colour and clump
+/// images are always expected; normal maps depend on [`leaf_has_normal_map`].
 fn leaf_maps(kind: &str) -> Vec<LeafMap> {
     LeafMap::ALL
         .into_iter()
-        .filter(|&map| map == LeafMap::Color || leaf_has_normal_map(kind))
+        .filter(|&map| map != LeafMap::Normal || leaf_has_normal_map(kind))
         .collect()
 }
 
@@ -204,8 +204,15 @@ fn texture_kinds_match_the_manifest() {
     };
     assert_eq!(ids("bark"), BARK_KINDS);
     assert_eq!(ids("leaves"), LEAF_KINDS);
-    let total = manifest["assets"].as_array().expect("manifest assets").len();
-    assert_eq!(total, BARK_KINDS.len() + LEAF_KINDS.len(), "unknown categories");
+    let total = manifest["assets"]
+        .as_array()
+        .expect("manifest assets")
+        .len();
+    assert_eq!(
+        total,
+        BARK_KINDS.len() + LEAF_KINDS.len(),
+        "unknown categories"
+    );
 }
 
 #[test]
@@ -230,6 +237,23 @@ fn leaf_paths_name_kind_map_and_format() {
         leaf_texture_path("white_oak", LeafMap::Normal, TextureCompression::Uastc),
         "leaves/white_oak-normal-uastc.ktx2"
     );
+    assert_eq!(
+        leaf_texture_path("oak", LeafMap::Clump, TextureCompression::Bc7),
+        "leaves/oak-clump-bc7.ktx2"
+    );
+    assert!(LeafMap::Clump.is_srgb() && !LeafMap::Normal.is_srgb());
+}
+
+#[test]
+fn every_bark_kind_has_an_average_color() {
+    for kind in BARK_KINDS {
+        let color = bark_average_color(kind).unwrap_or_else(|| panic!("{kind}"));
+        assert!(
+            color.iter().all(|c| (0.0..=1.0).contains(c)),
+            "{kind}: {color:?}"
+        );
+    }
+    assert_eq!(bark_average_color("not_a_bark"), None);
 }
 
 #[test]
@@ -260,7 +284,10 @@ fn manifest_lists_every_leaf_file_once() {
         for map in leaf_maps(kind) {
             for compression in TextureCompression::ALL {
                 let path = leaf_texture_path(kind, map, compression);
-                assert!(paths.contains(path.as_str()), "{path} missing from manifest");
+                assert!(
+                    paths.contains(path.as_str()),
+                    "{path} missing from manifest"
+                );
                 expected += 1;
             }
         }
@@ -298,7 +325,10 @@ fn manifest_lists_every_bark_file_once() {
             for map in BarkMap::ALL {
                 for compression in TextureCompression::ALL {
                     let path = bark_texture_path(kind, size, map, compression);
-                    assert!(paths.contains(path.as_str()), "{path} missing from manifest");
+                    assert!(
+                        paths.contains(path.as_str()),
+                        "{path} missing from manifest"
+                    );
                     expected += 1;
                 }
             }
@@ -318,8 +348,11 @@ fn downloaded_leaf_textures_have_the_documented_formats() {
     for file in &files {
         let path = str_field(file, "path");
         let map = leaf_map_from(str_field(file, "map"));
-        let (width, height) =
-            check_texture(compression_from(str_field(file, "format")), path, map.is_srgb());
+        let (width, height) = check_texture(
+            compression_from(str_field(file, "format")),
+            path,
+            map.is_srgb(),
+        );
         assert_eq!(
             (Some(width as u64), Some(height as u64)),
             (file["width"].as_u64(), file["height"].as_u64()),
@@ -344,8 +377,11 @@ fn downloaded_bark_textures_have_the_documented_formats() {
             continue;
         }
         let map = map_from(str_field(file, "map"));
-        let (width, height) =
-            check_texture(compression_from(str_field(file, "format")), path, map.is_srgb());
+        let (width, height) = check_texture(
+            compression_from(str_field(file, "format")),
+            path,
+            map.is_srgb(),
+        );
         assert_eq!(
             (Some(width as u64), Some(height as u64)),
             (file["width"].as_u64(), file["height"].as_u64()),
@@ -353,7 +389,10 @@ fn downloaded_bark_textures_have_the_documented_formats() {
         );
         checked += 1;
     }
-    assert!(checked >= BARK_KINDS.len() * 2 * 3 * 2, "too few files checked");
+    assert!(
+        checked >= BARK_KINDS.len() * 2 * 3 * 2,
+        "too few files checked"
+    );
 }
 
 #[test]

@@ -143,12 +143,15 @@ fn partial_json_keeps_nested_defaults() {
 }
 
 #[test]
-fn bark_uv_mode_defaults_to_mirrored_and_reads_from_json() {
-    assert_eq!(TreeOptions::default().bark.uv_mode, BarkUvMode::Mirrored);
-    let options = TreeOptions::from_json(r#"{ "bark": { "uvMode": "continuous" } }"#).unwrap();
-    assert_eq!(options.bark.uv_mode, BarkUvMode::Continuous);
+fn bark_uv_mode_defaults_to_continuous_and_reads_from_json() {
+    assert_eq!(TreeOptions::default().bark.uv_mode, BarkUvMode::Continuous);
+    for preset in TreePreset::ALL {
+        assert_eq!(preset.options().bark.uv_mode, BarkUvMode::Continuous);
+    }
+    let options = TreeOptions::from_json(r#"{ "bark": { "uvMode": "mirrored" } }"#).unwrap();
+    assert_eq!(options.bark.uv_mode, BarkUvMode::Mirrored);
     let json: Value = serde_json::from_str(&options.to_json()).unwrap();
-    assert_eq!(json["bark"]["uvMode"], "continuous");
+    assert_eq!(json["bark"]["uvMode"], "mirrored");
 }
 
 #[test]

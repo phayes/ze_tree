@@ -68,7 +68,10 @@ fn image_paths_name_bark_by_size_and_leaves_once() {
         kind: "oak",
         map: TextureMap::LeafColor,
     };
-    assert_eq!(leaf.image_path(TextureSize::Size512), "leaves/oak-color.png");
+    assert_eq!(
+        leaf.image_path(TextureSize::Size512),
+        "leaves/oak-color.png"
+    );
     assert_eq!(leaf.image_path(TextureSize::Size2k), "leaves/oak-color.png");
     let normal = TextureRef {
         kind: "white_oak",

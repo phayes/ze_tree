@@ -567,7 +567,7 @@ mod tests {
     /// review the cause before updating the expected value.
     #[test]
     fn default_tree_id_is_pinned() {
-        assert_eq!(TreeOptions::default().tree_id(), 15_696_179_148_416_510_207);
+        assert_eq!(TreeOptions::default().tree_id(), 6_735_305_979_733_377_408);
     }
 
     /// Checks that a `u32` uses little-endian bytes and a `usize` uses 64 bits.

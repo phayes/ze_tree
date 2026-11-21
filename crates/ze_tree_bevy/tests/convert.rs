@@ -4,10 +4,10 @@ use bevy::mesh::{Mesh, VertexAttributeValues};
 use bevy::prelude::*;
 use bevy::render::render_resource::encase::UniformBuffer;
 use bevy::render::render_resource::{Face, ShaderType};
-use ze_tree::{BarkMaterial, BarkUvMode, Tree, TreePreset, WindParams};
+use ze_tree::{BarkMaterial, BarkUvMode, Tree, TreePreset, WindParams, bark_average_color};
 use ze_tree_bevy::{
-    ATTRIBUTE_WIND, BarkTextures, LeafTextures, WindUniform, bark_material, bark_mesh,
-    cluster_mesh, flower_material, fruit_material, leaf_material, leaf_mesh,
+    ATTRIBUTE_WIND, BarkTextures, LeafTextures, WindUniform, average_bark_material, bark_material,
+    bark_mesh, cluster_mesh, flower_material, fruit_material, leaf_material, leaf_mesh,
 };
 
 fn float2(mesh: &Mesh, id: impl Into<bevy::mesh::MeshVertexAttributeId>) -> Vec<[f32; 2]> {
@@ -157,6 +157,37 @@ fn bark_normal_map_needs_continuous_texture_coordinates() {
     let plain = bark_material(&bark, Some(&textures), wind);
     assert!(plain.base.base_color_texture.is_none());
     assert_eq!(plain.extension.wind, WindUniform::from(wind));
+}
+
+#[test]
+fn average_bark_material_tints_the_average_texture_colour() {
+    let mut bark = TreePreset::OakSmall.options().bark;
+    let wind = WindParams::default();
+    let tint = BarkMaterial::new(&bark).base_color;
+    let average = bark_average_color(&bark.kind).unwrap();
+
+    // Textured bark uses the tint times the texture's average, with no images.
+    let material = average_bark_material(&bark, wind);
+    let expected: [f32; 3] = std::array::from_fn(|i| tint[i] * average[i]);
+    let [r, g, b] = expected;
+    assert_eq!(material.base.base_color, Color::linear_rgb(r, g, b));
+    assert!(material.base.base_color_texture.is_none());
+    assert!(material.base.normal_map_texture.is_none());
+    assert_eq!(material.extension.wind, WindUniform::from(wind));
+
+    // Untextured bark and unknown kinds fall back to the tint alone.
+    let [r, g, b] = tint;
+    bark.textured = false;
+    assert_eq!(
+        average_bark_material(&bark, wind).base.base_color,
+        Color::linear_rgb(r, g, b)
+    );
+    bark.textured = true;
+    bark.kind = "not_a_bark".to_owned();
+    assert_eq!(
+        average_bark_material(&bark, wind).base.base_color,
+        Color::linear_rgb(r, g, b)
+    );
 }
 
 #[test]

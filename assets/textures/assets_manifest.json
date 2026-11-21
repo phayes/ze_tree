@@ -13,7 +13,8 @@
   "maps": {
     "color": "surface colour, with transparency for leaves; load as sRGB",
     "normal": "surface lighting detail, OpenGL (+Y) convention; load as linear data",
-    "roughness": "how matte the surface is, identical in R, G and B; load as linear data"
+    "roughness": "how matte the surface is, identical in R, G and B; load as linear data",
+    "clump": "256 x 256 spray of leaves with transparency, for distant trees; load as sRGB"
   },
   "formats": {
     "bc7": "BC7 with Zstandard compression, for GPUs that support BC7, commonly desktops",
@@ -5635,6 +5636,24 @@
           "height": 1024,
           "bytes": 281526,
           "sha256": "ae6c947ce26c5433604d7dc388940d38e5b2458f97c563fb4bfa4c8c67066bc4"
+        },
+        {
+          "path": "leaves/ash-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 49997,
+          "sha256": "63931993f07532b9608ed310942ef3a921f5af6ca854fc91e83122d3a3c1dd9c"
+        },
+        {
+          "path": "leaves/ash-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 58351,
+          "sha256": "2abed35b754bd7126e34625b9123cf644d3f24b342e70c3d7d4a331a0cf381bd"
         }
       ]
     },
@@ -5666,6 +5685,24 @@
           "height": 1024,
           "bytes": 263484,
           "sha256": "247e1b9bbee9004734abbac6dafa0547dad36963740f6994c3b7acd9160529e2"
+        },
+        {
+          "path": "leaves/aspen-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 46968,
+          "sha256": "46d95436afa72091e53b88e4e3214c468cab9214ae13d91c60b7e6c29bde55bd"
+        },
+        {
+          "path": "leaves/aspen-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 54332,
+          "sha256": "3cd4dcb8517bad8ce9145da7d61fe8770231dbb58ad73021de348df665a109d2"
         }
       ]
     },
@@ -5697,6 +5734,24 @@
           "height": 1024,
           "bytes": 389142,
           "sha256": "8195f2c98e2210cefb54b9d540d1f474460d2b0645534038a777cc7d3cee81f5"
+        },
+        {
+          "path": "leaves/oak-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 53197,
+          "sha256": "d840ae6064a4a4a44f548b33d931f9f2b57951c0684175af2d44b156d0b03e39"
+        },
+        {
+          "path": "leaves/oak-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 61066,
+          "sha256": "b50919c8ec4330847e743b14f7c8a471bc7357ccf23618a36ff01c0c67451d49"
         }
       ]
     },
@@ -5728,6 +5783,24 @@
           "height": 1024,
           "bytes": 440913,
           "sha256": "d1d271beaee238a0fa3b3c04c089c0af34661e6f11d8b20523f2e9959ec2e36d"
+        },
+        {
+          "path": "leaves/pine-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 53388,
+          "sha256": "93bac48dcabd49151bf27125fc2bdaaf9a4df31c536dfd2bf94eb154bd8fda4e"
+        },
+        {
+          "path": "leaves/pine-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 61193,
+          "sha256": "f97f8f1ee5b06db7d72af5ac3eb571ca735b4cafcbcf519062be9461b2fb635b"
         }
       ]
     },
@@ -5777,6 +5850,24 @@
           "height": 1024,
           "bytes": 431723,
           "sha256": "b0f03065e453b9b3401b443e3d9a3ea3c42dad5c7699c9c875eb7456ef3be7ef"
+        },
+        {
+          "path": "leaves/aspen_autumn-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 50610,
+          "sha256": "f97b0829d93414486ae625af07caa22604ce3614d89a10d9e844cc7f258d63cd"
+        },
+        {
+          "path": "leaves/aspen_autumn-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 58630,
+          "sha256": "30d8dc2942a29379d5ffa6565ed40f519ae4908f65dc7c8e3155c49da0eddfb4"
         }
       ]
     },
@@ -5826,6 +5917,24 @@
           "height": 1024,
           "bytes": 601241,
           "sha256": "9386e5fceb69aadeaac750bde4f1077e2cba51e127d680829e09e9539b68ce07"
+        },
+        {
+          "path": "leaves/european_aspen-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 57052,
+          "sha256": "604330b21456fc3a05a7c22b1483865494aadab21ecddbd2030a700ec0b64aae"
+        },
+        {
+          "path": "leaves/european_aspen-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 61510,
+          "sha256": "c33df7399b1632f98507869c2fa63c2bb2c93abb0b5587659b7c16980fec68fc"
         }
       ]
     },
@@ -5875,6 +5984,24 @@
           "height": 1024,
           "bytes": 718697,
           "sha256": "863251b67c79658b2faf9536c8bd22ad81b4f1767c96cd7027d1d64b1a1a1989"
+        },
+        {
+          "path": "leaves/bigtooth_aspen-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 59742,
+          "sha256": "06f6f30d5d59be60f753052b5e3bed5569f598cd7d51f4e3b27b96e36071d6d3"
+        },
+        {
+          "path": "leaves/bigtooth_aspen-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 58191,
+          "sha256": "1c583e3470f6db96e9d38507d41b437d5bca170e191ef0f58c71a41554976cb6"
         }
       ]
     },
@@ -5924,6 +6051,24 @@
           "height": 1024,
           "bytes": 350145,
           "sha256": "3023a75ba732aae9a3b9e1e82eb4ad91f7c27ef18e73113d77290255e1afa426"
+        },
+        {
+          "path": "leaves/alder_buckthorn-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 51464,
+          "sha256": "c3cf103ae9a41c3d9c4254f4006e8ff2c8415b5ccf891bbb6a8a0f86b5e13b77"
+        },
+        {
+          "path": "leaves/alder_buckthorn-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 58418,
+          "sha256": "856023dd928c3632479bde798102444b480a59def4abe7abceffb5625f3050d1"
         }
       ]
     },
@@ -5973,6 +6118,24 @@
           "height": 1024,
           "bytes": 537211,
           "sha256": "c36482a219d936808e15e3d8c5dd3a143ba95bcaa7843bce54a335ba04a81faf"
+        },
+        {
+          "path": "leaves/smoke_bush-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 60042,
+          "sha256": "9cb6aee9508f15dd350ba02138842f6104f38d87f8b15859923f511b9b44ba49"
+        },
+        {
+          "path": "leaves/smoke_bush-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 67316,
+          "sha256": "ee004d0935a9df573227c5e5b750c2302f210270bb068c355c973864d94e9018"
         }
       ]
     },
@@ -6022,6 +6185,24 @@
           "height": 1024,
           "bytes": 579649,
           "sha256": "345eb63651b95a3254eaf1646b023240d763956ba748964534ed88527563dad1"
+        },
+        {
+          "path": "leaves/field_maple_autumn-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 56162,
+          "sha256": "f396a1f24af175a82a66c72e4debc62aaa6521f9977771d450546cb6f4578011"
+        },
+        {
+          "path": "leaves/field_maple_autumn-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 60660,
+          "sha256": "16ec69638e4998a4ddca358cc91bb2c122da3be3584fa01dbee7733c1181abdf"
         }
       ]
     },
@@ -6071,6 +6252,24 @@
           "height": 1024,
           "bytes": 812697,
           "sha256": "ee5c0c643435ec83dd82de1246fdcb4ab77c114e75940d1dde6a08ab74f4177e"
+        },
+        {
+          "path": "leaves/bamboo-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 59065,
+          "sha256": "88ea9e3622044244b8d091f259108218434ba029be5d1b2c1172513adb4409b5"
+        },
+        {
+          "path": "leaves/bamboo-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 63748,
+          "sha256": "889be69ee7160dd439cbed00df2b65b055021c914f17980f25f7863dd02029fe"
         }
       ]
     },
@@ -6120,6 +6319,24 @@
           "height": 1024,
           "bytes": 499830,
           "sha256": "866eac7cb3908ac7f06ffd5a9b2ddf201410a460db7bedc4de0052d3749d60bb"
+        },
+        {
+          "path": "leaves/fir-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 49683,
+          "sha256": "f750059db14361d53bd62cbdf4b954c155cc21fb4893ec10ec4668674ecb4504"
+        },
+        {
+          "path": "leaves/fir-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 52091,
+          "sha256": "ab2ff15d5162add2723d72e6c5ac02e5d34ca07ab50b555ea8e77b9afa0ebdd1"
         }
       ]
     },
@@ -6169,6 +6386,24 @@
           "height": 1024,
           "bytes": 772392,
           "sha256": "610e3d8198d7c03790db93aec7711e4f2c34465434ad5a33f527feac61f91333"
+        },
+        {
+          "path": "leaves/white_pine-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 55305,
+          "sha256": "5bcf879b6ed05bf083080da825cbe015f8c6a4ed787ec346510b9df182f292eb"
+        },
+        {
+          "path": "leaves/white_pine-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 56666,
+          "sha256": "fcaff6f35e258e8b74bd6757b7a15a3392d11b043b2c2b17c9470e23283b5d19"
         }
       ]
     },
@@ -6218,6 +6453,24 @@
           "height": 1024,
           "bytes": 766515,
           "sha256": "a57c2e58f2e3cdabce45c4e9e41dda0aecf0c6ec0424bd52de041efc34d5af4b"
+        },
+        {
+          "path": "leaves/arborvitae_autumn-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 59193,
+          "sha256": "b7584a55d30b424d87b0edc9f579119edd94a76c035761321f9fb6623bfe61f3"
+        },
+        {
+          "path": "leaves/arborvitae_autumn-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 62615,
+          "sha256": "d3338b1ac3291c2f16dc926c805460af732fab660bc2e5bc4fef20996f13206d"
         }
       ]
     },
@@ -6267,6 +6520,24 @@
           "height": 1024,
           "bytes": 238205,
           "sha256": "13c10a5fea55f857d881bf554a4b1df3185ea24142ca4b3a36e8d3449ca8612c"
+        },
+        {
+          "path": "leaves/birch_autumn-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 48601,
+          "sha256": "6297769b8364067d1e03a67f07bfd1fdeab3d861f22b650fa10b3d71e7e0d260"
+        },
+        {
+          "path": "leaves/birch_autumn-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 56695,
+          "sha256": "777bb8efbdb9a19e452ee891df475baa06b02e2c17d83f24bd46ee5c37bf0923"
         }
       ]
     },
@@ -6316,6 +6587,24 @@
           "height": 1024,
           "bytes": 322188,
           "sha256": "75ccdef3c0db3f52f5e8d273ecf92c847af43dc9b8c25d77624d939c5f627826"
+        },
+        {
+          "path": "leaves/larch-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 49535,
+          "sha256": "c97ae83528d4f4e76e955f382e3ff4e8553b4f65b5a484ab7832124b5487dc1c"
+        },
+        {
+          "path": "leaves/larch-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 54384,
+          "sha256": "2592f90b79a9f977d001e061817cd7592b4403d9203689bc54377decf47cbb24"
         }
       ]
     },
@@ -6365,6 +6654,24 @@
           "height": 1024,
           "bytes": 349708,
           "sha256": "9559c07b875e97a965a64ce794bd9b6e1ce62b6d74486fb1167d2c684ad45213"
+        },
+        {
+          "path": "leaves/black_locust-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 49245,
+          "sha256": "58540efb72640c651c39a894a39cbe164f448e87e1243dd1a63327f915f68d77"
+        },
+        {
+          "path": "leaves/black_locust-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 53703,
+          "sha256": "9ba6617d37a8748fbe445fda78c408d9e294ba04ad832aa9209379e5c2c985bf"
         }
       ]
     },
@@ -6414,6 +6721,24 @@
           "height": 1024,
           "bytes": 291391,
           "sha256": "b7e73495c87345351a12aac7dbf86d3f707a1e21799b1b0351ed7c697f7a4901"
+        },
+        {
+          "path": "leaves/olive-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 49243,
+          "sha256": "366c1f5a2edaa6a7bb86138a5efd4d19515b03349d6787b9b72a4c6b26da9dc3"
+        },
+        {
+          "path": "leaves/olive-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 54185,
+          "sha256": "4c18e39927e4216c54aa3f7a310dd3051fc730ba68110fd6ac34f104fdf7ec0f"
         }
       ]
     },
@@ -6463,6 +6788,24 @@
           "height": 1024,
           "bytes": 309726,
           "sha256": "490f4105e20285a067831ddbe5d4cc16a1cd570839b375b510c2c57fb2e3221e"
+        },
+        {
+          "path": "leaves/cotoneaster-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 47217,
+          "sha256": "9c1028806211068c28a09f967fb2760a64147d8902324b8a1b65c6452c5083d1"
+        },
+        {
+          "path": "leaves/cotoneaster-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 52211,
+          "sha256": "ecce778c2cdcc4c8ecf9a87ef3ae588c965cc2433228b1b2044ecaf4f4ceb9c7"
         }
       ]
     },
@@ -6512,6 +6855,24 @@
           "height": 1024,
           "bytes": 204918,
           "sha256": "8e07aeeca59f9408d597e0fe2ab2816bbe79c61ceb13093ecc80916d9edc6442"
+        },
+        {
+          "path": "leaves/bare_twig_1-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 42924,
+          "sha256": "0ff43d3699025975c2b67d37914399b2a701b5ffe06c96be5f1c783ff9c5e678"
+        },
+        {
+          "path": "leaves/bare_twig_1-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 47340,
+          "sha256": "0307e4f15d7459616a5d6fd0abf989e660bae5d08a40e3e1c6ece966ecbd4c2c"
         }
       ]
     },
@@ -6561,6 +6922,24 @@
           "height": 1024,
           "bytes": 279966,
           "sha256": "6ab4f9d1e966f57661fcc54ea1c852b2f62253df636d7cc757e701364c42ad5c"
+        },
+        {
+          "path": "leaves/bare_twig_2-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 48866,
+          "sha256": "14618ad4d6f4f637980782cb5df62444fb65ae4377ed1eac4ef88f28deae7f86"
+        },
+        {
+          "path": "leaves/bare_twig_2-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 55540,
+          "sha256": "f1e8619d01d660774a06a1506cc7865f81180602e2b726b96e376393944cabf3"
         }
       ]
     },
@@ -6610,6 +6989,24 @@
           "height": 1024,
           "bytes": 570453,
           "sha256": "24b413f168fe51cb20cb580ac7a4026a24943e7e147002a7e553a9f19e408a84"
+        },
+        {
+          "path": "leaves/white_oak_autumn-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 58301,
+          "sha256": "75e473dac1b6abb0f6239332835ecb6786df8a1befdda9afc5bea67175d200a6"
+        },
+        {
+          "path": "leaves/white_oak_autumn-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 66368,
+          "sha256": "7dcb89823c0f61c45cedc5be9805b8bb9c1214f2cbc7aecd8d1c6ff50350b358"
         }
       ]
     },
@@ -6659,6 +7056,24 @@
           "height": 1024,
           "bytes": 570453,
           "sha256": "24b413f168fe51cb20cb580ac7a4026a24943e7e147002a7e553a9f19e408a84"
+        },
+        {
+          "path": "leaves/white_oak-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 55919,
+          "sha256": "55ef2665f11f51371e735a125dcfce2b5dc082a1b81e1e9e3a3420615b75aa50"
+        },
+        {
+          "path": "leaves/white_oak-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 61897,
+          "sha256": "5a007583db363c835c439ac2af09ae80260576e8ee94ae0f0c4e151e97eb62a0"
         }
       ]
     },
@@ -6708,6 +7123,24 @@
           "height": 1024,
           "bytes": 570453,
           "sha256": "24b413f168fe51cb20cb580ac7a4026a24943e7e147002a7e553a9f19e408a84"
+        },
+        {
+          "path": "leaves/white_oak_dead-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 56445,
+          "sha256": "08e7b99184b3074f7708e286c5925709edc745ffba5e8d026d0b5a64be48a2d7"
+        },
+        {
+          "path": "leaves/white_oak_dead-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 61937,
+          "sha256": "e1292020c65d79cd2e8ee226ee4c15ed5314e2b6e7c1e418f3ec083560d95ab5"
         }
       ]
     }

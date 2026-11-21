@@ -31,14 +31,13 @@
 //! produce the same shape; change the seed for another variation.
 //!
 //! ```rust
-//! use ze_tree::{BarkUvMode, Tree, TreePreset};
+//! use ze_tree::{Tree, TreePreset};
 //!
 //! fn main() -> Result<(), Box<dyn std::error::Error>> {
 //!     let mut options = TreePreset::OakSmall.options();
 //!     options.seed = 42;
 //!     options.branch.length[0] = 12.0; // Trunk length, in tree units.
 //!     options.leaves.size = 1.5;
-//!     options.bark.uv_mode = BarkUvMode::Continuous;
 //!
 //!     let tree = Tree::new(options)?;
 //!     println!("{} triangles", tree.triangle_count());
@@ -93,8 +92,9 @@
 //! }
 //! ```
 //!
-//! The defaults provide three levels, starting at distances 0, 100, and 250 in tree
-//! units. For your own settings, pass a `LodDetail` to `Tree::mesh_with_detail`.
+//! The four default levels use progressively simpler meshes at distances of 0, 100,
+//! 250 and 500 tree units. To choose your own mesh detail, pass a `LodDetail` to
+//! `Tree::mesh_with_detail`.
 //! If you only need branch shapes and leaf placements, use `Skeleton::generate`
 //! without building a mesh.
 //!
@@ -168,9 +168,12 @@
 //! Keep the metallic factor at zero when using a roughness image as a combined
 //! metallic-roughness texture.
 //!
-//! Normal maps need the directions in [`MeshBuffers::tangents`] to orient lighting
-//! detail on the surface. Supply the leaf mesh's tangents for leaf normal maps.
-//! For bark normal maps, also select [`BarkUvMode::Continuous`].
+//! Normal maps add lighting detail without extra geometry. Supply the directions
+//! in [`MeshBuffers::tangents`] from the corresponding bark or leaf mesh to orient
+//! that detail. For bark, keep the default [`BarkUvMode::Continuous`].
+//! [`BarkUvMode::Mirrored`] matches the JavaScript ez-tree generator's texture layout
+//! but reverses normal-map lighting detail on every other branch section, so
+//! Bevy and glTF export omit bark normal maps in that mode.
 //!
 //! For GPU wind, pass `MeshBuffers::wind` and `WindParams` to the `WIND_WESL` shader
 //! module and add its `wind_offset` to vertex positions. For joint-based animation,
@@ -206,12 +209,12 @@ mod wind;
 pub use cluster::{ClusterItem, ClusterStalk, SkeletonCluster};
 pub use material::{
     BARK_KINDS, BarkMap, BarkMaterial, FlowerMaterial, FruitMaterial, LEAF_KINDS, LeafMap,
-    LeafMaterial, TextureCompression, TextureSize, TrellisMaterial, bark_texture_path,
-    leaf_has_normal_map, leaf_texture_path,
+    LeafMaterial, TextureCompression, TextureSize, TrellisMaterial, bark_average_color,
+    bark_texture_path, leaf_has_normal_map, leaf_texture_path,
 };
 pub use mesh::{
-    BranchSpan, ClusterSpan, ItemDetail, LeafSpan, LodDetail, LodLevel, MeshBuffers, TreeMesh,
-    default_lod_levels,
+    BranchShape, BranchSpan, ClusterSpan, ItemDetail, LeafSpan, LodDetail, LodLevel, MeshBuffers,
+    TreeMesh, default_lod_levels,
 };
 pub use options::{
     BarkOptions, BarkUvMode, Billboard, BranchOptions, ClusterKind, ClusterPlacement, ClusterShape,

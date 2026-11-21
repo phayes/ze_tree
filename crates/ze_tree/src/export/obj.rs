@@ -250,7 +250,12 @@ fn material_library(
     let flower = FlowerMaterial::default();
     for (part, name, roughness, metallic) in [
         (MeshPart::Fruit, "fruit", fruit.roughness, fruit.metallic),
-        (MeshPart::Flowers, "flowers", flower.roughness, flower.metallic),
+        (
+            MeshPart::Flowers,
+            "flowers",
+            flower.roughness,
+            flower.metallic,
+        ),
     ] {
         if parts.contains(&part) {
             let _ = write!(

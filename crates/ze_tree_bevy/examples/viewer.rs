@@ -266,9 +266,11 @@ fn show_trees(
 
     let preset = TreePreset::ALL[viewer.preset];
     let mut options: TreeOptions = preset.options();
-    if viewer.continuous {
-        options.bark.uv_mode = BarkUvMode::Continuous;
-    }
+    options.bark.uv_mode = if viewer.continuous {
+        BarkUvMode::Continuous
+    } else {
+        BarkUvMode::Mirrored
+    };
     if let Some(maturity) = viewer.maturity {
         options.fruit.maturity = maturity;
         options.flowers.maturity = maturity;

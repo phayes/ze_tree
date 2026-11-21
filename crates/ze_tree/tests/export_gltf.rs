@@ -277,12 +277,23 @@ fn levels_of_detail_get_suffixed_names() {
     let gltf = read(&to_glb(&meshes, tree.options(), &options).unwrap());
 
     let mut expected = Vec::new();
-    for lod in 0..3 {
+    for lod in 0..4 {
         for part in ["trunk", "branches", "leaves"] {
             expected.push(format!("{part}_LOD{lod}"));
         }
     }
     assert_eq!(mesh_names(&gltf), expected);
+    // Bark uses a two-sided material only at the fourth level, where branches are ribbons.
+    for mesh in gltf.meshes() {
+        let name = mesh.name().unwrap();
+        let material = mesh.primitives().next().unwrap().material();
+        let ribbons = name.ends_with("_LOD3") && !name.starts_with("leaves");
+        let bark_name = if ribbons { "bark_two_sided" } else { "bark" };
+        if !name.starts_with("leaves") {
+            assert_eq!(material.name(), Some(bark_name), "{name}");
+            assert_eq!(material.double_sided(), ribbons, "{name}");
+        }
+    }
     // Detail variants reuse one joint set, and disabling wind must omit its attribute.
     assert_eq!(gltf.skins().count(), 1);
     for mesh in gltf.meshes() {
@@ -386,6 +397,42 @@ fn embedded_and_referenced_textures() {
     assert_eq!(uris, [format!("textures/{leaf}.png")]);
 }
 
+/// Checks that mirrored bark keeps its colour and roughness images but exports
+/// no normal map, avoiding reversed lighting detail on every other branch section.
+#[test]
+fn mirrored_bark_omits_the_normal_map() {
+    let mut options = TreePreset::OakSmall.options();
+    options.bark.uv_mode = ze_tree::BarkUvMode::Mirrored;
+    let tree = Tree::new(options).unwrap();
+    let uri = |t: TextureRef<'_>| Some(format!("textures/{:?}.png", t.map));
+    let gltf_options = GltfOptions {
+        textures: GltfTextures::Uri(&uri),
+        ..GltfOptions::default()
+    };
+    let glb = to_glb(
+        std::slice::from_ref(tree.mesh()),
+        tree.options(),
+        &gltf_options,
+    )
+    .unwrap();
+    let gltf = read(&glb);
+
+    let bark = gltf.materials().next().unwrap();
+    assert_eq!(bark.name(), Some("bark"));
+    let pbr = bark.pbr_metallic_roughness();
+    assert!(pbr.base_color_texture().is_some());
+    assert!(pbr.metallic_roughness_texture().is_some());
+    assert!(bark.normal_texture().is_none());
+    let uris: Vec<String> = gltf
+        .images()
+        .map(|image| match image.source() {
+            gltf::image::Source::Uri { uri, .. } => uri.to_owned(),
+            gltf::image::Source::View { .. } => panic!("expected a referenced image"),
+        })
+        .collect();
+    assert!(!uris.contains(&"textures/BarkNormal.png".to_owned()));
+}
+
 /// Checks that a leaf kind with a normal map exports both the material's lighting
 /// texture and one tangent per leaf vertex to orient that lighting detail.
 #[test]
@@ -407,12 +454,18 @@ fn leaf_normal_maps_and_tangents() {
         .unwrap(),
     );
 
-    let leaves = gltf.materials().find(|m| m.name() == Some("leaves")).unwrap();
+    let leaves = gltf
+        .materials()
+        .find(|m| m.name() == Some("leaves"))
+        .unwrap();
     let normal = leaves.normal_texture().unwrap().texture();
     assert_eq!(normal.name(), Some("white_oak_normal"));
     assert!(matches!(
         normal.source().source(),
-        gltf::image::Source::Uri { uri: "white_oak:LeafNormal", .. }
+        gltf::image::Source::Uri {
+            uri: "white_oak:LeafNormal",
+            ..
+        }
     ));
 
     let leaf_mesh = gltf.meshes().find(|m| m.name() == Some("leaves")).unwrap();
@@ -548,7 +601,10 @@ fn fruit_and_flowers_are_exported_with_their_colours() {
         // must have no joint assignments or connection to the rig.
         let material = primitive.material();
         assert_eq!(material.name(), Some(mesh.name().unwrap()));
-        assert_eq!(material.pbr_metallic_roughness().base_color_factor(), [1.0; 4]);
+        assert_eq!(
+            material.pbr_metallic_roughness().base_color_factor(),
+            [1.0; 4]
+        );
         assert!(material.double_sided());
         assert!(node.skin().is_none());
         assert!(reader.read_joints(0).is_none());

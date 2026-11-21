@@ -10,8 +10,9 @@
 //! - `<preset>.obj` and `<preset>.mtl`: the full-detail model and its material
 //!   description. Available texture images are copied to `OUT_DIR/textures/`.
 //!   Keep these files together when moving or sharing the export.
-//! - `<preset>.glb`: one file containing three detail levels, available texture
-//!   images and a rig of up to 64 joints for animating bark and leaves. Animation
+//! - `<preset>.glb`: one file with four mesh detail levels for different viewing
+//!   distances, available texture images and a rig of up to 64 joints for
+//!   animating bark and leaves. Animation
 //!   clips are not included, and fruit and flowers do not move with the joints.
 //!
 //! `TEXTURE_DIR` is optional and defaults to `assets/textures/images` in this
@@ -27,9 +28,9 @@ use std::error::Error;
 use std::fs;
 use std::path::{Path, PathBuf};
 
+use ze_tree::export::TextureRef;
 use ze_tree::export::gltf::{EmbeddedImage, GltfOptions, GltfTextures, ImageFormat, to_glb};
 use ze_tree::export::obj::{ObjOptions, to_obj};
-use ze_tree::export::TextureRef;
 use ze_tree::{RigOptions, TextureSize, Tree, TreePreset, default_lod_levels};
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -54,7 +55,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
     // Resolve the requested texture kind and role to an existing image file.
     let texture_path = |t: TextureRef<'_>| -> Option<PathBuf> {
-        let path = texture_dir.as_ref()?.join(t.image_path(TextureSize::Size1k));
+        let path = texture_dir
+            .as_ref()?
+            .join(t.image_path(TextureSize::Size1k));
         path.is_file().then_some(path)
     };
     // Copy images beside the export so relative material paths remain usable

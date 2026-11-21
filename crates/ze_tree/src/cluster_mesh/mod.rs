@@ -34,6 +34,9 @@ pub(crate) fn mesh_fruit(
     winds: &[BranchWind],
     detail: &LodDetail,
 ) -> Vec<ClusterSpan> {
+    if fruit.placement.size < detail.min_item_size {
+        return Vec::new();
+    }
     let stalk_color = rgba(fruit.cluster.stalk_color);
     let catkin = fruit.cluster.kind == ClusterKind::Catkin;
     let level = detail.item_detail;
@@ -77,6 +80,9 @@ pub(crate) fn mesh_flowers(
     winds: &[BranchWind],
     detail: &LodDetail,
 ) -> Vec<ClusterSpan> {
+    if flowers.placement.size < detail.min_item_size {
+        return Vec::new();
+    }
     let stalk_color = rgba(flowers.cluster.stalk_color);
     let catkin = flowers.cluster.kind == ClusterKind::Catkin;
     let level = detail.item_detail;

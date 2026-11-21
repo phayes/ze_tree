@@ -1,26 +1,25 @@
 #!/usr/bin/env bash
-# Write assets/textures/assets_manifest.json for downloading prepared KTX2 textures.
-# Run convert.sh first: all expected bark and leaf files must exist, or this script
-# stops with an error. The existing manifest is overwritten. Publish it alongside
-# the matching textures in gs://ze_textures/tree so download paths and checksums
-# agree. Other projects share the bucket under their own folders, so publish only
-# into tree/:
+# Create the download manifest at assets/textures/assets_manifest.json, replacing
+# any existing manifest. Run convert.sh first; missing bark or leaf textures cause
+# an error. Publish the manifest with the matching textures so its download paths
+# and checksums stay correct. Use only gs://ze_textures/tree/; the bucket also
+# contains other projects:
 #   gcloud storage rsync --recursive assets/textures/bark gs://ze_textures/tree/bark
 #   gcloud storage rsync --recursive assets/textures/leaves gs://ze_textures/tree/leaves
 #   gcloud storage cp assets/textures/assets_manifest.json assets/textures/LICENSE.md \
 #       gs://ze_textures/tree/
 #
-# Entries include file paths, maps, compression formats, dimensions, byte counts,
-# and SHA-256 checksums for verifying downloads. Each texture also includes its
-# title, authors, source and licence. Bark entries follow tools/textures/sets.txt;
-# leaf entries follow tools/textures/leaves.txt. Every leaf has colour files;
-# Nobiax leaves also have normal maps for lighting detail. Both BC7 and UASTC
-# formats are listed. Only bark files have size variants.
+# The manifest lists each file's path, image type, compression format, dimensions,
+# byte count and SHA-256 checksum, plus attribution and licence information.
+# Bark kinds come from tools/textures/sets.txt and leaf kinds from leaves.txt.
+# Every leaf kind includes regular colour and clump images (several leaves on
+# one card); Nobiax kinds also include normal maps for lighting detail. Files in
+# both BC7 and UASTC formats are listed. Only bark has multiple image sizes.
 #
 # Requirements: jq, KTX-Software 4.4+ (ktx), and shasum (macOS) or sha256sum.
 # Usage: tools/textures/manifest.sh [BARK_DIR]
-# BARK_DIR defaults to prior_art/textures, where fetch.sh saves each bark
-# texture's info.json. Leaf attribution comes from leaves.txt and leaves.sh.
+# BARK_DIR defaults to prior_art/textures and must contain the bark info.json
+# files saved by fetch.sh. Leaf attribution is read from leaves.txt and leaves.sh.
 
 set -euo pipefail
 
@@ -82,10 +81,11 @@ bark_assets=$(for id in "${bark_ids[@]}"; do
         '{id: $id, category: "bark"} + $info[0] + {files: .}'
 done | jq -s '.')
 
-# List each leaf kind's colour and available normal maps with attribution and licence details.
+# Include colour and clump images for every leaf kind, plus normal maps where
+# available, with attribution and licence details.
 leaf_assets=$(while IFS=$'\t' read -r kind source _ title; do
     info=$(leaf_info "$kind" "$source" "$title")
-    for map in $(leaf_maps "$source"); do
+    for map in $(leaf_maps "$source") clump; do
         for format in "${formats[@]}"; do
             describe_file "leaves/$kind-$map-$format.ktx2" \
                 "$(jq -nc --arg map "$map" --arg format "$format" '{map: $map, format: $format}')"
@@ -110,7 +110,8 @@ jq -n --arg base_url "$base_url" --argjson bark "$bark_assets" --argjson leaves 
     maps: {
         color: "surface colour, with transparency for leaves; load as sRGB",
         normal: "surface lighting detail, OpenGL (+Y) convention; load as linear data",
-        roughness: "how matte the surface is, identical in R, G and B; load as linear data"
+        roughness: "how matte the surface is, identical in R, G and B; load as linear data",
+        clump: "256 x 256 spray of leaves with transparency, for distant trees; load as sRGB"
     },
     formats: {
         bc7: "BC7 with Zstandard compression, for GPUs that support BC7, commonly desktops",

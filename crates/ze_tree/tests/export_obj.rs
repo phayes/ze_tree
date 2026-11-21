@@ -124,9 +124,9 @@ fn mtl_lists_textures_from_the_path_function() {
     let mut options_with_normals = tree.options().clone();
     options_with_normals.leaves.kind = "white_oak".to_owned();
     let mtl = to_obj(tree.mesh(), &options_with_normals, &options).mtl;
-    assert!(mtl.contains(
-        "map_Kd white_oak.png\nmap_d white_oak.png\nmap_Bump white_oak_normal.png\n"
-    ));
+    assert!(
+        mtl.contains("map_Kd white_oak.png\nmap_d white_oak.png\nmap_Bump white_oak_normal.png\n")
+    );
 
     // Omitting the image callback must retain colours without emitting texture paths.
     let plain = to_obj(tree.mesh(), tree.options(), &ObjOptions::default()).mtl;
@@ -254,7 +254,10 @@ fn fruit_and_flowers_carry_vertex_colours() {
     for (v, color) in vertices[plain..].iter().zip(&colors) {
         assert_eq!(v.len(), 6);
         for channel in 0..3 {
-            assert!((v[3 + channel] - srgb(color[channel])).abs() < 1e-6, "{v:?}");
+            assert!(
+                (v[3 + channel] - srgb(color[channel])).abs() < 1e-6,
+                "{v:?}"
+            );
         }
     }
 }

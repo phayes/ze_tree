@@ -76,16 +76,16 @@ pub enum Billboard {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum BarkUvMode {
-    /// Matches ez-tree: the image reverses direction between successive rings
-    /// of vertices (`v` alternates between 0 and 1). Lower detail stretches the
-    /// image along the branch. Avoid this mode with the supplied tangents for
-    /// normal maps: their lighting detail is reversed on every other section.
-    #[default]
+    /// Reverses the bark image on every other branch section to match the
+    /// JavaScript ez-tree generator. Lower detail stretches the image along
+    /// the branch. Bevy and glTF export omit bark normal maps in this mode
+    /// because it reverses their lighting detail on every other section.
     Mirrored,
-    /// Repeats the image in one direction, preserving texture coordinates at
-    /// retained sections when detail changes. Before material scaling, `v`
-    /// increases by one per original branch section. Choose this mode for bark
-    /// normal maps. This option is available in ze_tree only.
+    /// The default. Repeats the bark image in the same direction along the
+    /// branch and keeps it aligned when detail changes. Use this mode for
+    /// bark normal maps, which add lighting detail without extra geometry.
+    /// This mode is available in ze_tree only.
+    #[default]
     Continuous,
 }
 
@@ -139,9 +139,10 @@ pub struct BarkOptions {
     /// larger `x` adds repeats around the branch; larger `y` stretches along it.
     #[serde(with = "serde_vec::vec2")]
     pub texture_scale: Vec2,
-    /// How bark images repeat along branches. Defaults to [`BarkUvMode::Mirrored`];
-    /// choose [`BarkUvMode::Continuous`] for normal maps. The JavaScript ez-tree
-    /// generator ignores this setting and always uses mirrored coordinates.
+    /// How bark images repeat along branches. Keep the default,
+    /// [`BarkUvMode::Continuous`], to use bark normal maps in Bevy and glTF export.
+    /// Choose [`BarkUvMode::Mirrored`] to match the JavaScript ez-tree generator's
+    /// texture layout; that generator ignores this setting.
     pub uv_mode: BarkUvMode,
 }
 
@@ -532,7 +533,7 @@ impl Default for BarkOptions {
             flat_shading: false,
             textured: true,
             texture_scale: Vec2::ONE,
-            uv_mode: BarkUvMode::Mirrored,
+            uv_mode: BarkUvMode::Continuous,
         }
     }
 }

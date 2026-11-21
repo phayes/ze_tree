@@ -14,7 +14,7 @@ use bevy::shader::ShaderRef;
 use ze_tree::{
     BarkMap, BarkMaterial, BarkOptions, BarkUvMode, FlowerMaterial, FruitMaterial, LeafMap,
     LeafMaterial, LeafOptions, TextureCompression, TextureSize, TrellisMaterial, TrellisOptions,
-    WindParams, bark_texture_path, leaf_has_normal_map, leaf_texture_path,
+    WindParams, bark_average_color, bark_texture_path, leaf_has_normal_map, leaf_texture_path,
 };
 
 use crate::mesh::ATTRIBUTE_WIND;
@@ -178,18 +178,47 @@ impl LeafTextures {
         kind: &str,
         compression: TextureCompression,
     ) -> Self {
-        let load = |map: LeafMap| {
-            let srgb = map.is_srgb();
-            asset_server
-                .load_builder()
-                .with_settings(move |settings: &mut ImageLoaderSettings| settings.is_srgb = srgb)
-                .load(format!("{root}/{}", leaf_texture_path(kind, map, compression)))
-        };
+        let load = |map| load_leaf_map(asset_server, root, kind, map, compression);
         Self {
             color: load(LeafMap::Color),
             normal: leaf_has_normal_map(kind).then(|| load(LeafMap::Normal)),
         }
     }
+
+    /// Starts loading [`LeafMap::Clump`], an image of several leaves for a single
+    /// flat leaf card. Use it with fewer, larger cards for distant trees.
+    /// Returns a colour handle with no normal map. Pass the same texture root,
+    /// leaf kind and compression format as for [`Self::load`]; loading is asynchronous.
+    pub fn load_clump(
+        asset_server: &AssetServer,
+        root: &str,
+        kind: &str,
+        compression: TextureCompression,
+    ) -> Self {
+        Self {
+            color: load_leaf_map(asset_server, root, kind, LeafMap::Clump, compression),
+            normal: None,
+        }
+    }
+}
+
+/// Starts loading one leaf image under `root`, using sRGB for colour and clump
+/// images and linear data for normal maps.
+fn load_leaf_map(
+    asset_server: &AssetServer,
+    root: &str,
+    kind: &str,
+    map: LeafMap,
+    compression: TextureCompression,
+) -> Handle<Image> {
+    let srgb = map.is_srgb();
+    asset_server
+        .load_builder()
+        .with_settings(move |settings: &mut ImageLoaderSettings| settings.is_srgb = srgb)
+        .load(format!(
+            "{root}/{}",
+            leaf_texture_path(kind, map, compression)
+        ))
 }
 
 /// Requests an image with linear filtering and repetition in both texture directions.
@@ -211,9 +240,11 @@ fn load_repeating(asset_server: &AssetServer, path: String, srgb: bool) -> Handl
 ///
 /// Supply textures matching [`BarkOptions::kind`]. They are used only when
 /// [`BarkOptions::textured`] is enabled; otherwise the bark uses its tint alone.
-/// Normal maps add surface detail only with [`BarkUvMode::Continuous`]. The default
-/// mirrored texture coordinates are unsuitable for these normal maps. Pair this
-/// material with [`bark_mesh`](crate::bark_mesh) for texture repeat and flat shading.
+/// The normal map adds lighting detail without extra geometry. Keep the default
+/// [`BarkUvMode::Continuous`] to use it. With [`BarkUvMode::Mirrored`], the material
+/// omits the normal map to avoid reversed lighting detail on every other branch
+/// section. Pair this material with [`bark_mesh`](crate::bark_mesh) for texture
+/// repeat and flat shading.
 /// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
 pub fn bark_material(
     bark: &BarkOptions,
@@ -235,6 +266,33 @@ pub fn bark_material(
             base.normal_map_texture = Some(textures.normal.clone());
         }
     }
+    TreeMaterial {
+        base,
+        extension: WindExtension { wind: wind.into() },
+    }
+}
+
+/// Creates a bark material with a single colour and the supplied initial wind settings.
+/// No texture files are needed.
+///
+/// If [`BarkOptions::textured`] is enabled and the bark kind is in
+/// [`ze_tree::BARK_KINDS`], the colour combines the bark tint with
+/// [`bark_average_color`], approximating textured bark viewed from a distance.
+/// Otherwise, the material uses the tint alone.
+/// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
+pub fn average_bark_material(bark: &BarkOptions, wind: WindParams) -> TreeMaterial {
+    let settings = BarkMaterial::new(bark);
+    let average = bark_average_color(&bark.kind).filter(|_| settings.textured);
+    let [r, g, b] = match average {
+        Some(average) => std::array::from_fn(|i| settings.base_color[i] * average[i]),
+        None => settings.base_color,
+    };
+    let base = StandardMaterial {
+        base_color: Color::linear_rgb(r, g, b),
+        metallic: settings.metallic,
+        perceptual_roughness: settings.roughness,
+        ..default()
+    };
     TreeMaterial {
         base,
         extension: WindExtension { wind: wind.into() },
@@ -281,7 +339,12 @@ pub fn leaf_material(
 /// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
 pub fn fruit_material(wind: WindParams) -> TreeMaterial {
     let settings = FruitMaterial::default();
-    vertex_color_material(settings.metallic, settings.roughness, settings.double_sided, wind)
+    vertex_color_material(
+        settings.metallic,
+        settings.roughness,
+        settings.double_sided,
+        wind,
+    )
 }
 
 /// Creates a wind-animated flower material. Pair it with
@@ -290,7 +353,12 @@ pub fn fruit_material(wind: WindParams) -> TreeMaterial {
 /// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
 pub fn flower_material(wind: WindParams) -> TreeMaterial {
     let settings = FlowerMaterial::default();
-    vertex_color_material(settings.metallic, settings.roughness, settings.double_sided, wind)
+    vertex_color_material(
+        settings.metallic,
+        settings.roughness,
+        settings.double_sided,
+        wind,
+    )
 }
 
 /// Builds an untextured, white-based material whose colour comes from vertex colours.

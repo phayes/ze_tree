@@ -1,6 +1,6 @@
 //! Generate trees in background tasks and display their parts as child entities.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use bevy::asset::io::Reader;
@@ -9,14 +9,15 @@ use bevy::camera::visibility::VisibilityRange;
 use bevy::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task, block_on, poll_once};
 use ze_tree::{
-    LodLevel, OptionsError, Skeleton, TextureCompression, TextureSize, TreeError, TreeOptions,
-    TreePreset, TrellisWire, default_lod_levels,
+    BranchShape, LodLevel, OptionsError, Skeleton, TextureCompression, TextureSize, TreeError,
+    TreeOptions, TreePreset, TrellisWire, default_lod_levels,
 };
 
 use crate::material::{
-    BarkTextures, LeafTextures, TreeMaterial, bark_material, flower_material, fruit_material,
-    leaf_material, trellis_material,
+    BarkTextures, LeafTextures, TreeMaterial, average_bark_material, bark_material,
+    flower_material, fruit_material, leaf_material, trellis_material,
 };
+use crate::material_key::{BarkKey, LeafKey, TrellisKey};
 use crate::mesh::{bark_mesh, cluster_mesh, leaf_mesh};
 use crate::wind::Wind;
 
@@ -109,30 +110,67 @@ impl AssetLoader for TreeOptionsLoader {
     }
 }
 
-/// One detail level for [`ZeTreePlugin::lod_levels`](crate::ZeTreePlugin::lod_levels):
-/// the mesh detail and switching distance, plus the bark texture size to use.
+/// Mesh and material settings for one entry in
+/// [`ZeTreePlugin::lod_levels`](crate::ZeTreePlugin::lod_levels).
+/// The plugin automatically renders [`BranchShape::Ribbons`] from both sides.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TreeLodLevel {
-    /// Mesh detail settings and the camera distance where this level starts.
+    /// Mesh detail and the camera distance, in world units, where this level starts.
     pub level: LodLevel,
-    /// Bark texture size for this level. Smaller sizes use less memory; the file
-    /// must be present under the plugin's texture folder.
-    pub bark_texture_size: TextureSize,
+    /// Bark texture size or flat-colour shading for this level.
+    pub bark: BarkTexture,
+    /// Leaf image to use for this level's flat leaf cards.
+    pub leaves: LeafTexture,
 }
 
-/// Returns the plugin's three default detail levels, nearest first: the
-/// [`default_lod_levels`] meshes with 1k bark textures up close and 512 bark
-/// textures at the two farther levels.
+/// Bark appearance for a detail level. These choices apply when the plugin has
+/// a texture folder configured; without one, bark uses its tint alone.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum BarkTexture {
+    /// Use colour, normal and roughness images at the given size. Smaller
+    /// images use less memory. Supply the files under the plugin's texture folder.
+    Textured(TextureSize),
+    /// Use one colour that approximates textured bark viewed from a distance.
+    /// Requires no bark images; see [`average_bark_material`] for tint handling
+    /// and the fallback for unknown bark kinds.
+    AverageColor,
+}
+
+/// Image used on each flat leaf card. Requires a configured plugin texture folder.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Default)]
+pub enum LeafTexture {
+    /// Use the leaf kind's regular colour image ([`Color`](ze_tree::LeafMap::Color))
+    /// and its normal map when available.
+    #[default]
+    Leaf,
+    /// Use the leaf kind's [`Clump`](ze_tree::LeafMap::Clump) image to show several
+    /// leaves per card, without a normal map. For distant trees, increase
+    /// [`leaf_stride`](ze_tree::LodDetail::leaf_stride) to draw fewer cards and
+    /// [`leaf_scale`](ze_tree::LodDetail::leaf_scale) to make them larger.
+    Clump,
+}
+
+/// Returns four detail levels, nearest first, using [`default_lod_levels`].
+/// Bark uses 1k textures at the nearest level and 512 textures at the next two.
+/// The fourth level uses a flat average bark colour and images of several leaves
+/// per card. These material choices require a configured plugin texture folder.
 pub fn default_tree_lod_levels() -> Vec<TreeLodLevel> {
-    let sizes = [TextureSize::Size1k, TextureSize::Size512, TextureSize::Size512];
-    default_lod_levels()
-        .into_iter()
-        .zip(sizes)
-        .map(|(level, bark_texture_size)| TreeLodLevel {
-            level,
-            bark_texture_size,
-        })
-        .collect()
+    let [near, middle, far, farthest] = default_lod_levels();
+    let textured = |level, size| TreeLodLevel {
+        level,
+        bark: BarkTexture::Textured(size),
+        leaves: LeafTexture::Leaf,
+    };
+    vec![
+        textured(near, TextureSize::Size1k),
+        textured(middle, TextureSize::Size512),
+        textured(far, TextureSize::Size512),
+        TreeLodLevel {
+            level: farthest,
+            bark: BarkTexture::AverageColor,
+            leaves: LeafTexture::Clump,
+        },
+    ]
 }
 
 /// Texture location, format and detail levels copied from the plugin configuration.
@@ -195,15 +233,16 @@ struct LevelAssets {
     fruit: Option<Handle<Mesh>>,
     /// Flower mesh, absent when this level contains no flower triangles.
     flowers: Option<Handle<Mesh>>,
-    /// Bark material for this level's texture size, shared by levels with the same size.
+    /// Bark material, shared by levels with matching bark settings and sidedness.
     bark_material: Handle<TreeMaterial>,
+    /// Leaf material, shared by levels using the same leaf image selection.
+    leaf_material: Handle<TreeMaterial>,
 }
 
 /// Meshes and materials reused by trees with identical options.
 struct Generated {
     /// Detail levels sorted from the nearest switching distance to the farthest.
     levels: Vec<LevelAssets>,
-    leaves: Handle<TreeMaterial>,
     fruit: Handle<TreeMaterial>,
     flowers: Handle<TreeMaterial>,
     /// One cylinder mesh and material shared by all wires, plus each wire's placement.
@@ -216,13 +255,21 @@ enum Entry {
     Failed(OptionsError),
 }
 
-/// Caches generation tasks and results by tree options, bark textures by kind and
-/// size, and leaf textures by kind.
+/// Reuses generated trees when their options match. Trees with different shapes
+/// can still share texture images and materials (surface colour, texture and shine)
+/// when those settings match, avoiding duplicate assets.
 #[derive(Resource, Default)]
 pub(crate) struct TreeCache {
     trees: HashMap<TreeKey, Entry>,
     bark_textures: HashMap<(String, TextureSize), BarkTextures>,
-    leaf_textures: HashMap<String, LeafTextures>,
+    leaf_textures: HashMap<(String, LeafTexture), LeafTextures>,
+    bark_materials: HashMap<BarkKey, Handle<TreeMaterial>>,
+    leaf_materials: HashMap<LeafKey, Handle<TreeMaterial>>,
+    trellis_materials: HashMap<TrellisKey, Handle<StandardMaterial>>,
+    /// Shared fruit appearance, retained even when no trees use it.
+    fruit_material: Option<Handle<TreeMaterial>>,
+    /// Shared flower appearance, retained even when no trees use it.
+    flower_material: Option<Handle<TreeMaterial>>,
 }
 
 /// Removes generated children when a tree changes or loses its [`ZeTree`] component.
@@ -354,45 +401,68 @@ pub(crate) fn finish_generation(
             }
         };
 
-        // Reuse leaf textures by kind, even when the trees have different options.
+        // Share matching materials across trees and their distance-based detail
+        // levels. Bark visible from both sides needs a separate material.
+        // Reuse texture images; without a texture folder, use plain colours.
         let compression = settings.texture_compression;
-        let leaf_textures = settings.texture_root.as_ref().map(|root| {
-            cache
-                .leaf_textures
-                .entry(options.leaves.kind.clone())
-                .or_insert_with(|| {
-                    LeafTextures::load(&asset_server, root, &options.leaves.kind, compression)
-                })
-                .clone()
-        });
-
-        // Make one bark material per texture size; levels with the same size share it.
-        // Bark textures are reused by kind and size across trees. Without textures,
-        // every level shares one untextured material.
-        let mut bark_materials: HashMap<Option<TextureSize>, Handle<TreeMaterial>> = HashMap::new();
+        let root = settings.texture_root.as_deref();
         let ranges = visibility_ranges(levels.iter().map(|l| l.level.level));
         let mut level_assets = Vec::with_capacity(levels.len());
         for (l, range) in levels.into_iter().zip(ranges) {
-            let size = l.level.bark_texture_size;
-            let key = settings.texture_root.is_some().then_some(size);
-            let bark = bark_materials.entry(key).or_insert_with(|| {
-                let textures = settings.texture_root.as_ref().map(|root| {
+            // Render both faces of each ribbon strip.
+            let two_sided = l.level.level.detail.branch_shape == BranchShape::Ribbons;
+            let look = root.map(|_| l.level.bark);
+            let key = BarkKey::new(&options.bark, look, two_sided);
+            let bark = cache.bark_materials.entry(key).or_insert_with(|| {
+                let mut material = match (look, root) {
+                    (Some(BarkTexture::Textured(size)), Some(root)) => {
+                        let textures = cache
+                            .bark_textures
+                            .entry((options.bark.kind.clone(), size))
+                            .or_insert_with(|| {
+                                BarkTextures::load(
+                                    &asset_server,
+                                    root,
+                                    &options.bark.kind,
+                                    size,
+                                    compression,
+                                )
+                            });
+                        bark_material(&options.bark, Some(&*textures), wind.0)
+                    }
+                    (Some(BarkTexture::AverageColor), _) => {
+                        average_bark_material(&options.bark, wind.0)
+                    }
+                    _ => bark_material(&options.bark, None, wind.0),
+                };
+                if two_sided {
+                    material.base.cull_mode = None;
+                    material.base.double_sided = true;
+                }
+                tree_materials.add(material)
+            });
+
+            let image = root.map(|_| l.level.leaves);
+            let key = LeafKey::new(&options.leaves, image);
+            let leaves = cache.leaf_materials.entry(key).or_insert_with(|| {
+                let textures = image.zip(root).map(|(image, root)| {
+                    let kind = &options.leaves.kind;
                     cache
-                        .bark_textures
-                        .entry((options.bark.kind.clone(), size))
-                        .or_insert_with(|| {
-                            BarkTextures::load(
-                                &asset_server,
-                                root,
-                                &options.bark.kind,
-                                size,
-                                compression,
-                            )
+                        .leaf_textures
+                        .entry((kind.clone(), image))
+                        .or_insert_with(|| match image {
+                            LeafTexture::Leaf => {
+                                LeafTextures::load(&asset_server, root, kind, compression)
+                            }
+                            LeafTexture::Clump => {
+                                LeafTextures::load_clump(&asset_server, root, kind, compression)
+                            }
                         })
                         .clone()
                 });
-                tree_materials.add(bark_material(&options.bark, textures.as_ref(), wind.0))
+                tree_materials.add(leaf_material(&options.leaves, textures.as_ref(), wind.0))
             });
+
             level_assets.push(LevelAssets {
                 range,
                 bark: l.bark.map(|m| meshes.add(m)),
@@ -400,26 +470,38 @@ pub(crate) fn finish_generation(
                 fruit: l.fruit.map(|m| meshes.add(m)),
                 flowers: l.flowers.map(|m| meshes.add(m)),
                 bark_material: bark.clone(),
+                leaf_material: leaves.clone(),
             });
         }
 
+        // All trees share one fruit material and one flower material because
+        // these surface settings do not vary between trees.
+        let fruit = cache
+            .fruit_material
+            .get_or_insert_with(|| tree_materials.add(fruit_material(wind.0)))
+            .clone();
+        let flowers = cache
+            .flower_material
+            .get_or_insert_with(|| tree_materials.add(flower_material(wind.0)))
+            .clone();
+        let trellis = (options.trellis.enabled && options.trellis.visible).then(|| {
+            let wires = options.trellis.wires();
+            let material = cache
+                .trellis_materials
+                .entry(TrellisKey::new(&options.trellis))
+                .or_insert_with(|| standard_materials.add(trellis_material(&options.trellis)))
+                .clone();
+            (
+                meshes.add(Cylinder::new(options.trellis.cylinder_radius, 1.0)),
+                material,
+                wires.iter().map(wire_transform).collect(),
+            )
+        });
         let generated = Generated {
             levels: level_assets,
-            leaves: tree_materials.add(leaf_material(
-                &options.leaves,
-                leaf_textures.as_ref(),
-                wind.0,
-            )),
-            fruit: tree_materials.add(fruit_material(wind.0)),
-            flowers: tree_materials.add(flower_material(wind.0)),
-            trellis: (options.trellis.enabled && options.trellis.visible).then(|| {
-                let wires = options.trellis.wires();
-                (
-                    meshes.add(Cylinder::new(options.trellis.cylinder_radius, 1.0)),
-                    standard_materials.add(trellis_material(&options.trellis)),
-                    wires.iter().map(wire_transform).collect(),
-                )
-            }),
+            fruit,
+            flowers,
+            trellis,
         };
         *entry = Entry::Ready(Arc::new(generated));
     }
@@ -491,7 +573,7 @@ fn spawn_tree_parts(commands: &mut Commands, tree: Entity, generated: &Generated
     for (lod, level) in generated.levels.iter().enumerate() {
         let parts = [
             (TreePartKind::Bark, &level.bark, &level.bark_material),
-            (TreePartKind::Leaves, &level.leaves, &generated.leaves),
+            (TreePartKind::Leaves, &level.leaves, &level.leaf_material),
             (TreePartKind::Fruit, &level.fruit, &generated.fruit),
             (TreePartKind::Flowers, &level.flowers, &generated.flowers),
         ];
@@ -524,8 +606,10 @@ fn spawn_tree_parts(commands: &mut Commands, tree: Entity, generated: &Generated
     }
 }
 
-/// Removes cached generation entries no tree entity uses. Meshes and materials
-/// can be freed once no other handles retain them. Cached textures are kept.
+/// Removes unused tree generation entries and their unneeded bark, leaf and
+/// trellis materials. Their shapes and materials can be freed when nothing else
+/// references them. Texture images and shared fruit and flower materials stay
+/// cached for reuse.
 pub(crate) fn prune_cache(
     mut removed: RemovedComponents<TreeKey>,
     keys: Query<&TreeKey>,
@@ -534,8 +618,29 @@ pub(crate) fn prune_cache(
     if removed.read().count() == 0 {
         return;
     }
-    let used: std::collections::HashSet<&TreeKey> = keys.iter().collect();
+    let used: HashSet<&TreeKey> = keys.iter().collect();
     cache.trees.retain(|key, _| used.contains(key));
+
+    // Preserve materials referenced by the generated trees still in the cache.
+    let mut drawn = HashSet::new();
+    let mut wires = HashSet::new();
+    for entry in cache.trees.values() {
+        let Entry::Ready(generated) = entry else {
+            continue;
+        };
+        for level in &generated.levels {
+            drawn.insert(level.bark_material.id());
+            drawn.insert(level.leaf_material.id());
+        }
+        if let Some((_, material, _)) = &generated.trellis {
+            wires.insert(material.id());
+        }
+    }
+    cache.bark_materials.retain(|_, m| drawn.contains(&m.id()));
+    cache.leaf_materials.retain(|_, m| drawn.contains(&m.id()));
+    cache
+        .trellis_materials
+        .retain(|_, m| wires.contains(&m.id()));
 }
 
 #[cfg(test)]
@@ -549,8 +654,19 @@ mod tests {
     #[derive(Resource, Default)]
     struct Finished(Vec<Result<(), OptionsError>>);
 
-    /// An app running only the spawn systems, without rendering or textures.
+    /// Creates a test app with one full-detail level and the spawn systems,
+    /// without rendering or loading textures.
     fn spawn_app() -> App {
+        spawn_app_with(vec![TreeLodLevel {
+            level: LodLevel::default(),
+            bark: BarkTexture::Textured(TextureSize::Size1k),
+            leaves: LeafTexture::Leaf,
+        }])
+    }
+
+    /// Creates a test app with the supplied levels and the spawn systems,
+    /// without rendering or loading textures.
+    fn spawn_app_with(lod_levels: Vec<TreeLodLevel>) -> App {
         let mut app = App::new();
         app.add_plugins((MinimalPlugins, AssetPlugin::default()))
             .init_asset::<Mesh>()
@@ -564,10 +680,7 @@ mod tests {
             .insert_resource(SpawnSettings {
                 texture_root: None,
                 texture_compression: TextureCompression::Bc7,
-                lod_levels: vec![TreeLodLevel {
-                    level: LodLevel::default(),
-                    bark_texture_size: TextureSize::Size1k,
-                }],
+                lod_levels,
             })
             .add_systems(
                 Update,
@@ -642,6 +755,108 @@ mod tests {
         assert_eq!(app.world().resource::<Finished>().0.len(), 3);
     }
 
+    /// Checks that all four default levels have bark and leaves, and that bark
+    /// is two-sided only at the fourth level, which uses ribbons.
+    #[test]
+    fn ribbon_bark_is_drawn_two_sided() {
+        let mut app = spawn_app_with(default_tree_lod_levels());
+        let tree = app
+            .world_mut()
+            .spawn(ZeTree::preset(TreePreset::OakSmall))
+            .id();
+        update_until_finished(&mut app, tree);
+
+        let mut parts = app
+            .world_mut()
+            .query::<(&TreePart, &MeshMaterial3d<TreeMaterial>)>();
+        let materials = app.world().resource::<Assets<TreeMaterial>>();
+        let mut seen = Vec::new();
+        for (part, material) in parts.iter(app.world()) {
+            seen.push((part.lod, part.kind));
+            if part.kind == TreePartKind::Bark {
+                let base = &materials.get(&material.0).unwrap().base;
+                let ribbons = part.lod == 3;
+                assert_eq!(base.cull_mode.is_none(), ribbons, "lod {}", part.lod);
+                assert_eq!(base.double_sided, ribbons, "lod {}", part.lod);
+            }
+        }
+        for lod in 0..4 {
+            assert!(seen.contains(&(lod, TreePartKind::Bark)), "lod {lod}");
+            assert!(seen.contains(&(lod, TreePartKind::Leaves)), "lod {lod}");
+        }
+    }
+
+    /// Returns the distinct material identifiers for one kind of part on a tree.
+    fn part_materials(
+        app: &mut App,
+        tree: Entity,
+        kind: TreePartKind,
+    ) -> HashSet<AssetId<TreeMaterial>> {
+        let mut parts = app
+            .world_mut()
+            .query::<(&TreePart, &MeshMaterial3d<TreeMaterial>, &ChildOf)>();
+        parts
+            .iter(app.world())
+            .filter(|(part, _, parent)| part.kind == kind && parent.parent() == tree)
+            .map(|(_, material, _)| material.0.id())
+            .collect()
+    }
+
+    #[test]
+    fn trees_that_look_the_same_share_materials() {
+        let mut app = spawn_app();
+        app.add_systems(Update, prune_cache.after(spawn_parts));
+        let spawn = |app: &mut App, options: TreeOptions| {
+            let tree = app
+                .world_mut()
+                .spawn(ZeTree::Options(Arc::new(options)))
+                .id();
+            update_until_finished(app, tree);
+            tree
+        };
+        let oak = TreePreset::OakSmall.options();
+
+        // Changing the random seed varies tree shape while preserving the
+        // shared bark and leaf materials.
+        let first = spawn(&mut app, oak.clone());
+        let reseeded = TreeOptions {
+            seed: oak.seed + 1,
+            ..oak.clone()
+        };
+        let second = spawn(&mut app, reseeded);
+        for kind in [TreePartKind::Bark, TreePartKind::Leaves] {
+            let shared = part_materials(&mut app, first, kind);
+            assert_eq!(shared.len(), 1, "{kind:?}");
+            assert_eq!(part_materials(&mut app, second, kind), shared, "{kind:?}");
+        }
+
+        // Changing bark colour creates a separate bark material; leaves still
+        // share their original material.
+        let mut tinted = oak.clone();
+        tinted.bark.tint ^= 0x10;
+        let third = spawn(&mut app, tinted);
+        assert!(
+            part_materials(&mut app, third, TreePartKind::Bark).is_disjoint(&part_materials(
+                &mut app,
+                first,
+                TreePartKind::Bark
+            ))
+        );
+        assert_eq!(
+            part_materials(&mut app, third, TreePartKind::Leaves),
+            part_materials(&mut app, first, TreePartKind::Leaves)
+        );
+        assert_eq!(app.world().resource::<TreeCache>().bark_materials.len(), 2);
+
+        // Once the differently coloured tree is removed, its unique bark
+        // material is no longer needed in the cache.
+        app.world_mut().entity_mut(third).despawn();
+        app.update();
+        let cache = app.world().resource::<TreeCache>();
+        assert_eq!(cache.bark_materials.len(), 1);
+        assert_eq!(cache.leaf_materials.len(), 1);
+    }
+
     #[test]
     fn rejected_options_finish_with_their_error() {
         let mut app = spawn_app();
@@ -666,7 +881,9 @@ mod tests {
         assert_eq!(ranges[1].start_margin, 95.0..105.0);
         assert_eq!(ranges[1].end_margin, 237.5..262.5);
         assert_eq!(ranges[2].start_margin, 237.5..262.5);
-        assert_eq!(ranges[2].end_margin.start, f32::INFINITY);
+        assert_eq!(ranges[2].end_margin, 475.0..525.0);
+        assert_eq!(ranges[3].start_margin, 475.0..525.0);
+        assert_eq!(ranges[3].end_margin.start, f32::INFINITY);
 
         // A lone detail level must remain visible at every camera distance.
         let single = visibility_ranges([LodLevel::default()].into_iter());

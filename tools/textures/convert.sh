@@ -20,15 +20,19 @@
 # Kinds and source paths come from tools/textures/leaves.txt. Each kind keeps
 # its source dimensions, with no size variants. Every kind has a color map;
 # Nobiax kinds also have a normal map for lighting detail without extra geometry.
+# Every leaf kind also gets a 256 x 256 clump image showing several leaves on
+# one flat card. Use these sRGB images with transparency for distant trees
+# drawn with fewer, larger cards.
 # Colour uses sRGB with straight alpha: transparency is separate from RGB colour.
 # Load normal maps as linear data using the OpenGL (+Y) convention. Bark roughness
 # maps also use linear data, without sRGB colour conversion.
 #
 # Requirements: ImageMagick 7 (magick), KTX-Software 4.4+ (ktx), and
 # ctt-cli 0.6 (cargo install ctt-cli --version 0.6.1 --locked).
-# Usage: tools/textures/convert.sh [--only bark|leaves] [PRIOR_ART_DIR]
-# By default both categories are converted. Use --only leaves to skip the slower
-# bark conversion. PRIOR_ART_DIR defaults to prior_art/ in the repository.
+# Usage: tools/textures/convert.sh [--only bark|leaves|clumps] [PRIOR_ART_DIR]
+# By default, convert all bark and leaf images, including clumps. Use --only leaves
+# to skip bark, or --only clumps to regenerate clump textures without replacing
+# regular leaf or bark textures. PRIOR_ART_DIR defaults to prior_art/ in the repository.
 # Run fetch.sh for bark sources in its textures/ folder. For leaves, clone ez-tree
 # at the commit in port_plan.md and extract Nobiax's packs as described in
 # leaves.txt. All leaf source paths are relative to PRIOR_ART_DIR.
@@ -46,8 +50,8 @@ while [[ $# -gt 0 && $1 == --* ]]; do
         *) echo "unknown option $1" >&2; exit 1 ;;
     esac
 done
-if [[ -n $only && $only != bark && $only != leaves ]]; then
-    echo "--only takes bark or leaves" >&2
+if [[ -n $only && $only != bark && $only != leaves && $only != clumps ]]; then
+    echo "--only takes bark, leaves or clumps" >&2
     exit 1
 fi
 prior_art=${1:-$repo/prior_art}
@@ -94,7 +98,7 @@ while read -r source id; do
     [[ -z $source || $source == \#* ]] || bark_ids+=("$id")
 done <"$repo/tools/textures/sets.txt"
 
-[[ $only == leaves ]] && bark_ids=()
+[[ $only == leaves || $only == clumps ]] && bark_ids=()
 for id in "${bark_ids[@]}"; do
     for size in "${sizes[@]}"; do
         name=${size%%:*} px=${size#*:}
@@ -125,13 +129,18 @@ done
 if [[ $only != bark ]]; then
     while IFS=$'\t' read -r kind source path _; do
         prepare_leaf "$kind" "$source" "$prior_art/$path" "$stage/leaves"
+        prepare_clump "$kind" "$stage/leaves"
         prefix=$out/leaves/$kind
-        encode "$stage/leaves/$kind-color.png" "$prefix-color-uastc.ktx2" \
-            "$prefix-color-bc7.ktx2" srgb rgba yes
-        if [[ -f $stage/leaves/$kind-normal.png ]]; then
-            encode "$stage/leaves/$kind-normal.png" "$prefix-normal-uastc.ktx2" \
-                "$prefix-normal-bc7.ktx2" linear rgb no
+        if [[ $only != clumps ]]; then
+            encode "$stage/leaves/$kind-color.png" "$prefix-color-uastc.ktx2" \
+                "$prefix-color-bc7.ktx2" srgb rgba yes
+            if [[ -f $stage/leaves/$kind-normal.png ]]; then
+                encode "$stage/leaves/$kind-normal.png" "$prefix-normal-uastc.ktx2" \
+                    "$prefix-normal-bc7.ktx2" linear rgb no
+            fi
         fi
+        encode "$stage/leaves/$kind-clump.png" "$prefix-clump-uastc.ktx2" \
+            "$prefix-clump-bc7.ktx2" srgb rgba yes
     done < <(leaf_list "$repo")
 fi
 

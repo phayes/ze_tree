@@ -40,22 +40,7 @@ prepare_leaf() {
             magick "$src" -type TrueColorAlpha "PNG32:$out/$kind-color.png"
             ;;
         nobiax)
-            # Build a colour background from coarse to fine copies of the image,
-            # then overlay every pixel with any opacity at full strength, so those
-            # keep their original colour, and restore the original transparency.
-            local size s
-            size=$(magick identify -format '%wx%h!' "$src/diffuse.tga")
-            local args=("$src/diffuse.tga" -alpha set -write mpr:leaf +delete
-                mpr:leaf -resize '1x1!' -alpha off -alpha set -resize "$size")
-            for s in 2 4 8 16 32 64 128 256 512; do
-                args+=('(' mpr:leaf -resize "${s}x${s}!" -resize "$size" ')'
-                    -compose over -composite)
-            done
-            args+=('(' mpr:leaf '(' mpr:leaf -alpha extract -threshold 0 ')'
-                    -compose copyalpha -composite ')' -compose over -composite
-                '(' mpr:leaf -alpha extract ')' -compose copyalpha -composite
-                -type TrueColorAlpha "PNG32:$out/$kind-color.png")
-            magick "${args[@]}"
+            bleed_color "$src/diffuse.tga" "$out/$kind-color.png"
             magick "$src/normal.tga" -alpha off -type TrueColor "PNG24:$out/$kind-normal.png"
             ;;
         *)
@@ -63,6 +48,65 @@ prepare_leaf() {
             return 1
             ;;
     esac
+}
+
+# Copy a leaf image to an 8-bit PNG, filling transparent areas with nearby leaf
+# colours to reduce dark edges when textures are filtered or viewed from afar.
+# Preserves the original transparency and visible colours. The input should use
+# sRGB colour; the output uses straight alpha (colour separate from transparency).
+# Arguments: input image path, output PNG path.
+bleed_color() {
+    local src=$1 dst=$2
+
+    # Layer increasingly detailed copies to fill the background with leaf colours.
+    # Restore the original colours wherever alpha is nonzero, then restore alpha.
+    local size s
+    size=$(magick identify -format '%wx%h!' "$src")
+    local args=("$src" -alpha set -write mpr:leaf +delete
+        mpr:leaf -resize '1x1!' -alpha off -alpha set -resize "$size")
+    for s in 2 4 8 16 32 64 128 256 512; do
+        args+=('(' mpr:leaf -resize "${s}x${s}!" -resize "$size" ')'
+            -compose over -composite)
+    done
+    args+=('(' mpr:leaf '(' mpr:leaf -alpha extract -threshold 0 ')'
+            -compose copyalpha -composite ')' -compose over -composite
+        '(' mpr:leaf -alpha extract ')' -compose copyalpha -composite
+        -type TrueColorAlpha "PNG32:$dst")
+    magick "${args[@]}"
+}
+
+# Create <out>/<kind>-clump.png, a 256 x 256 image showing several leaves on one
+# flat card for distant trees. Run prepare_leaf first to supply
+# <out>/<kind>-color.png. Leaves fan out from the bottom centre so the card
+# attaches to a branch like a single leaf. Output uses sRGB with straight alpha.
+# Arguments: leaf kind, folder containing the prepared colour image.
+prepare_clump() {
+    local kind=$1 out=$2 src=$2/$1-color.png
+    local w h
+    read -r w h < <(magick identify -format '%w %h\n' "$src")
+
+    # Each entry is "scale angle x y". Scale and rotate the leaf around its
+    # bottom centre, then place that point at x, y on a 1024 x 1024 canvas.
+    # Angles are in degrees; later entries are drawn over earlier ones.
+    local copies=(
+        "0.50 -65 440 960" "0.50 65 584 960"
+        "0.45 -15 400 620" "0.45 20 630 600" "0.40 0 512 520"
+        "0.55 -35 470 1000" "0.55 35 554 1000" "0.60 0 512 1010"
+    )
+    local args=(-size 1024x1024 xc:none) copy scale angle x y
+    for copy in "${copies[@]}"; do
+        read -r scale angle x y <<<"$copy"
+        args+=('(' "$src" -alpha set -virtual-pixel transparent
+            -define distort:viewport=1024x1024+0+0
+            -distort SRT "$((w / 2)),$((h - 1)) $scale $angle $x,$y" ')'
+            -compose over -composite)
+    done
+
+    # Shrink the composed image to 256 x 256, then fill transparent areas with
+    # nearby colours to reduce dark edges during texture filtering.
+    magick "${args[@]}" -filter Lanczos -resize 256x256 "PNG32:$out/$kind-clump-raw.png"
+    bleed_color "$out/$kind-clump-raw.png" "$out/$kind-clump.png"
+    rm "$out/$kind-clump-raw.png"
 }
 
 # Print attribution and licence metadata for one leaf texture as JSON.

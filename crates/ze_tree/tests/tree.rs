@@ -56,14 +56,15 @@ fn lod_meshes_are_sorted_by_distance_and_reuse_the_skeleton() {
     // distinguished when checking that their input order is preserved.
     let mut levels = default_lod_levels().to_vec();
     levels.reverse();
-    let mut tie = levels[1];
+    let mut tie = levels[2];
+    assert_eq!(tie.distance, 100.0);
     tie.detail.leaf_stride = 3;
     levels.push(tie);
 
     let lods = tree.lod_meshes(&levels);
     let distances: Vec<f32> = lods.iter().map(|(level, _)| level.distance).collect();
-    assert_eq!(distances, [0.0, 100.0, 100.0, 250.0]);
-    assert_eq!(lods[1].0, levels[1]);
+    assert_eq!(distances, [0.0, 100.0, 100.0, 250.0, 500.0]);
+    assert_eq!(lods[1].0, levels[2]);
     assert_eq!(lods[2].0, tie);
 
     for (level, mesh) in &lods {

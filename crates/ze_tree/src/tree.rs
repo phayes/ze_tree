@@ -106,7 +106,7 @@ impl Tree {
     /// Each result pairs a [`LodLevel`] with its mesh. Levels with equal distances
     /// keep their input order; an empty slice returns an empty vector.
     /// Your application decides when to switch meshes using [`LodLevel::distance`].
-    /// For ez-tree's standard three levels, pass `&default_lod_levels()` from
+    /// Pass `&default_lod_levels()` to use the four standard levels returned by
     /// [`default_lod_levels`](crate::default_lod_levels).
     pub fn lod_meshes(&self, levels: &[LodLevel]) -> Vec<(LodLevel, TreeMesh)> {
         let mut ordered = levels.to_vec();

@@ -158,6 +158,27 @@ fn connected_pieces(indices: &[u32], range: Range<usize>) -> usize {
         .count()
 }
 
+/// Checks that the size threshold removes an entire fruit category, including
+/// stalks and catkins, while flowers above the threshold remain.
+#[test]
+fn min_item_size_leaves_out_small_fruit_and_flowers() {
+    for kind in [ClusterKind::Umbel, ClusterKind::Catkin] {
+        let mut options = decorated(kind);
+        options.fruit.placement.size = 0.4;
+        options.flowers.placement.size = 0.6;
+        let skeleton = Skeleton::generate(&options).unwrap();
+        let detail = LodDetail {
+            min_item_size: 0.5,
+            ..LodDetail::default()
+        };
+        let mesh = skeleton.mesh(&options, &detail);
+        assert_eq!(mesh.fruit, MeshBuffers::default(), "{kind:?}");
+        assert!(mesh.fruit_spans.is_empty(), "{kind:?}");
+        assert_eq!(mesh.flower_spans.len(), skeleton.flowers.len(), "{kind:?}");
+        assert!(mesh.flowers.triangle_count() > 0, "{kind:?}");
+    }
+}
+
 #[test]
 fn presets_have_empty_fruit_and_flower_meshes() {
     let options = TreePreset::OakMedium.options();
@@ -783,17 +804,23 @@ fn minimal_catkins_are_one_body_whatever_the_item_stride() {
 
 #[test]
 fn default_levels_simplify_fruit_and_flowers_further_away() {
-    let [near, middle, far] = default_lod_levels().map(|level| level.detail);
+    let [near, middle, far, farthest] = default_lod_levels().map(|level| level.detail);
     assert_eq!(near.item_detail, ItemDetail::Full);
     assert_eq!(middle.item_detail, ItemDetail::Simple);
     assert_eq!(far.item_detail, ItemDetail::Minimal);
+    assert_eq!(farthest.item_detail, ItemDetail::Minimal);
     assert_eq!((far.item_stride, far.item_scale), (2, 1.25));
     assert_eq!(
-        [near, middle, far].map(|d| d.flat_item_size),
-        [0.0, 0.0, 0.75]
+        [near, middle, far, farthest].map(|d| d.flat_item_size),
+        [0.0, 0.0, 0.75, 1.5]
+    );
+    // The size filter is disabled for the first three levels and set to 0.5 for the fourth.
+    assert_eq!(
+        [near, middle, far, farthest].map(|d| d.min_item_size),
+        [0.0, 0.0, 0.0, 0.5]
     );
     // Farther levels must select a subset of the items and clusters kept nearby.
-    for (nearer, farther) in [(near, middle), (middle, far)] {
+    for (nearer, farther) in [(near, middle), (middle, far), (far, farthest)] {
         assert_eq!(farther.item_stride % nearer.item_stride.max(1), 0);
         assert_eq!(farther.cluster_stride % nearer.cluster_stride.max(1), 0);
     }

@@ -325,8 +325,7 @@ impl Rig {
     pub fn skin(&self, mesh: &TreeMesh) -> MeshSkin {
         let mut branches = SkinWeights::rigid_to_root(mesh.branches.positions.len());
         for span in &mesh.branch_spans {
-            // Each retained section has a ring plus one duplicated vertex at the seam.
-            let ring = span.segments as usize + 1;
+            let ring = span.ring_vertices() as usize;
             let first = span.vertices.start as usize;
             for (k, &section) in span.sections.iter().enumerate() {
                 let influence = self.influence_at(span.branch, section, 0.0);

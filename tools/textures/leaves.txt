@@ -36,3 +36,5 @@ bare_twig_2 nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#37 Bare twig
 white_oak_autumn nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#38 White oak, autumn
 white_oak nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#39 White oak
 white_oak_dead nobiax free_3d_branches_textures_04_by_yughues_d4rlc6o/#40 White oak, dead leaves
+cedar nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#30 Cedar (arborvitae recoloured green)
+maple nobiax free_3d_branches_textures_02_by_yughues_d4pgt2v/#26 Maple (field maple recoloured green)

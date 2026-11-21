@@ -18,7 +18,7 @@ mod common;
 
 use glam::{Quat, Vec3};
 use serde_json::Value;
-use ze_tree::{OptionsError, Section, Skeleton, TreeOptions, TreeType};
+use ze_tree::{OptionsError, PerLevel, Section, Skeleton, TreeOptions, TreePreset, TreeType};
 
 /// Default limit of 1e-4 for relative position or rotation-based displacement.
 /// Outside [`KNOWN_SENSITIVE_CASES`], the largest observed difference is 4.8e-5
@@ -310,15 +310,15 @@ fn generation_is_repeatable() {
 
 #[test]
 fn deciduous_tips_continue_and_evergreen_tips_end() {
-    // With side leaves disabled, a deciduous trunk at the deepest configured level
-    // still gets one terminal leaf.
+    // With one side leaf, a deciduous trunk at the deepest configured level also
+    // gets one terminal leaf, recorded before its side leaf.
     let mut options = TreeOptions::default();
     options.branch.levels = 0;
-    options.leaves.count = 0;
+    options.leaves.count = 1;
 
     let deciduous = Skeleton::generate(&options).unwrap();
     assert_eq!(deciduous.branches.len(), 1);
-    assert_eq!(deciduous.leaves.len(), 1);
+    assert_eq!(deciduous.leaves.len(), 2);
     let tip = deciduous.branches[0].sections.last().unwrap();
     assert_eq!(deciduous.leaves[0].origin, tip.origin);
 
@@ -357,6 +357,164 @@ fn deciduous_branches_tapered_to_a_point_end_there() {
         for leaf in &skeleton.leaves {
             assert!(leaf.origin.is_finite(), "level {level}: {leaf:?}");
         }
+    }
+}
+
+/// A leaf count of zero removes every leaf, including tip leaves, for both
+/// tree types, while branches and fruit still grow.
+#[test]
+fn zero_leaf_count_grows_no_leaves() {
+    for tree_type in [TreeType::Deciduous, TreeType::Evergreen] {
+        let mut options = TreeOptions::default();
+        options.tree_type = tree_type;
+        options.fruit.placement.count = 2;
+        options.leaves.count = 0;
+        let bare = Skeleton::generate(&options).unwrap();
+        assert!(bare.leaves.is_empty(), "{tree_type:?}");
+        assert!(bare.branches.len() > 1, "{tree_type:?}");
+        assert!(!bare.fruit.is_empty(), "{tree_type:?}");
+    }
+}
+
+/// Flattening one level levels off its branches without moving other levels
+/// or changing how many branches, sections and leaves grow.
+#[test]
+fn flatten_levels_off_only_its_own_level() {
+    // Without the upward force or random bending, nothing competes with the pull
+    // toward horizontal.
+    let mut options = TreeOptions::default();
+    options.branch.force.strength = 0.0;
+    options.branch.gnarliness = PerLevel([0.0; 4]);
+    let mut flat_options = options.clone();
+    flat_options.branch.flatten[2] = 0.2;
+    let base = Skeleton::generate(&options).unwrap();
+    let flat = Skeleton::generate(&flat_options).unwrap();
+
+    // Same structure: flattening draws no random numbers.
+    assert_eq!(flat.branches.len(), base.branches.len());
+    assert_eq!(flat.leaves.len(), base.leaves.len());
+    for (a, b) in flat.branches.iter().zip(&base.branches) {
+        assert_eq!(a.level, b.level);
+        assert_eq!(a.sections.len(), b.sections.len());
+        if a.level < 2 {
+            assert_eq!(a, b);
+        }
+    }
+
+    // Level-2 branches finish nearly level, well below their unflattened steepness.
+    let mean_tip_steepness = |skeleton: &Skeleton| {
+        let tips: Vec<f32> = skeleton
+            .branches
+            .iter()
+            .filter(|b| b.level == 2)
+            .map(|b| (b.sections.last().unwrap().orientation * Vec3::Y).y.abs())
+            .collect();
+        tips.iter().sum::<f32>() / tips.len() as f32
+    };
+    let (flat_steepness, base_steepness) = (mean_tip_steepness(&flat), mean_tip_steepness(&base));
+    assert!(
+        flat_steepness < 0.15 && flat_steepness < 0.5 * base_steepness,
+        "flattened {flat_steepness} vs unflattened {base_steepness}"
+    );
+}
+
+/// Flattening leaves turns them level and face up without moving them or
+/// changing how many branches and leaves grow; half the amount goes partway.
+#[test]
+fn leaf_flatten_lays_leaves_level_and_face_up() {
+    let options = TreePreset::OakMedium.options();
+    let base = Skeleton::generate(&options).unwrap();
+    let with_flatten = |amount: f32| {
+        let mut flat_options = options.clone();
+        flat_options.leaves.flatten = amount;
+        Skeleton::generate(&flat_options).unwrap()
+    };
+    let (flat, half) = (with_flatten(1.0), with_flatten(0.5));
+
+    // Same structure and leaf positions: flattening draws no random numbers.
+    assert_eq!(flat.branches, base.branches);
+    assert_eq!(flat.leaves.len(), base.leaves.len());
+    for (a, b) in flat.leaves.iter().zip(&base.leaves) {
+        assert_eq!((a.parent, a.origin, a.size), (b.parent, b.origin, b.size));
+    }
+
+    // Fully flattened leaves lie level, face straight up, and keep the
+    // horizontal heading of their original tip.
+    for (a, b) in flat.leaves.iter().zip(&base.leaves) {
+        let tip = a.orientation * Vec3::Y;
+        assert!(tip.y.abs() < 1e-4, "tip {tip}");
+        assert!((a.orientation * Vec3::Z).y > 0.9999);
+        let old_tip = b.orientation * Vec3::Y;
+        let old_heading = Vec3::new(old_tip.x, 0.0, old_tip.z);
+        if old_heading.length() > 0.1 {
+            assert!(tip.dot(old_heading.normalize()) > 0.9999, "{tip} vs {old_tip}");
+        }
+    }
+
+    // Half flattening faces leaves further upward than the original on average.
+    let mean_face_up = |skeleton: &Skeleton| {
+        let sum: f32 = skeleton
+            .leaves
+            .iter()
+            .map(|l| (l.orientation * Vec3::Z).y)
+            .sum();
+        sum / skeleton.leaves.len() as f32
+    };
+    let (base_up, half_up) = (mean_face_up(&base), mean_face_up(&half));
+    assert!(half_up > base_up + 0.2 && half_up < 0.99, "{base_up} -> {half_up}");
+}
+
+/// A multi-stemmed tree grows the requested number of parentless trunks, all
+/// starting near the origin and tilted no more than the stem angle.
+#[test]
+fn stems_grow_separate_trunks_from_the_base() {
+    let mut options = TreeOptions::default();
+    options.branch.stems = 6;
+    options.branch.stem_angle = 30.0;
+    let skeleton = Skeleton::generate(&options).unwrap();
+
+    let trunks: Vec<_> = skeleton
+        .branches
+        .iter()
+        .filter(|b| b.parent.is_none())
+        .collect();
+    assert_eq!(trunks.len(), 6);
+    // Trunks come first, all at level 0.
+    assert!(skeleton.branches[..6].iter().all(|b| b.parent.is_none() && b.level == 0));
+
+    for trunk in trunks {
+        let base = trunk.sections[0];
+        assert!(base.origin.y.abs() < 1e-6, "{base:?}");
+        assert!(base.origin.length() <= options.branch.radius[0] + 1e-4, "{base:?}");
+        let tilt = (base.orientation * Vec3::Y).angle_between(Vec3::Y).to_degrees();
+        assert!(tilt <= 30.0 + 1e-3, "tilt {tilt}");
+    }
+
+    // Different trunks lean in different directions.
+    let first = skeleton.branches[0].sections[0].orientation * Vec3::Y;
+    let second = skeleton.branches[1].sections[0].orientation * Vec3::Y;
+    assert!(first.angle_between(second) > 1e-3);
+}
+
+/// One stem with any stem angle grows the same tree as the defaults.
+#[test]
+fn single_stem_ignores_stem_angle() {
+    let reference = Skeleton::generate(&TreeOptions::default()).unwrap();
+    let mut options = TreeOptions::default();
+    options.branch.stem_angle = 45.0;
+    assert_eq!(Skeleton::generate(&options).unwrap(), reference);
+}
+
+/// Rejects zero stems and stem angles outside 0–90 degrees.
+#[test]
+fn invalid_stem_settings_are_rejected() {
+    let mut options = TreeOptions::default();
+    options.branch.stems = 0;
+    assert!(options.validate().is_err());
+    for bad in [-1.0, 91.0, f32::NAN] {
+        let mut options = TreeOptions::default();
+        options.branch.stem_angle = bad;
+        assert!(options.validate().is_err(), "{bad} accepted");
     }
 }
 

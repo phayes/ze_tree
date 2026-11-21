@@ -66,6 +66,7 @@ fn every_preset_stays_within_the_amount() {
             assert_levels_near(&b.start, &a.start, amount, "start");
             assert_levels_near(&b.taper, &a.taper, amount, "taper");
             assert_levels_near(&b.twist, &a.twist, amount, "twist");
+            assert_levels_near(&b.flatten, &a.flatten, amount, "flatten");
             assert_near(b.force.strength, a.force.strength, amount, "force");
             for level in 0..4 {
                 assert!((0.0..=1.0).contains(&a.start[level]));

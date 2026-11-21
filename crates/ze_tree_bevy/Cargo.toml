@@ -18,8 +18,18 @@ bevy = { version = "0.20.1", default-features = false, features = [
     "zstd_rust",
 ] }
 
+[features]
+# Enable wind animation and camera-facing billboards for exported ze_tree glTF scenes.
+# Requires add_tree_gltf_attributes and ZeTreePlugin in the app.
+gltf = ["bevy/bevy_gltf"]
+
 [dev-dependencies]
+ze_tree = { path = "../ze_tree", features = ["export-gltf"] }
 bevy = { version = "0.20.1", features = ["free_camera"] }
+
+[[example]]
+name = "gltf_tree"
+required-features = ["gltf"]
 
 [package.metadata.docs.rs]
 all-features = true

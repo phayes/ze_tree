@@ -8,8 +8,8 @@ use glam::{Quat, Vec3};
 
 use crate::skeleton::{place, shuffled_indices};
 use crate::{
-    Attachment, ClusterKind, ClusterPlacement, ClusterShape, Facing, Rng, SkeletonBranch,
-    TreeOptions, TreeType,
+    Attachment, ClusterKind, ClusterPlacement, ClusterShape, Facing, Rng, Section,
+    SkeletonBranch, TreeOptions, TreeType,
 };
 
 /// Angle between successive items around a stem, about 137.5°.
@@ -88,7 +88,7 @@ pub(crate) fn grow_clusters(
     mut rng: Rng,
 ) -> Vec<SkeletonCluster> {
     let mut clusters = Vec::new();
-    if placement.count == 0 && placement.tips <= 0.0 {
+    if placement.count == 0 && placement.density <= 0.0 && placement.tips <= 0.0 {
         return clusters;
     }
 
@@ -99,7 +99,7 @@ pub(crate) fn grow_clusters(
         let sections = &branch.sections;
 
         // Distribute side clusters along the allowed branch length and around its surface.
-        let count = placement.count;
+        let count = placement.count + density_count(sections, placement, &mut rng);
         if count > 0 {
             let radial_offset = rng.next_f32();
             let step = (1.0 - placement.start) / count as f32;
@@ -131,6 +131,22 @@ pub(crate) fn grow_clusters(
         }
     }
     clusters
+}
+
+/// Number of extra side clusters that [`ClusterPlacement::density`] adds to one
+/// branch, based on the branch length after `placement.start`. The fractional
+/// part sets the chance of one more cluster. Draws nothing from `rng` when the
+/// density is zero, so trees without density keep their random sequence.
+fn density_count(sections: &[Section], placement: &ClusterPlacement, rng: &mut Rng) -> u32 {
+    if placement.density <= 0.0 {
+        return 0;
+    }
+    let length: f32 = sections
+        .windows(2)
+        .map(|pair| pair[0].origin.distance(pair[1].origin))
+        .sum();
+    let expected = placement.density * length * (1.0 - placement.start);
+    (expected + rng.next_f32()).floor() as u32
 }
 
 /// Collects stalks and items for one cluster using shared settings and random choices.

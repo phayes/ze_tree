@@ -66,7 +66,9 @@ https://nobiax.deviantart.com. Released under
 [CC0 1.0 Universal](https://creativecommons.org/publicdomain/zero/1.0/) (public
 domain). Attribution is not required but is given as a courtesy. Each
 texture's colour map is unchanged where it is visible, with colour filled in
-under its transparent pixels; its normal map is unchanged.
+under its transparent pixels; its normal map is unchanged. The exceptions are
+`cedar` and `maple`, copies of textures #30 and #26 whose colour maps are
+recoloured from autumn shades to green.
 
 | Id                   | Pack | Texture |
 | -------------------- | ---- | ------- |
@@ -90,6 +92,8 @@ under its transparent pixels; its normal map is unchanged.
 | `white_oak_autumn`   | 04   | #38     |
 | `white_oak`          | 04   | #39     |
 | `white_oak_dead`     | 04   | #40     |
+| `cedar`              | 02   | #30     |
+| `maple`              | 02   | #26     |
 
 ## Leaves from ez-tree
 

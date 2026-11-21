@@ -17,7 +17,9 @@ use ze_tree::{
     WindParams, bark_average_color, bark_texture_path, leaf_has_normal_map, leaf_texture_path,
 };
 
-use crate::mesh::ATTRIBUTE_WIND;
+use crate::mesh::{
+    ATTRIBUTE_BILLBOARD_AXIS, ATTRIBUTE_BILLBOARD_NORMAL, ATTRIBUTE_BILLBOARD_PIVOT, ATTRIBUTE_WIND,
+};
 
 /// Vertex shader for drawing wind-animated trees in the main render pass.
 pub(crate) const TREE_SHADER: &str = "embedded://ze_tree_bevy/shaders/tree.wesl";
@@ -26,12 +28,20 @@ pub(crate) const TREE_PREPASS_SHADER: &str = "embedded://ze_tree_bevy/shaders/tr
 
 /// Input slot for [`ATTRIBUTE_WIND`], after Bevy's vertex attribute slots 0–7.
 const WIND_LOCATION: u32 = 8;
+/// Shader input location for the billboard pivot and horizontal offset.
+const BILLBOARD_PIVOT_LOCATION: u32 = 9;
+/// Shader input location for the billboard axis and vertical offset.
+const BILLBOARD_AXIS_LOCATION: u32 = 10;
+/// Shader input location for the optional billboard lighting normal.
+const BILLBOARD_NORMAL_LOCATION: u32 = 11;
 
-/// Bevy's [`StandardMaterial`] with wind animation for bark and leaves.
+/// A [`StandardMaterial`] with tree wind animation and optional billboard rotation.
 ///
-/// Use meshes from [`bark_mesh`](crate::bark_mesh) or [`leaf_mesh`](crate::leaf_mesh),
-/// or supply [`ATTRIBUTE_WIND`] on your own mesh. This material does not support
-/// skinning (bone animation) or morph targets (blending between mesh shapes).
+/// Use meshes from [`bark_mesh`](crate::bark_mesh), [`leaf_mesh`](crate::leaf_mesh)
+/// or [`cluster_mesh`](crate::cluster_mesh), or supply [`ATTRIBUTE_WIND`] yourself.
+/// Meshes with both [`ATTRIBUTE_BILLBOARD_PIVOT`] and [`ATTRIBUTE_BILLBOARD_AXIS`]
+/// face the current render view: the camera for visible geometry and the light
+/// for shadows. Skinning (joint animation) and morph targets are not supported.
 pub type TreeMaterial = ExtendedMaterial<StandardMaterial, WindExtension>;
 
 /// Adds wind animation to a [`TreeMaterial`].
@@ -106,6 +116,34 @@ impl MaterialExtension for WindExtension {
         descriptor.vertex.buffers[0]
             .attributes
             .extend(wind.attributes);
+
+        // Enable billboard rotation for mesh layouts containing the rotation attributes.
+        let layout = &layout.0;
+        if layout.contains(ATTRIBUTE_BILLBOARD_PIVOT) && layout.contains(ATTRIBUTE_BILLBOARD_AXIS) {
+            let billboard = layout.get_layout(&[
+                ATTRIBUTE_BILLBOARD_PIVOT.at_shader_location(BILLBOARD_PIVOT_LOCATION),
+                ATTRIBUTE_BILLBOARD_AXIS.at_shader_location(BILLBOARD_AXIS_LOCATION),
+            ])?;
+            descriptor.vertex.buffers[0]
+                .attributes
+                .extend(billboard.attributes);
+            descriptor.vertex.shader_defs.push("BILLBOARD".into());
+
+            // Light shapes that carry their own normal with it.
+            if layout.contains(ATTRIBUTE_BILLBOARD_NORMAL) {
+                let normal =
+                    layout
+                        .get_layout(&[ATTRIBUTE_BILLBOARD_NORMAL
+                            .at_shader_location(BILLBOARD_NORMAL_LOCATION)])?;
+                descriptor.vertex.buffers[0]
+                    .attributes
+                    .extend(normal.attributes);
+                descriptor
+                    .vertex
+                    .shader_defs
+                    .push("BILLBOARD_NORMAL".into());
+            }
+        }
         Ok(())
     }
 }
@@ -299,15 +337,17 @@ pub fn average_bark_material(bark: &BarkOptions, wind: WindParams) -> TreeMateri
     }
 }
 
-/// Creates a leaf material with the requested appearance and initial wind settings.
+/// Creates a two-sided leaf material with the supplied appearance and initial wind.
 ///
-/// Supply textures matching [`LeafOptions::kind`]. The colour image's alpha cuts out
-/// the leaf outline using [`LeafOptions::alpha_test`]; without it, leaves are solid
-/// rectangles. An optional normal map adds lighting detail. Use
-/// [`leaf_mesh`](crate::leaf_mesh) to supply the tangents that orient this detail.
+/// Pass textures matching [`LeafOptions::kind`]. The colour image’s alpha and
+/// [`LeafOptions::alpha_test`] define the cutout outline; without an image, cards
+/// are solid rectangles. For a normal map, use [`leaf_mesh`](crate::leaf_mesh)
+/// to supply the tangents that orient its lighting detail.
 ///
-/// Both sides are visible. With [`LeafOptions::rounded_normals`], back faces keep
-/// the front faces' lighting directions for a softer, rounded canopy appearance.
+/// For camera-facing leaves ([`LodDetail::leaf_billboard`](ze_tree::LodDetail::leaf_billboard)),
+/// pass textures with no normal map: these meshes have no tangents.
+/// With [`LeafOptions::rounded_normals`], back faces keep the front’s lighting
+/// direction for a softer canopy appearance.
 /// [`ZeTreePlugin`](crate::ZeTreePlugin) replaces `wind` with the global [`Wind`](crate::Wind).
 pub fn leaf_material(
     leaves: &LeafOptions,

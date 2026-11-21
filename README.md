@@ -22,8 +22,9 @@ println!("{} leaf vertices", mesh.leaves.positions.len());
 
 `mesh.branches` and `mesh.leaves` contain positions, normals, texture coordinates,
 and triangle indices. Upload these buffers to your renderer and give each mesh
-its own material. Presets include ash, aspen, oak, pine, bushes, and a tree trained
-along a trellis. `TreePreset::ALL` lists them all.
+its own material. Presets include ash, aspen, oak, pine, bushes, a tree trained
+along a trellis, a cedar, and flowering and fruiting trees such as apple and
+flowering dogwood. `TreePreset::ALL` lists them all.
 
 ## Customize the shape
 
@@ -95,6 +96,16 @@ for (level, mesh) in tree.lod_meshes(&default_lod_levels()) {
 The four default levels use progressively simpler meshes at distances of 0, 100,
 250 and 500 tree units. To choose your own mesh detail, pass a `LodDetail` to
 `Tree::mesh_with_detail`.
+
+At 500 tree units (LOD3), retained branches, leaves and fruit use flat shapes
+called billboards. A compatible renderer turns them toward the camera to help
+preserve the distant tree’s outline. `MeshBuffers::billboard` stores the rotation
+data; `TreeMesh::billboard_cull` stores crossed fallback shapes. Draw the fallback
+shapes only when the renderer does not rotate billboards. `ze_tree_bevy` handles
+rotation and skips the fallback shapes automatically. glTF exports the data and
+`billboard` / `billboard_cull` node tags for compatible importers; ordinary viewers
+show the fixed shapes. OBJ exports fixed shapes, naming fallback objects
+`<part>_billboard_cull`.
 If you only need branch shapes and leaf placements, use `Skeleton::generate`
 without building a mesh.
 
@@ -152,9 +163,11 @@ fetches every leaf and the 512 and 1k bark sizes (add `--sizes 512,1k,2k` for
 `bark_texture_path` and `leaf_texture_path` give each file's path inside that
 directory, such as `bark/sakura_bark-1k-color-bc7.ktx2`. The options' `bark.kind`
 and `leaves.kind` select the texture names; bark comes in three sizes.
-`LEAF_KINDS` lists 24 leaf textures: four single leaves from ez-tree, and 20
+`LEAF_KINDS` lists 26 leaf textures: four single leaves from ez-tree, and 22
 leafy branch tips from Nobiax's CC0 packs, which also have normal maps
-(`leaf_has_normal_map`). Every leaf kind also has a 256 × 256 clump image
+(`leaf_has_normal_map`). Two of these, `cedar` and `maple`, are recoloured
+arborvitae and field maple branches in a bright green that presets can darken
+or shift with a leaf tint. Every leaf kind also has a 256 × 256 clump image
 (`LeafMap::Clump`), showing several leaves on one flat card. Use it with fewer,
 larger cards for distant trees. For bark without texture images, multiply the
 linear RGB colour from `bark_average_color` by the bark tint to approximate

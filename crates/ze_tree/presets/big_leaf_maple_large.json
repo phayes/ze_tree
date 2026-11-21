@@ -1,0 +1,215 @@
+{
+  "seed": 47425,
+  "type": "deciduous",
+  "bark": {
+    "type": "Bark001",
+    "tint": 13154480,
+    "flatShading": false,
+    "textured": true,
+    "textureScale": {
+      "x": 2.7,
+      "y": 1.1
+    },
+    "uvMode": "continuous"
+  },
+  "branch": {
+    "levels": 3,
+    "stems": 5,
+    "stemAngle": 0.0,
+    "angle": {
+      "0": 0.0,
+      "1": 48.0,
+      "2": 55.0,
+      "3": 50.0
+    },
+    "children": {
+      "0": 0,
+      "1": 2,
+      "2": 4,
+      "3": 0
+    },
+    "force": {
+      "direction": {
+        "x": 0.0,
+        "y": 1.0,
+        "z": 0.0
+      },
+      "strength": 0.0
+    },
+    "flatten": {
+      "0": 0.0,
+      "1": 0.0,
+      "2": 0.0,
+      "3": 0.0
+    },
+    "gnarliness": {
+      "0": 0.13,
+      "1": 0.33999997,
+      "2": 0.26,
+      "3": 0.16999996
+    },
+    "length": {
+      "0": 16.2,
+      "1": 19.1,
+      "2": 14.6,
+      "3": 9.900001
+    },
+    "radius": {
+      "0": 1.98,
+      "1": 0.75,
+      "2": 0.6,
+      "3": 0.67
+    },
+    "sections": {
+      "0": 6,
+      "1": 8,
+      "2": 5,
+      "3": 3
+    },
+    "segments": {
+      "0": 9,
+      "1": 7,
+      "2": 4,
+      "3": 3
+    },
+    "start": {
+      "0": 0.0,
+      "1": 0.6,
+      "2": 0.3,
+      "3": 0.1
+    },
+    "taper": {
+      "0": 0.61,
+      "1": 0.6,
+      "2": 0.6,
+      "3": 0.7
+    },
+    "twist": {
+      "0": 0.029999971,
+      "1": 0.0,
+      "2": 0.0,
+      "3": 0.0
+    }
+  },
+  "leaves": {
+    "type": "maple",
+    "billboard": "single",
+    "angle": 40.0,
+    "count": 4,
+    "start": 0.05,
+    "size": 9.0,
+    "sizeVariance": 0.19999999,
+    "tint": 14478540,
+    "alphaTest": 0.5,
+    "roundedNormals": true,
+    "flatten": 0.7
+  },
+  "trellis": {
+    "enabled": false,
+    "position": {
+      "x": 0.0,
+      "y": 0.0,
+      "z": -2.0
+    },
+    "width": 10.0,
+    "height": 20.0,
+    "spacing": 2.0,
+    "force": {
+      "strength": 0.02,
+      "maxDistance": 3.0,
+      "falloff": 1.0
+    },
+    "cylinderRadius": 0.05,
+    "visible": true,
+    "color": 9127187
+  },
+  "fruit": {
+    "placement": {
+      "minLevel": 2,
+      "tips": 0.0,
+      "count": 0,
+      "density": 0.0,
+      "start": 0.3,
+      "facing": "hang",
+      "facingJitter": 25.0,
+      "size": 0.5,
+      "sizeVariance": 0.15
+    },
+    "cluster": {
+      "kind": "single",
+      "items": 1,
+      "itemsVariance": 0.0,
+      "spread": 30.0,
+      "axisLength": 2.0,
+      "droop": 0.0,
+      "taper": 0.0,
+      "sideStalks": 4,
+      "sideLength": 0.4,
+      "stalkLength": 0.0,
+      "stalkRadius": 0.04,
+      "stalkColor": 6113838
+    },
+    "shape": {
+      "elongation": 0.9,
+      "topDimple": 0.5,
+      "bottomTaper": 0.2,
+      "lobes": 5,
+      "lobeDepth": 0.06,
+      "segments": 12,
+      "rings": 8,
+      "stemLength": 0.25,
+      "stemRadius": 0.04,
+      "stemCurve": 0.3,
+      "calyx": true,
+      "color": 12597547,
+      "unripeColor": 9159498,
+      "blushColor": 16734780,
+      "blushAmount": 0.6
+    },
+    "maturity": 1.0
+  },
+  "flowers": {
+    "placement": {
+      "minLevel": 1,
+      "tips": 0.0,
+      "count": 0,
+      "density": 0.0,
+      "start": 0.3,
+      "facing": "outward",
+      "facingJitter": 20.0,
+      "size": 1.0,
+      "sizeVariance": 0.15
+    },
+    "cluster": {
+      "kind": "single",
+      "items": 1,
+      "itemsVariance": 0.0,
+      "spread": 40.0,
+      "axisLength": 2.0,
+      "droop": 0.0,
+      "taper": 0.0,
+      "sideStalks": 4,
+      "sideLength": 0.4,
+      "stalkLength": 0.3,
+      "stalkRadius": 0.02,
+      "stalkColor": 5925678
+    },
+    "shape": {
+      "petalCount": 5,
+      "rings": 1,
+      "petalLength": 0.5,
+      "petalWidth": 0.35,
+      "cup": 0.2,
+      "curl": 0.0,
+      "notch": 0.0,
+      "petalSegments": 4,
+      "centerSize": 0.15,
+      "centerColor": 15255616,
+      "petalColor": 16777215,
+      "baseColor": 16767204,
+      "budColor": 14712984,
+      "fadeColor": 13352100
+    },
+    "maturity": 0.5
+  }
+}

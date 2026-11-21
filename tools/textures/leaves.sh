@@ -41,6 +41,7 @@ prepare_leaf() {
             ;;
         nobiax)
             bleed_color "$src/diffuse.tga" "$out/$kind-color.png"
+            recolor_leaf "$kind" "$out/$kind-color.png"
             magick "$src/normal.tga" -alpha off -type TrueColor "PNG24:$out/$kind-normal.png"
             ;;
         *)
@@ -48,6 +49,44 @@ prepare_leaf() {
             return 1
             ;;
     esac
+}
+
+# Recolour a prepared leaf colour PNG in place for kinds that reuse another
+# texture with new colours; other kinds are left unchanged. Transparency is kept.
+# Arguments: leaf kind, colour PNG path.
+#
+# Kinds recoloured here:
+# cedar: Nobiax's bronze autumn arborvitae in a bright cedar green.
+# maple: Nobiax's autumn field maple in a bright summer green.
+# Both are light enough for presets to darken or shift with a tint.
+recolor_leaf() {
+    local kind=$1 png=$2
+    case $kind in
+        cedar) regrade_green "$png" '#0e1f08' '#447224' '#b4d070' 70%,95% 160,40 ;;
+        maple) regrade_green "$png" '#16330a' '#4c8a26' '#c4e07a' 45%,70% 150,35 ;;
+    esac
+}
+
+# Recolour a leaf colour PNG in place to green, keeping its transparency.
+# Each pixel's brightness picks a colour from a three-colour ramp, darkest first.
+# Greyish pixels, such as twigs and stems, keep a muted version of their own colour.
+# Arguments: PNG path; dark, middle and light ramp colours; the saturation range
+# (an ImageMagick -level range on inverted saturation) treated as twig, where
+# higher values select only greyer pixels; and the twig colour's
+# -modulate brightness,saturation percentages.
+regrade_green() {
+    local png=$1 dark=$2 mid=$3 light=$4 twig_level=$5 twig_modulate=$6
+    magick "$png" -write mpr:leaf +delete \
+        '(' mpr:leaf -alpha off -colorspace gray -level 0%,60% \
+            '(' -size 1x128 gradient:"$dark-$mid" \
+                -size 1x128 gradient:"$mid-$light" -append -rotate 90 ')' \
+            -clut ')' \
+        '(' mpr:leaf -alpha off -modulate "$twig_modulate" ')' \
+        '(' mpr:leaf -alpha off -colorspace HSL -channel G -separate +channel \
+            -negate -level "$twig_level" -blur 0x1 ')' \
+        -composite \
+        '(' mpr:leaf -alpha extract ')' -alpha off -compose copyalpha -composite \
+        -type TrueColorAlpha "PNG32:$png"
 }
 
 # Copy a leaf image to an 8-bit PNG, filling transparent areas with nearby leaf

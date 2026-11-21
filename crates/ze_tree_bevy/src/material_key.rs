@@ -78,11 +78,14 @@ pub(crate) struct LeafKey {
     rounded_normals: bool,
     metallic: u32,
     roughness: u32,
+    /// Whether camera-facing leaves need a material without a normal map.
+    billboard: bool,
 }
 
 impl LeafKey {
-    /// Identifies the requested leaf appearance, with or without a texture image.
-    pub(crate) fn new(leaves: &LeafOptions, image: Option<LeafTexture>) -> Self {
+    /// Returns a reusable material key for these leaf settings and optional texture.
+    /// Set `billboard` when the mesh turns toward the camera and must omit normal maps.
+    pub(crate) fn new(leaves: &LeafOptions, image: Option<LeafTexture>, billboard: bool) -> Self {
         let settings = LeafMaterial::new(leaves);
         Self {
             textures: image.map(|image| (leaves.kind.clone(), image)),
@@ -92,6 +95,7 @@ impl LeafKey {
             rounded_normals: settings.rounded_normals,
             metallic: settings.metallic.to_bits(),
             roughness: settings.roughness.to_bits(),
+            billboard,
         }
     }
 }
@@ -149,17 +153,19 @@ mod tests {
     #[test]
     fn leaf_keys_follow_what_the_material_shows() {
         let leaves = TreeOptions::default().leaves;
-        let key = LeafKey::new(&leaves, Some(LeafTexture::Leaf));
-        assert_ne!(key, LeafKey::new(&leaves, Some(LeafTexture::Clump)));
-        assert_ne!(key, LeafKey::new(&leaves, None));
+        let key = LeafKey::new(&leaves, Some(LeafTexture::Leaf), false);
+        assert_ne!(key, LeafKey::new(&leaves, Some(LeafTexture::Clump), false));
+        assert_ne!(key, LeafKey::new(&leaves, None, false));
+        // Camera-facing leaves must not share a material that uses a normal map.
+        assert_ne!(key, LeafKey::new(&leaves, Some(LeafTexture::Leaf), true));
 
         // Changing the number or size of leaves preserves the material key.
         let mut more = leaves.clone();
         more.count += 3;
         more.size *= 2.0;
-        assert_eq!(key, LeafKey::new(&more, Some(LeafTexture::Leaf)));
+        assert_eq!(key, LeafKey::new(&more, Some(LeafTexture::Leaf), false));
         let mut sharper = leaves.clone();
         sharper.alpha_test += 0.1;
-        assert_ne!(key, LeafKey::new(&sharper, Some(LeafTexture::Leaf)));
+        assert_ne!(key, LeafKey::new(&sharper, Some(LeafTexture::Leaf), false));
     }
 }

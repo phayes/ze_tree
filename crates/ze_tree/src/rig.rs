@@ -102,6 +102,12 @@ pub struct MeshSkin {
     pub branches: SkinWeights,
     /// Assignments for [`TreeMesh::leaves`], in the same vertex order.
     pub leaves: SkinWeights,
+    /// Joint weights for the fallback bark strips in
+    /// [`BillboardCull::branches`](crate::BillboardCull::branches), in vertex order.
+    pub branches_billboard_cull: SkinWeights,
+    /// Joint weights for the fallback leaf cards in
+    /// [`BillboardCull::leaves`](crate::BillboardCull::leaves), in vertex order.
+    pub leaves_billboard_cull: SkinWeights,
 }
 
 /// A hierarchy of movable joints for bending a tree in a renderer or 3D tool.
@@ -310,36 +316,58 @@ impl Rig {
         self.branch_stride(branch).is_some()
     }
 
-    /// Assigns joints and movement weights to every vertex in `mesh`.
+    /// Returns joint assignments for bark and leaves, including their crossed
+    /// fallback shapes. Fruit and flowers receive no assignments.
     ///
-    /// The mesh must come from the same skeleton as this rig, but may use any detail
-    /// level. Bark follows nearby joints, and branches with no joints inherit the
-    /// weights at their parent attachment. All corners of a leaf share its attachment
-    /// weights. Blending two joint transforms can still change a leaf's shape.
+    /// Pass a mesh from the same skeleton used to build this rig; any detail level
+    /// is supported. Bark follows nearby branch joints. All corners of a leaf
+    /// share its attachment weights, though blending joints can still deform it.
+    ///
+    /// These weights apply to stored vertex positions. To combine joint animation
+    /// with camera-facing billboards, the renderer must also transform the pivots
+    /// and axes in [`MeshBuffers::billboard`](crate::MeshBuffers::billboard).
     ///
     /// # Panics
     ///
-    /// Panics if a mesh span refers to a branch or leaf missing from the rig, or if
-    /// an assigned vertex range is out of bounds. Other mismatched meshes may produce
-    /// incorrect assignments without a panic.
+    /// Panics if spans refer to branches or leaves absent from the rig, or assigned
+    /// vertex ranges are out of bounds. Other mismatches may give incorrect
+    /// assignments without a panic.
     pub fn skin(&self, mesh: &TreeMesh) -> MeshSkin {
+        let cull = &mesh.billboard_cull;
         let mut branches = SkinWeights::rigid_to_root(mesh.branches.positions.len());
+        let mut branches_cull = SkinWeights::rigid_to_root(cull.branches.positions.len());
         for span in &mesh.branch_spans {
             let ring = span.ring_vertices() as usize;
-            let first = span.vertices.start as usize;
             for (k, &section) in span.sections.iter().enumerate() {
                 let influence = self.influence_at(span.branch, section, 0.0);
-                branches.fill(first + k * ring..first + (k + 1) * ring, influence);
+                let first = span.vertices.start as usize + k * ring;
+                branches.fill(first..first + ring, influence);
+                // Give the fallback strip the same section weights as the main ribbon strip.
+                if !span.cull_vertices.is_empty() {
+                    let first = span.cull_vertices.start as usize + k * ring;
+                    branches_cull.fill(first..first + ring, influence);
+                }
             }
         }
 
         let mut leaves = SkinWeights::rigid_to_root(mesh.leaves.positions.len());
+        let mut leaves_cull = SkinWeights::rigid_to_root(cull.leaves.positions.len());
         for span in &mesh.leaf_spans {
-            let range = span.vertices.start as usize..span.vertices.end as usize;
-            leaves.fill(range, self.leaf_influences[span.leaf]);
+            let influence = self.leaf_influences[span.leaf];
+            leaves.fill(
+                span.vertices.start as usize..span.vertices.end as usize,
+                influence,
+            );
+            let range = span.cull_vertices.start as usize..span.cull_vertices.end as usize;
+            leaves_cull.fill(range, influence);
         }
 
-        MeshSkin { branches, leaves }
+        MeshSkin {
+            branches,
+            leaves,
+            branches_billboard_cull: branches_cull,
+            leaves_billboard_cull: leaves_cull,
+        }
     }
 
     /// Adds joints and bindings in parent-before-child branch order.
@@ -357,15 +385,22 @@ impl Rig {
             };
             let Some(stride) = stride else {
                 // Reuse the parent's attachment weights for this entire branch.
-                let parent = branch.parent.expect("the trunk is always rigged");
-                let influence = self.influence_at(parent.branch, parent.section, parent.t);
+                // An unrigged extra trunk follows the root joint.
+                let influence = match branch.parent {
+                    Some(parent) => self.influence_at(parent.branch, parent.section, parent.t),
+                    None => Influence::rigid(0),
+                };
                 self.bindings.push(Binding::Fixed(influence));
                 continue;
             };
 
             // Attach the base joint to the parent's joint below the branch attachment.
+            // Extra trunks hang from the root joint so the rig keeps a single root.
             // Chain the remaining joints along this branch.
-            let mut parent = branch.parent.map(|a| self.joint_below(a.branch, a.section));
+            let mut parent = match branch.parent {
+                Some(a) => Some(self.joint_below(a.branch, a.section)),
+                None => (!self.joints.is_empty()).then_some(0),
+            };
             let first = self.joints.len();
             let segments = segment_count(branch.sections.len());
             let stride = stride.min(segments);

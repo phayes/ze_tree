@@ -8,7 +8,7 @@ use crate::{BarkOptions, LeafOptions, TrellisOptions};
 
 /// Available bark texture names. Use these values for [`BarkOptions::kind`];
 /// they include every built-in preset's bark.
-pub const BARK_KINDS: [&str; 29] = [
+pub const BARK_KINDS: [&str; 31] = [
     "bark_brown_02",
     "bark_brown_01",
     "bark_willow",
@@ -38,6 +38,8 @@ pub const BARK_KINDS: [&str; 29] = [
     "Bark009",
     "Bark014",
     "Bark016",
+    "apple_bark_01",
+    "apple_bark_02",
 ];
 
 /// Bark texture resolution. Each size fits within a square of that many pixels;
@@ -207,10 +209,12 @@ pub fn leaf_has_normal_map(kind: &str) -> bool {
 /// Available texture names for [`LeafOptions::kind`], including those used by all presets.
 ///
 /// The first four (`ash`, `aspen`, `oak`, `pine`) come from ez-tree and have colour
-/// images only. The remaining 20 come from Nobiax's CC0 "Free 3D branches textures"
-/// packs and depict branch tips or bare twigs. Each includes a colour image and a
-/// normal map for lighting detail; use [`leaf_has_normal_map`] to check a name.
-pub const LEAF_KINDS: [&str; 24] = [
+/// images only. The remaining 22 come from Nobiax's CC0 "Free 3D branches textures"
+/// packs and depict branch tips or bare twigs; `cedar` and `maple` are the
+/// arborvitae and field maple branches recoloured a bright green that suits tinting.
+/// Each includes a colour image and a normal map for lighting detail; use
+/// [`leaf_has_normal_map`] to check a name.
+pub const LEAF_KINDS: [&str; 26] = [
     "ash",
     "aspen",
     "oak",
@@ -235,6 +239,8 @@ pub const LEAF_KINDS: [&str; 24] = [
     "white_oak_autumn",
     "white_oak",
     "white_oak_dead",
+    "cedar",
+    "maple",
 ];
 
 /// Number of ez-tree entries at the start of [`LEAF_KINDS`]. These have colour
@@ -286,6 +292,8 @@ const BARK_AVERAGE_COLORS: [(&str, [f32; 3]); BARK_KINDS.len()] = [
     ("Bark009", [0.6170, 0.6044, 0.4250]),
     ("Bark014", [0.2022, 0.1417, 0.0881]),
     ("Bark016", [0.1691, 0.1348, 0.0549]),
+    ("apple_bark_01", [0.1581, 0.1455, 0.1358]),
+    ("apple_bark_02", [0.3574, 0.2886, 0.2331]),
 ];
 
 /// Bark shading settings for your renderer, matching ez-tree's appearance.

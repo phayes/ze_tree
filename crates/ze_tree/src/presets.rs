@@ -30,14 +30,33 @@ pub enum TreePreset {
     PineLarge,
     /// A broadleaf tree configured to grow along a grid of guide wires.
     Trellis,
+    /// A single-trunked bigleaf maple of moderate height with a broad crown
+    /// of large autumn-coloured leaves.
+    BigLeafMapleMedium,
+    /// A tall, many-stemmed bigleaf maple with a broad crown of large
+    /// autumn-coloured leaves.
+    BigLeafMapleLarge,
     /// A short, spreading apple tree hung with ripe apples.
     Apple,
+    /// A low-forking flowering dogwood in full bloom, covered in white,
+    /// four-bracted flowers that face the sky.
+    FloweringDogwood,
+    /// A many-stemmed pussy willow shrub in early spring: bare upright stems
+    /// studded with fuzzy, upward-pointing catkins.
+    SpringPussyWillow,
+    /// A dense, many-stemmed willow thicket in winter: bare upright stems
+    /// with no leaves, fruit or flowers.
+    WinterThicket,
+    /// A tall, narrow cedar with a single straight trunk and layered branches
+    /// carrying flat, horizontal sprays of green foliage.
+    Cedar,
 }
 
 impl TreePreset {
-    /// Every preset, suitable for a selection menu: the ez-tree presets in
-    /// [`EZ_TREE`](Self::EZ_TREE) order, followed by the fruit and flower trees.
-    pub const ALL: [TreePreset; 17] = [
+    /// Every preset, in an order suitable for a selection menu: the general
+    /// species and sizes first, followed by the specialty trees such as fruit,
+    /// flowering and winter trees.
+    pub const ALL: [TreePreset; 23] = [
         Self::AshSmall,
         Self::AshMedium,
         Self::AshLarge,
@@ -54,12 +73,18 @@ impl TreePreset {
         Self::PineMedium,
         Self::PineLarge,
         Self::Trellis,
+        Self::BigLeafMapleMedium,
+        Self::BigLeafMapleLarge,
         Self::Apple,
+        Self::FloweringDogwood,
+        Self::SpringPussyWillow,
+        Self::WinterThicket,
+        Self::Cedar,
     ];
 
-    /// The 16 presets that come from ez-tree, in ez-tree display order. Their
-    /// settings match ez-tree's own presets, and they grow no fruit or flowers.
-    pub const EZ_TREE: [TreePreset; 16] = [
+    /// The 13 presets whose settings match ez-tree's own presets, in ez-tree
+    /// display order. They grow no fruit or flowers.
+    pub const EZ_TREE: [TreePreset; 13] = [
         Self::AshSmall,
         Self::AshMedium,
         Self::AshLarge,
@@ -69,9 +94,6 @@ impl TreePreset {
         Self::Bush1,
         Self::Bush2,
         Self::Bush3,
-        Self::OakSmall,
-        Self::OakMedium,
-        Self::OakLarge,
         Self::PineSmall,
         Self::PineMedium,
         Self::PineLarge,
@@ -97,7 +119,13 @@ impl TreePreset {
             Self::PineMedium => "Pine Medium",
             Self::PineLarge => "Pine Large",
             Self::Trellis => "Trellis",
+            Self::BigLeafMapleMedium => "Big Leaf Maple Medium",
+            Self::BigLeafMapleLarge => "Big Leaf Maple Large",
             Self::Apple => "Apple",
+            Self::FloweringDogwood => "Flowering Dogwood",
+            Self::SpringPussyWillow => "Spring Pussy Willow",
+            Self::WinterThicket => "Winter Thicket",
+            Self::Cedar => "Cedar",
         }
     }
 
@@ -129,7 +157,13 @@ impl TreePreset {
             Self::PineMedium => include_str!("../presets/pine_medium.json"),
             Self::PineLarge => include_str!("../presets/pine_large.json"),
             Self::Trellis => include_str!("../presets/trellis.json"),
+            Self::BigLeafMapleMedium => include_str!("../presets/big_leaf_maple_medium.json"),
+            Self::BigLeafMapleLarge => include_str!("../presets/big_leaf_maple_large.json"),
             Self::Apple => include_str!("../presets/apple.json"),
+            Self::FloweringDogwood => include_str!("../presets/flowering_dogwood.json"),
+            Self::SpringPussyWillow => include_str!("../presets/spring_pussy_willow.json"),
+            Self::WinterThicket => include_str!("../presets/winter_thicket.json"),
+            Self::Cedar => include_str!("../presets/cedar.json"),
         }
     }
 

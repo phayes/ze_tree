@@ -160,9 +160,14 @@
 //! The plugin generates four mesh detail levels. Bevy fades to simpler meshes at
 //! camera distances of 100, 250 and 500 world units. With a texture folder configured,
 //! the nearest level uses 1k bark textures and the next two use 512 textures.
-//! At the farthest level, branches become two flat strips crossing at right angles,
-//! with a single colour approximating the bark texture. Thin branches are omitted.
-//! Leaves use fewer, larger flat cards, each showing several leaves in a clump image.
+//! At the farthest level (LOD3), thin branches are omitted and the remaining branches
+//! use flat strips. With textures configured, those strips use a single colour
+//! approximating the bark texture, and fewer, larger leaf cards show clumps of leaves.
+//! Fruit above the size threshold become flat hexagons without stalks. These flat
+//! shapes, called billboards, turn toward the camera to help preserve the tree’s
+//! outline as the view changes. For shadow rendering, they turn toward the light.
+//! To see shadows at this distance, extend the directional light’s shadow cascades
+//! far enough to cover the trees.
 //! Set `ZeTreePlugin::lod_levels` when adding the plugin to choose mesh detail,
 //! switching distances, bark appearance and leaf images. For a single full-detail
 //! mesh with 2k bark textures and no distance switching:
@@ -207,7 +212,51 @@
 //! create materials with `bark_material` and `leaf_material`, and attach the mesh
 //! handles and `MeshMaterial3d<TreeMaterial>` to your entities. Keep `ZeTreePlugin`
 //! installed to register shaders and synchronize wind settings.
+//!
+//! ## Load exported glTF trees
+//!
+//! Enable this crate's `gltf` feature to animate billboards in trees saved with
+//! `ze_tree::export::gltf`. Billboards are flat shapes used for distant tree parts;
+//! this integration lets them turn toward the camera and move with the wind.
+//! Export with `GltfOptions::wind` enabled (the default).
+//!
+//! Register the tree's custom vertex attributes with Bevy's `GltfPlugin`, then add
+//! `ZeTreePlugin` after Bevy's default plugins:
+//!
+//! ```rust,ignore
+//! use bevy::gltf::GltfPlugin;
+//! use bevy::prelude::*;
+//! use ze_tree_bevy::{ZeTreePlugin, add_tree_gltf_attributes};
+//!
+//! App::new().add_plugins((
+//!     DefaultPlugins.set(add_tree_gltf_attributes(GltfPlugin::default())),
+//!     ZeTreePlugin::default(),
+//! ));
+//! ```
+//!
+//! Load and spawn the file's scene with Bevy's glTF loader. Eligible meshes under
+//! nodes tagged as billboards use `TreeMaterial` for wind and camera-facing rotation.
+//! Their crossed fallback shapes are removed once all meshes under the billboard
+//! node are converted. Bounds are updated to keep the rotating shapes visible;
+//! these bounds do not include wind movement. Other meshes keep their original
+//! materials, and converted billboard materials do not retain normal maps.
+//!
+//! Meshes keep their original shapes and materials if wind or billboard attributes
+//! are missing or unregistered, or if they use animation joints. Their fallback
+//! partners remain in the scene. Missing or unregistered attributes produce a
+//! warning; check both the export's wind setting and the plugin setup above.
+//!
+//! Try the example, which exports and loads a distant Apple tree by default:
+//!
+//! ```sh
+//! cargo run -p ze_tree_bevy --example gltf_tree --features gltf
+//! ```
+//!
+//! To load your own file, append `-- path/to/tree.glb`. Hold the left mouse button
+//! to look around, and use WASD and Q/E to fly.
 
+#[cfg(feature = "gltf")]
+mod gltf;
 mod material;
 mod material_key;
 mod mesh;
@@ -224,12 +273,18 @@ pub use material::{
     BarkTextures, LeafTextures, TreeMaterial, WindExtension, WindUniform, average_bark_material,
     bark_material, flower_material, fruit_material, leaf_material, trellis_material,
 };
-pub use mesh::{ATTRIBUTE_WIND, bark_mesh, cluster_mesh, leaf_mesh};
+pub use mesh::{
+    ATTRIBUTE_BILLBOARD_AXIS, ATTRIBUTE_BILLBOARD_NORMAL, ATTRIBUTE_BILLBOARD_PIVOT,
+    ATTRIBUTE_WIND, bark_mesh, billboard_aabb, cluster_mesh, leaf_mesh,
+};
 pub use spawn::{
     BarkTexture, LeafTexture, TreeFinished, TreeGenerating, TreeLodLevel, TreeOptionsAsset,
     TreePart, TreePartKind, ZeTree, default_tree_lod_levels,
 };
 pub use wind::Wind;
+
+#[cfg(feature = "gltf")]
+pub use gltf::add_tree_gltf_attributes;
 
 use spawn::{SpawnSettings, TreeCache, TreeOptionsLoader};
 
@@ -276,6 +331,7 @@ impl Plugin for ZeTreePlugin {
             .add(Shader::from_wesl(WIND_WESL, "embedded://ze_tree/wind.wesl"));
         app.insert_resource(WindShader(wind_shader));
         load_shader_library!(app, "shaders/tree_wind.wesl");
+        load_shader_library!(app, "shaders/tree_billboard.wesl");
         embedded_asset!(app, "shaders/tree.wesl");
         embedded_asset!(app, "shaders/tree_prepass.wesl");
 
@@ -302,5 +358,7 @@ impl Plugin for ZeTreePlugin {
                 )
                     .chain(),
             );
+        #[cfg(feature = "gltf")]
+        gltf::register(app);
     }
 }

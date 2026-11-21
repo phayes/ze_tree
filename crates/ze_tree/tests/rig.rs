@@ -128,6 +128,31 @@ fn simpler_meshes_share_the_rig() {
             rig.joint_count(),
         );
         check_rest_pose(&rig, &mesh, &skin);
+
+        // Fallback ribbon vertices must use the same section weights as the main strip.
+        let cull = &mesh.billboard_cull;
+        let joints = rig.joint_count();
+        check_weights(
+            &skin.branches_billboard_cull,
+            cull.branches.positions.len(),
+            joints,
+        );
+        check_weights(
+            &skin.leaves_billboard_cull,
+            cull.leaves.positions.len(),
+            joints,
+        );
+        for span in &mesh.branch_spans {
+            let (main, second) = (
+                span.vertices.start as usize,
+                span.cull_vertices.start as usize,
+            );
+            for k in 0..span.cull_vertices.len() {
+                let (a, b) = (&skin.branches, &skin.branches_billboard_cull);
+                assert_eq!(a.joints[main + k], b.joints[second + k]);
+                assert_eq!(a.weights[main + k], b.weights[second + k]);
+            }
+        }
     }
 }
 
@@ -299,4 +324,33 @@ fn spare_joints_refine_the_largest_branches() {
     assert!(refined > 0);
 
     check_rest_pose(&rig, tree.mesh(), &rig.skin(tree.mesh()));
+}
+
+/// A multi-stemmed tree keeps one root joint. With more stems than joints,
+/// stems without joints of their own follow the root, and the rest pose holds.
+#[test]
+fn multi_stem_trees_keep_a_single_root() {
+    for (stems, max_joints) in [(5, 64), (12, 8)] {
+        let mut options = ze_tree::TreeOptions::default();
+        options.branch.stems = stems;
+        options.branch.stem_angle = 25.0;
+        let tree = Tree::new(options).unwrap();
+        let rig = tree
+            .rig(&RigOptions {
+                max_joints,
+                ..RigOptions::default()
+            })
+            .unwrap();
+
+        let joints = rig.joints();
+        assert!(joints.len() <= max_joints as usize);
+        assert_eq!(joints[0].parent, None);
+        assert!(joints.iter().skip(1).all(|j| j.parent.is_some()));
+        let rigged_stems = (0..stems as usize).filter(|&b| rig.is_rigged(b)).count();
+        assert_eq!(rigged_stems, (stems as usize).min(max_joints as usize));
+
+        let skin = rig.skin(tree.mesh());
+        check_weights(&skin.branches, tree.mesh().branches.positions.len(), joints.len());
+        check_rest_pose(&rig, tree.mesh(), &skin);
+    }
 }

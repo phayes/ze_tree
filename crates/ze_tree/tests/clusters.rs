@@ -373,3 +373,50 @@ fn zero_stalk_length_puts_a_single_item_on_the_branch() {
         assert_eq!(cluster.items[0].stalk, None);
     }
 }
+
+/// Density adds side clusters in proportion to branch length, so longer
+/// branches carry more clusters than shorter ones, and zero density adds none.
+#[test]
+fn density_scales_side_clusters_with_branch_length() {
+    let mut options = fruiting();
+    options.fruit.placement.count = 0;
+    options.fruit.placement.start = 0.0;
+    options.fruit.placement.density = 2.0;
+    let skeleton = grow(&options);
+
+    // Compare the cluster count on each branch with its measured length.
+    let mut counts = vec![0u32; skeleton.branches.len()];
+    for cluster in &skeleton.fruit {
+        counts[cluster.parent.branch] += 1;
+    }
+    for (branch, count) in skeleton.branches.iter().zip(counts) {
+        if branch.level < options.fruit.placement.min_level {
+            assert_eq!(count, 0);
+            continue;
+        }
+        let length: f32 = branch
+            .sections
+            .windows(2)
+            .map(|pair| pair[0].origin.distance(pair[1].origin))
+            .sum();
+        let expected = 2.0 * length;
+        assert!(
+            (count as f32 - expected).abs() <= 1.0,
+            "{count} clusters on a branch {length} long"
+        );
+    }
+
+    // Zero density with zero count and tips disables clusters entirely.
+    options.fruit.placement.density = 0.0;
+    assert!(Skeleton::generate(&options).unwrap().fruit.is_empty());
+}
+
+/// Rejects a negative or non-finite cluster density.
+#[test]
+fn density_must_be_finite_and_non_negative() {
+    for bad in [-1.0, f32::NAN, f32::INFINITY] {
+        let mut options = fruiting();
+        options.flowers.placement.density = bad;
+        assert!(options.validate().is_err(), "{bad} accepted");
+    }
+}

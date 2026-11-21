@@ -13,6 +13,8 @@ use crate::{OptionsError, Rng, TreeOptions, TreeType};
 const FRUIT_SALT: i32 = 0x2f6b_3c1d;
 /// Combines with the tree seed to give flowers a separate repeatable random sequence.
 const FLOWER_SALT: i32 = 0x5a1e_7b93;
+/// Combines with the tree seed to give stem placement its own repeatable random sequence.
+const STEM_SALT: i32 = 0x3c97_e215;
 
 /// A tree's branch structure, with positions for leaves, fruit, and flowers.
 ///
@@ -22,7 +24,8 @@ const FLOWER_SALT: i32 = 0x5a1e_7b93;
 /// the result contains no drawable surfaces.
 #[derive(Debug, Clone, PartialEq, Default)]
 pub struct Skeleton {
-    /// Generated branches, with the trunk first and each parent before its children.
+    /// Generated branches, with the trunks first and each parent before its children.
+    /// Most trees have one trunk; see [`BranchOptions::stems`](crate::BranchOptions::stems).
     pub branches: Vec<SkeletonBranch>,
     /// Generated leaves, in the order they were placed.
     pub leaves: Vec<SkeletonLeaf>,
@@ -37,9 +40,9 @@ pub struct Skeleton {
 /// A branch represented by a sequence of circular cross-sections from base to tip.
 #[derive(Debug, Clone, PartialEq)]
 pub struct SkeletonBranch {
-    /// Number of parent branches back to the trunk: 0 for the trunk, 1 for its children.
+    /// Number of parent branches back to a trunk: 0 for a trunk, 1 for its children.
     pub level: u32,
-    /// Attachment to the parent branch; `None` identifies the trunk.
+    /// Attachment to the parent branch; `None` identifies a trunk.
     pub parent: Option<Attachment>,
     /// Cross-sections ordered from base to tip. Generated branches have at least two.
     pub sections: Vec<Section>,
@@ -52,7 +55,7 @@ pub struct SkeletonBranch {
 /// A circular slice through a branch, describing its position, direction, and thickness.
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct Section {
-    /// Centre of the slice in tree coordinates, with the trunk base at the origin.
+    /// Centre of the slice in tree coordinates, with the base of the tree at the origin.
     pub origin: Vec3,
     /// Rotation from local to tree coordinates. Local +Y points along branch growth.
     pub orientation: Quat,
@@ -101,8 +104,8 @@ impl Skeleton {
     /// # Errors
     ///
     /// Returns the first [`OptionsError`] found by validation: unsupported branch
-    /// depth, a zero section count at a configured level, or an invalid fruit
-    /// or flower setting, even if fruit or flowers are disabled.
+    /// depth, a zero section count at a configured level, an invalid stem setting,
+    /// or an invalid fruit or flower setting, even if fruit or flowers are disabled.
     pub fn generate(options: &TreeOptions) -> Result<Self, OptionsError> {
         options.validate()?;
 
@@ -114,18 +117,20 @@ impl Skeleton {
             skeleton: Skeleton::default(),
         };
 
-        // Process the trunk, then its children, then their children. Preserve this
+        // Process the trunks, then their children, then their children. Preserve this
         // ez-tree order so each branch receives the same random draws.
-        grower.queue.push_back(Bud {
-            origin: Vec3::ZERO,
-            orientation: Quat::IDENTITY,
-            length: branch.length[0],
-            radius: branch.radius[0],
-            level: 0,
-            section_count: branch.sections[0],
-            segment_count: branch.segments[0],
-            parent: None,
-        });
+        for (origin, orientation) in stem_placements(options) {
+            grower.queue.push_back(Bud {
+                origin,
+                orientation,
+                length: branch.length[0],
+                radius: branch.radius[0],
+                level: 0,
+                section_count: branch.sections[0],
+                segment_count: branch.segments[0],
+                parent: None,
+            });
+        }
         while let Some(bud) = grower.queue.pop_front() {
             grower.grow_branch(bud);
         }
@@ -304,17 +309,18 @@ impl Grower<'_> {
         // Apply twist around local +Y, the branch's growth axis.
         q *= Quat::from_rotation_y(branch.twist[level]);
 
-        // Positive force turns toward the target without overshooting; negative force
-        // turns away. Limit either step to the target angle. Thin sections bend more.
-        let up = q * Vec3::Y;
+        // Positive force turns toward the target; negative force turns away.
+        // Thin sections bend more.
         let target = branch.force.direction.normalize_or_zero();
-        let axis = up.cross(target);
-        let sin_full = axis.length();
-        if sin_full > 1e-6 {
-            let full_angle = sin_full.atan2(up.dot(target));
-            let step = branch.force.strength / radius;
-            let angle = step.clamp(-full_angle, full_angle);
-            q = Quat::from_axis_angle(axis / sin_full, angle) * q;
+        q = turn_growth(q, target, branch.force.strength / radius);
+
+        // Level the branch off toward the horizontal direction it already leans in.
+        // Branches pointing straight up or down have no such direction and stay put.
+        let flatten = branch.flatten[level];
+        if flatten > 0.0 {
+            let growth = q * Vec3::Y;
+            let level_target = Vec3::new(growth.x, 0.0, growth.z).normalize_or_zero();
+            q = turn_growth(q, level_target, flatten);
         }
 
         // Apply the trellis influence only when enabled and within reach.
@@ -404,10 +410,16 @@ impl Grower<'_> {
     }
 
     /// Stores a leaf at the supplied attachment, position, and rotation with a random size.
+    /// With a leaf count of zero (only tip leaves reach here), nothing is stored,
+    /// but the size is still drawn so later branches keep their random sequence.
     fn record_leaf(&mut self, parent: Attachment, origin: Vec3, orientation: Quat) {
         let leaves = &self.options.leaves;
         let variance = leaves.size_variance;
         let size = leaves.size * (1.0 + self.rng.range(-variance, variance));
+        if leaves.count == 0 {
+            return;
+        }
+        let orientation = flatten_leaf(orientation, leaves.flatten);
         self.skeleton.leaves.push(SkeletonLeaf {
             parent,
             origin,
@@ -415,6 +427,38 @@ impl Grower<'_> {
             size,
         });
     }
+}
+
+/// Returns the base position and orientation of each trunk.
+///
+/// A single stem stands upright at the origin. Several stems take evenly spaced
+/// directions around the base with random jitter, each tilted by a random angle
+/// up to `stem_angle`. A stem starts further out the more it tilts, up to the
+/// trunk radius from the origin, so stems spread from a small crown.
+fn stem_placements(options: &TreeOptions) -> Vec<(Vec3, Quat)> {
+    let branch = &options.branch;
+    if branch.stems <= 1 {
+        return vec![(Vec3::ZERO, Quat::IDENTITY)];
+    }
+
+    let mut rng = Rng::new(options.seed ^ STEM_SALT);
+    let count = branch.stems;
+    let radial_offset = rng.next_f32();
+    let max_tilt = branch.stem_angle.to_radians();
+    shuffled_indices(&mut rng, count)
+        .into_iter()
+        .map(|slot| {
+            // Spread directions evenly, then tilt; the square root favours larger
+            // tilts so stems fill the cone rather than crowding the centre.
+            let jitter = rng.range(-0.5, 0.5);
+            let azimuth = TAU * (radial_offset + (slot as f32 + jitter) / count as f32);
+            let spread = rng.next_f32().sqrt();
+            let heading = Quat::from_rotation_y(azimuth);
+            let orientation = heading * Quat::from_rotation_x(max_tilt * spread);
+            let origin = heading * Vec3::Z * (branch.radius[0] * spread);
+            (origin, orientation)
+        })
+        .collect()
 }
 
 /// Returns each index in `0..count` once, in a random order determined by `rng`.
@@ -453,6 +497,44 @@ pub(crate) fn place(sections: &[Section], t: f32, branch: usize) -> Placement {
         orientation: b.orientation.slerp(a.orientation, alpha),
         radius: (1.0 - alpha) * a.radius + alpha * b.radius,
     }
+}
+
+/// Turns a leaf `orientation` (tip along local +Y, face along local +Z) the
+/// fraction `amount` (0–1) of the way toward lying level with its face up.
+/// The level leaf points in the horizontal direction its tip already leans; an
+/// upright leaf has no such direction and tips over backwards instead.
+fn flatten_leaf(orientation: Quat, amount: f32) -> Quat {
+    if amount <= 0.0 {
+        return orientation;
+    }
+
+    // Pick the level tip direction. Tip and face are perpendicular, so at
+    // most one of them can be vertical and the fallback is never zero.
+    let level = |v: Vec3| Vec3::new(v.x, 0.0, v.z);
+    let tip = orientation * Vec3::Y;
+    let forward = level(tip)
+        .try_normalize()
+        .unwrap_or_else(|| -level(orientation * Vec3::Z).normalize());
+
+    // Build the level, face-up frame and turn part of the way toward it.
+    let flat = Quat::from_mat3(&Mat3::from_cols(forward.cross(Vec3::Y), forward, Vec3::Y));
+    orientation.slerp(flat, amount.min(1.0))
+}
+
+/// Turns the growth axis (local +Y) of `orientation` toward the unit vector
+/// `target` by `step` radians, stopping at `target` rather than passing it.
+/// Negative steps turn away from `target`. Returns `orientation` unchanged when
+/// `target` is zero or parallel to the growth axis.
+fn turn_growth(orientation: Quat, target: Vec3, step: f32) -> Quat {
+    let up = orientation * Vec3::Y;
+    let axis = up.cross(target);
+    let sin_full = axis.length();
+    if sin_full <= 1e-6 {
+        return orientation;
+    }
+    let full_angle = sin_full.atan2(up.dot(target));
+    let angle = step.clamp(-full_angle, full_angle);
+    Quat::from_axis_angle(axis / sin_full, angle) * orientation
 }
 
 /// Converts a unit quaternion to XYZ Euler angles in radians using three.js conventions.

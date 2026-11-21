@@ -1,6 +1,6 @@
 //! Create fruit bodies, short stems, and calyxes (the flower remains at the bottom).
 
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::{FRAC_PI_2, PI, TAU};
 
 use glam::{Quat, Vec3, Vec4};
 
@@ -156,6 +156,65 @@ pub(super) fn mesh_disc(
         grid.push(centre, [j as f32 / DISC_SIDES as f32, 1.0], color);
     }
     grid.emit(out, normal, |_| wind);
+}
+
+/// Adds a main fruit hexagon to `out` and a perpendicular fallback hexagon to
+/// `cull`, without normals, stems or flower remains. Pass the outward unit
+/// direction as `facing`; `index` varies the stored shape’s tilt as in [`mesh_disc`].
+/// Only the main hexagon carries camera-facing data. Its rotated shape is regular
+/// and centred on the fruit body, with a diameter equal to the mean of the body’s
+/// width and height. A nonpositive body width adds nothing.
+pub(super) fn mesh_billboard(
+    [out, cull]: [&mut MeshBuffers; 2],
+    item: &ClusterItem,
+    index: usize,
+    fruit: &FruitOptions,
+    facing: Vec3,
+    wind: [f32; 4],
+) {
+    let (size, height) = body_size(item, fruit);
+    if size <= 0.0 {
+        return;
+    }
+
+    // Give the fixed fallback shape the same tilt and proportions as a flat fruit disc.
+    let t = (index as f32 * GOLDEN_RATIO_FRACTION).fract();
+    let (u, v) = facing.any_orthonormal_pair();
+    let turn = TAU * (index as f32 * GOLDEN_RATIO_FRACTION * 2.0).fract();
+    let lean_axis = u * turn.cos() + v * turn.sin();
+    let normal = Quat::from_axis_angle(lean_axis, DISC_LEAN * t) * facing;
+    let fruit_axis = item.orientation * Vec3::Y;
+    let along = (fruit_axis - normal * normal.dot(fruit_axis))
+        .normalize_or(normal.any_orthonormal_vector());
+    let across = normal.cross(along);
+    let centre = item.origin + fruit_axis * (height / 2.0);
+    // Rotate the fallback copy around the first hexagon’s long axis so they cross at 90°.
+    let quarter_turn = Quat::from_axis_angle(along, FRAC_PI_2);
+    let radius = (size + height) / 4.0;
+    let color = body_color(fruit).to_array();
+
+    // Order the corners so triangle fronts face outward from each hexagon.
+    for (k, buffers) in [out, cull].into_iter().enumerate() {
+        let first = buffers.next_index();
+        for j in 0..DISC_SIDES {
+            let phi = loop_angle(j, DISC_SIDES);
+            let (sin, cos) = phi.sin_cos();
+            let flat = along * (cos * height / 2.0) + across * (sin * size / 2.0);
+            let point = if k == 0 {
+                centre + flat
+            } else {
+                centre + quarter_turn * flat
+            };
+            buffers.push_unlit(point, [0.5 + cos / 2.0, 0.5 + sin / 2.0], wind);
+            buffers.colors.push(color);
+            if k == 0 {
+                buffers.push_billboard(centre, Vec3::ZERO, [cos * radius, sin * radius]);
+            }
+        }
+        for j in 1..DISC_SIDES as u32 - 1 {
+            buffers.indices.extend([first, first + j, first + j + 1]);
+        }
+    }
 }
 
 /// Appends one fruit with the supplied shape detail and wind values. Pass

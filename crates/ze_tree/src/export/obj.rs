@@ -69,6 +69,12 @@ pub struct ObjFiles {
 /// With [`BarkOptions::flat_shading`](crate::BarkOptions::flat_shading), trunk and
 /// branch objects get one normal per triangle, so importers shade each face flat.
 ///
+/// OBJ preserves fixed billboard shapes but cannot store camera-facing rotation
+/// data. Parts with [`MeshBuffers::billboard`] use their stored positions; bark
+/// and fruit omit normals, and leaves keep one normal per card. Crossed fallback shapes from [`TreeMesh::billboard_cull`] follow as
+/// `<part>_billboard_cull` objects, such as `branches_billboard_cull`, using the same
+/// material. Draw both objects to keep the fixed shapes visible from more angles.
+///
 /// Fruit and flowers are separate `fruit` and `flowers` objects. Their colours
 /// are stored at points on the model using the OBJ vertex-colour extension
 /// (`v x y z r g b`, with sRGB colours). Support depends on the receiving tool.
@@ -98,20 +104,28 @@ pub fn to_obj(mesh: &TreeMesh, options: &TreeOptions, obj: &ObjOptions<'_>) -> O
     let mut normals_written = 0;
     let parts = export_parts(obj.grouping, mesh);
     for &part in &parts {
-        let mut buffers = mesh.part(part).buffers;
         let material = match part {
             MeshPart::Leaves => "leaves",
             MeshPart::Fruit => "fruit",
             MeshPart::Flowers => "flowers",
-            MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => {
-                buffers.uvs = scaled_bark_uvs(&buffers.uvs, options);
-                "bark"
-            }
+            MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => "bark",
         };
         let flat = part.is_bark() && options.bark.flat_shading;
-        let _ = writeln!(out, "o {}", part.name());
-        normals_written += write_part(&mut out, &buffers, material, written, normals_written, flat);
-        written += buffers.positions.len();
+
+        // Write the main geometry followed by any crossed fallback shapes.
+        let cull = mesh.billboard_cull_part(part).buffers;
+        let cull = (!cull.indices.is_empty()).then_some(cull);
+        let groups = [Some(mesh.part(part).buffers), cull];
+        for (k, mut buffers) in groups.into_iter().flatten().enumerate() {
+            if part.is_bark() {
+                buffers.uvs = scaled_bark_uvs(&buffers.uvs, options);
+            }
+            let suffix = if k == 0 { "" } else { "_billboard_cull" };
+            let _ = writeln!(out, "o {}{suffix}", part.name());
+            normals_written +=
+                write_part(&mut out, &buffers, material, written, normals_written, flat);
+            written += buffers.positions.len();
+        }
     }
 
     ObjFiles {
@@ -120,10 +134,11 @@ pub fn to_obj(mesh: &TreeMesh, options: &TreeOptions, obj: &ObjOptions<'_>) -> O
     }
 }
 
-/// Writes one part's vertex attributes and triangles using the named material.
-/// `offset` and `normal_offset` count positions and normals already written.
-/// With `flat`, each triangle gets one face normal instead of the vertex normals.
-/// Returns the number of normals written.
+/// Appends a part’s vertices and faces with the named material, returning the
+/// number of normals written. Pass the counts of previously written positions
+/// and normals as `offset` and `normal_offset`. If normals are present, `flat`
+/// replaces them with one normal per triangle. Buffers without normals, including
+/// billboard shapes, remain without normals even when `flat` is enabled.
 fn write_part(
     out: &mut String,
     buffers: &MeshBuffers,
@@ -149,10 +164,11 @@ fn write_part(
         let _ = writeln!(out, "vt {u} {v}");
     }
     let triangles = buffers.indices.as_chunks::<3>().0;
-    let normals = if flat {
-        triangles.iter().map(|t| face_normal(buffers, t)).collect()
-    } else {
-        buffers.normals.clone()
+    let lit = !buffers.normals.is_empty();
+    let normals = match (lit, flat) {
+        (false, _) => Vec::new(),
+        (true, true) => triangles.iter().map(|t| face_normal(buffers, t)).collect(),
+        (true, false) => buffers.normals.clone(),
     };
     for [x, y, z] in &normals {
         let _ = writeln!(out, "vn {x} {y} {z}");
@@ -162,13 +178,17 @@ fn write_part(
     // vertex index for smooth parts and the triangle index for flat ones.
     // Smoothing groups tell importers which parts to shade smooth.
     let _ = writeln!(out, "usemtl {material}");
-    let _ = writeln!(out, "s {}", if flat { "off" } else { "1" });
+    let _ = writeln!(out, "s {}", if flat || !lit { "off" } else { "1" });
     for (t, triangle) in triangles.iter().enumerate() {
         out.push('f');
         for &i in triangle {
             let v = i as usize + offset + 1;
-            let n = if flat { t } else { i as usize } + normal_offset + 1;
-            let _ = write!(out, " {v}/{v}/{n}");
+            if lit {
+                let n = if flat { t } else { i as usize } + normal_offset + 1;
+                let _ = write!(out, " {v}/{v}/{n}");
+            } else {
+                let _ = write!(out, " {v}/{v}");
+            }
         }
         out.push('\n');
     }

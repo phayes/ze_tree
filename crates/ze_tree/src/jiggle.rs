@@ -11,7 +11,9 @@ impl TreeOptions {
     /// A new random seed controls branch and leaf placement, even when `amount` is 0.
     ///
     /// Variation affects branch shape, length, thickness and number, the strength
-    /// of the force that guides growth, and leaf placement, size and number.
+    /// of the force that guides growth, the pull toward level growth, and leaf
+    /// placement, size and number. Multi-stemmed trees also vary their stem count
+    /// and tilt, keeping at least two stems; a single-trunk tree keeps one trunk.
     /// Zero values stay zero, and non-zero counts stay at least 1. Start positions
     /// and taper stay between 0 and 1. The number of branching levels, mesh detail,
     /// textures, colours, tree type and trellis stay unchanged.
@@ -42,6 +44,7 @@ impl TreeOptions {
         jiggle_levels(&mut branch.start, &mut |v| scale(v).clamp(0.0, 1.0));
         jiggle_levels(&mut branch.taper, &mut |v| scale(v).clamp(0.0, 1.0));
         jiggle_levels(&mut branch.twist, &mut scale);
+        jiggle_levels(&mut branch.flatten, &mut scale);
         branch.force.strength = scale(branch.force.strength);
 
         // Vary where leaves grow, their angle and their size.
@@ -50,12 +53,19 @@ impl TreeOptions {
         leaves.start = scale(leaves.start).clamp(0.0, 1.0);
         leaves.size = scale(leaves.size);
         leaves.size_variance = scale(leaves.size_variance);
+        leaves.flatten = scale(leaves.flatten).clamp(0.0, 1.0);
 
         // Vary branch and leaf counts, rounding the results to whole numbers.
         for level in 0..4 {
             branch.children[level] = jiggle_count(branch.children[level], amount, rng);
         }
         leaves.count = jiggle_count(leaves.count, amount, rng);
+
+        // Vary multi-stem trees only, so a single trunk never splits into several.
+        if branch.stems > 1 {
+            branch.stems = jiggle_count(branch.stems, amount, rng).max(2);
+            branch.stem_angle = (branch.stem_angle * (1.0 + rng.range(-amount, amount))).min(90.0);
+        }
     }
 }
 

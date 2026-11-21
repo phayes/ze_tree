@@ -3,7 +3,7 @@
 mod flower;
 mod fruit;
 
-use std::f32::consts::{PI, TAU};
+use std::f32::consts::TAU;
 
 use glam::{Quat, Vec3, Vec4};
 
@@ -16,19 +16,17 @@ use crate::{ClusterItem, ClusterKind, ClusterStalk, FlowerOptions, FruitOptions,
 pub(super) const STALK_SIDES: usize = 6;
 /// Number of sides around a simplified stalk or fruit stem.
 pub(super) const SIMPLE_STALK_SIDES: usize = 3;
-/// Number of sides around the body used for a minimal-detail catkin.
-const CATKIN_BODY_SIDES: usize = 5;
-/// Number of lengthwise divisions in a minimal-detail catkin body.
-const CATKIN_BODY_RINGS: usize = 8;
 /// Below this sine of the angle between a strip's path and its facing
 /// direction, the strip keeps its previous sideways direction.
 const STRIP_PARALLEL: f32 = 0.1;
 
-/// Appends fruit and supporting stalks, returning buffer ranges for retained
-/// clusters in input order. Pass validated fruit options and wind data for
-/// the skeleton branches. Catkin fruit attach directly without individual stems.
+/// Adds fruit geometry and returns spans for retained clusters in input order.
+/// Pass validated options and wind data for the source branches. Ordinary fruit
+/// go into `out` with supporting stalks; catkin fruit have no individual stems.
+/// With [`LodDetail::billboard_fruit`], each fruit becomes a main hexagon in `out`
+/// and a crossed fallback hexagon in `cull`, with no stalks.
 pub(crate) fn mesh_fruit(
-    out: &mut MeshBuffers,
+    [out, cull]: [&mut MeshBuffers; 2],
     clusters: &[SkeletonCluster],
     fruit: &FruitOptions,
     winds: &[BranchWind],
@@ -40,21 +38,39 @@ pub(crate) fn mesh_fruit(
     let stalk_color = rgba(fruit.cluster.stalk_color);
     let catkin = fruit.cluster.kind == ClusterKind::Catkin;
     let level = detail.item_detail;
-    let spread = fruit.cluster.spread.to_radians();
+
+    // Keep all billboard fruit at their original sizes, without supporting stalks.
+    if detail.billboard_fruit {
+        let every_item = LodDetail {
+            cluster_stride: 1,
+            item_stride: 1,
+            item_scale: 1.0,
+            ..*detail
+        };
+        return mesh_clusters(
+            [out, cull],
+            clusters,
+            None,
+            winds,
+            &every_item,
+            |[out, cull], cluster, items, wind| {
+                let facing = outward(cluster.origin);
+                for (k, item) in items.iter().enumerate() {
+                    let item_wind = wind.at(item.distance);
+                    fruit::mesh_billboard([out, cull], item, k, fruit, facing, item_wind);
+                }
+            },
+        );
+    }
+
     let flat = !catkin && fruit.placement.size < detail.flat_item_size;
     mesh_clusters(
-        out,
+        [out, cull],
         clusters,
-        stalk_color,
+        Some(stalk_color),
         winds,
         &keep_flat_items(detail, flat),
-        |out, cluster, items, wind| {
-            // Replace the individual catkin items with one tapered body.
-            if catkin && level == ItemDetail::Minimal {
-                let size = |item: &ClusterItem| fruit::body_size(item, fruit);
-                catkin_body(out, cluster, size, spread, fruit::body_color(fruit), wind);
-                return;
-            }
+        |[out, _], cluster, items, wind| {
             if flat {
                 let facing = outward(cluster.origin);
                 for (k, item) in items.iter().enumerate() {
@@ -86,26 +102,20 @@ pub(crate) fn mesh_flowers(
     let stalk_color = rgba(flowers.cluster.stalk_color);
     let catkin = flowers.cluster.kind == ClusterKind::Catkin;
     let level = detail.item_detail;
-    let spread = flowers.cluster.spread.to_radians();
     let flat = !catkin && flowers.placement.size < detail.flat_item_size;
+    // Flowers do not use crossed fallback shapes; their cull buffer stays empty.
+    let mut no_cull = MeshBuffers::default();
     mesh_clusters(
-        out,
+        [out, &mut no_cull],
         clusters,
-        stalk_color,
+        Some(stalk_color),
         winds,
         &keep_flat_items(detail, flat),
-        |out, cluster, items, wind| {
+        |[out, _], _, items, wind| {
             if flat {
                 for item in items {
                     flower::mesh_triangle(out, item, flowers, wind.at(item.distance));
                 }
-                return;
-            }
-            // Replace the individual catkin items with one tapered body.
-            if catkin && level == ItemDetail::Minimal {
-                let size = |item: &ClusterItem| flower::catkin_size(item, flowers);
-                let color = flower::catkin_color(flowers);
-                catkin_body(out, cluster, size, spread, color, wind);
                 return;
             }
             for item in items {
@@ -131,24 +141,25 @@ fn keep_flat_items(detail: &LodDetail, flat: bool) -> LodDetail {
     }
 }
 
-/// Appends supporting stalks for retained items, then calls `items` with each
-/// retained cluster and its resized items. Returns their buffer ranges in input
-/// order. Wind values use the original cluster size, even when items are skipped.
+/// Processes retained clusters in input order and returns their main and fallback
+/// buffer ranges. Adds supporting stalks to `out` unless `stalk_color` is `None`,
+/// then calls `items` with both buffers and the retained, resized items. Wind
+/// values still use the original cluster extent when items are skipped.
 fn mesh_clusters(
-    out: &mut MeshBuffers,
+    [out, cull]: [&mut MeshBuffers; 2],
     clusters: &[SkeletonCluster],
-    stalk_color: Vec4,
+    stalk_color: Option<Vec4>,
     winds: &[BranchWind],
     detail: &LodDetail,
-    mut items: impl FnMut(&mut MeshBuffers, &SkeletonCluster, &[ClusterItem], &ClusterWind),
+    mut items: impl FnMut([&mut MeshBuffers; 2], &SkeletonCluster, &[ClusterItem], &ClusterWind),
 ) -> Vec<ClusterSpan> {
     let cluster_stride = detail.cluster_stride.max(1) as usize;
     let item_stride = detail.item_stride.max(1) as usize;
 
     let mut spans = Vec::with_capacity(clusters.len().div_ceil(cluster_stride));
     for (index, cluster) in clusters.iter().enumerate().step_by(cluster_stride) {
-        let first_vertex = out.next_index();
-        let first_index = out.indices.len();
+        let (first_vertex, first_index) = (out.next_index(), out.indices.len());
+        let (first_cull_vertex, first_cull_index) = (cull.next_index(), cull.indices.len());
         let wind = ClusterWind::new(cluster, wind_at(winds, &cluster.parent));
 
         // Resize retained items and keep their full chain of supporting stalks.
@@ -161,21 +172,25 @@ fn mesh_clusters(
                 ..*item
             })
             .collect();
-        let needed = needed_stalks(&cluster.stalks, &kept);
-        let shape = match detail.item_detail {
-            ItemDetail::Full => StalkShape::Tube(STALK_SIDES),
-            ItemDetail::Simple => StalkShape::Tube(SIMPLE_STALK_SIDES),
-            ItemDetail::Minimal => StalkShape::Strip(outward(cluster.origin)),
-        };
-        for (stalk, _) in cluster.stalks.iter().zip(needed).filter(|(_, n)| *n) {
-            mesh_stalk(out, stalk, shape, stalk_color, &wind);
+        if let Some(stalk_color) = stalk_color {
+            let needed = needed_stalks(&cluster.stalks, &kept);
+            let shape = match detail.item_detail {
+                ItemDetail::Full => StalkShape::Tube(STALK_SIDES),
+                ItemDetail::Simple => StalkShape::Tube(SIMPLE_STALK_SIDES),
+                ItemDetail::Minimal => StalkShape::Strip(outward(cluster.origin)),
+            };
+            for (stalk, _) in cluster.stalks.iter().zip(needed).filter(|(_, n)| *n) {
+                mesh_stalk(out, stalk, shape, stalk_color, &wind);
+            }
         }
-        items(out, cluster, &kept, &wind);
+        items([&mut *out, &mut *cull], cluster, &kept, &wind);
 
         spans.push(ClusterSpan {
             cluster: index,
             vertices: first_vertex..out.next_index(),
             indices: index_range(first_index, out.indices.len()),
+            cull_vertices: first_cull_vertex..cull.next_index(),
+            cull_indices: index_range(first_cull_index, cull.indices.len()),
         });
     }
     spans
@@ -197,99 +212,6 @@ fn needed_stalks(stalks: &[ClusterStalk], items: &[ClusterItem]) -> Vec<bool> {
         }
     }
     needed
-}
-
-/// Appends a tapered body representing an entire catkin along its main stem.
-/// `item_size` returns width and length in tree units; `spread` is the angle
-/// in radians between each item and the stem toward its tip.
-///
-/// The body follows the extent of all original items, ignoring item stride and
-/// scale. Adds nothing if there are no items or the first item has no stalk.
-fn catkin_body(
-    out: &mut MeshBuffers,
-    cluster: &SkeletonCluster,
-    item_size: impl Fn(&ClusterItem) -> (f32, f32),
-    spread: f32,
-    color: Vec4,
-    wind: &ClusterWind,
-) {
-    let Some(stalk) = cluster
-        .items
-        .first()
-        .and_then(|first| first.stalk)
-        .map(|s| &cluster.stalks[s])
-    else {
-        return;
-    };
-    let (sin, cos) = spread.sin_cos();
-
-    // Estimate the body's radius at the middle of each item along the stem.
-    let bulges: Vec<(f32, f32)> = cluster
-        .items
-        .iter()
-        .map(|item| {
-            let (width, length) = item_size(item);
-            let middle = item.distance + length / 2.0 * cos;
-            (middle, length / 2.0 * sin + width / 2.0)
-        })
-        .collect();
-    let (first, last) = (&cluster.items[0], &cluster.items[cluster.items.len() - 1]);
-    let (first_width, _) = item_size(first);
-    let (last_width, last_length) = item_size(last);
-    let start = first.distance - first_width / 2.0 * sin;
-    let end = last.distance + last_length * cos + last_width / 2.0 * sin;
-
-    // Blend radii between item centres; use the nearest radius beyond either end.
-    let reach_at = |d: f32| match bulges.iter().position(|&(middle, _)| middle >= d) {
-        None => bulges[bulges.len() - 1].1,
-        Some(0) => bulges[0].1,
-        Some(k) => {
-            let ((d0, r0), (d1, r1)) = (bulges[k - 1], bulges[k]);
-            r0 + (r1 - r0) * (d - d0) / (d1 - d0).max(f32::EPSILON)
-        }
-    };
-    let mut points = Vec::with_capacity(CATKIN_BODY_RINGS + 1);
-    let mut radii = Vec::with_capacity(CATKIN_BODY_RINGS + 1);
-    let mut row_winds = Vec::with_capacity(CATKIN_BODY_RINGS + 1);
-    for i in 0..=CATKIN_BODY_RINGS {
-        let f = i as f32 / CATKIN_BODY_RINGS as f32;
-        let d = start + (end - start) * f;
-        let envelope = if i == 0 || i == CATKIN_BODY_RINGS {
-            0.0
-        } else {
-            (PI * f).sin().sqrt()
-        };
-        points.push(point_along(&stalk.points, d - stalk.base_distance));
-        radii.push(reach_at(d) * envelope);
-        row_winds.push(wind.at(d));
-    }
-
-    if let Some(grid) = sweep(&points, &radii, CATKIN_BODY_SIDES, color) {
-        let fallback = (*points.last().unwrap() - points[0]).normalize_or(Vec3::Y);
-        grid.emit(out, fallback, |row| row_winds[row]);
-    }
-}
-
-/// Returns a position at `distance` tree units along the connected line segments
-/// in `points`. Negative distances extend the first segment backward; distances
-/// past the end extend the last segment forward. Pass at least two points.
-/// A zero-length end segment gives no extension at that end.
-fn point_along(points: &[Vec3], distance: f32) -> Vec3 {
-    let n = points.len();
-    if distance < 0.0 {
-        let direction = (points[1] - points[0]).normalize_or_zero();
-        return points[0] + direction * distance;
-    }
-    let mut left = distance;
-    for w in points.windows(2) {
-        let length = w[0].distance(w[1]);
-        if left <= length && length > 0.0 {
-            return w[0].lerp(w[1], left / length);
-        }
-        left -= length;
-    }
-    let direction = (points[n - 1] - points[n - 2]).normalize_or_zero();
-    points[n - 1] + direction * left
 }
 
 /// Wind values for a cluster. The cluster follows its branch, with extra
@@ -749,15 +671,6 @@ mod tests {
         let first = Vec3::from_array(out.normals[0]);
         assert!(first.abs().abs_diff_eq(Vec3::X, 1e-4), "{first}");
         assert!(strip(&points, 0.0, Vec3::X, Vec4::ONE).is_none());
-    }
-
-    #[test]
-    fn point_along_follows_and_extends_the_polyline() {
-        let points = [Vec3::ZERO, Vec3::X, Vec3::new(1.0, 2.0, 0.0)];
-        assert_eq!(point_along(&points, -1.0), Vec3::NEG_X);
-        assert_eq!(point_along(&points, 0.5), Vec3::new(0.5, 0.0, 0.0));
-        assert_eq!(point_along(&points, 2.0), Vec3::new(1.0, 1.0, 0.0));
-        assert_eq!(point_along(&points, 5.0), Vec3::new(1.0, 4.0, 0.0));
     }
 
     #[test]

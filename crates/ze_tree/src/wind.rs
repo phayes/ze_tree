@@ -139,10 +139,12 @@ pub(crate) fn branch_winds(skeleton: &Skeleton) -> Vec<BranchWind> {
             })
             .collect();
 
-        // Inherit movement at the attachment; give each child of the trunk
-        // its own timing offset, shared by its descendants.
+        // Inherit movement at the attachment; give each child of a trunk its own
+        // timing offset, shared by its descendants. Extra trunks of a multi-stemmed
+        // tree also get their own offsets so they don't sway in step.
         let (base, phase) = match branch.parent {
-            None => (None, 0.0),
+            None if index == 0 => (None, 0.0),
+            None => (None, hash_phase(index)),
             Some(Attachment {
                 branch: p,
                 section,

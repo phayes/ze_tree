@@ -276,10 +276,14 @@ fn levels_of_detail_get_suffixed_names() {
     };
     let gltf = read(&to_glb(&meshes, tree.options(), &options).unwrap());
 
+    // LOD3 exports each ribbon bark part followed by its named fallback strips.
     let mut expected = Vec::new();
     for lod in 0..4 {
         for part in ["trunk", "branches", "leaves"] {
             expected.push(format!("{part}_LOD{lod}"));
+            if lod == 3 && part != "leaves" {
+                expected.push(format!("{part}_LOD{lod}_billboard_cull"));
+            }
         }
     }
     assert_eq!(mesh_names(&gltf), expected);
@@ -287,7 +291,7 @@ fn levels_of_detail_get_suffixed_names() {
     for mesh in gltf.meshes() {
         let name = mesh.name().unwrap();
         let material = mesh.primitives().next().unwrap().material();
-        let ribbons = name.ends_with("_LOD3") && !name.starts_with("leaves");
+        let ribbons = name.contains("_LOD3") && !name.starts_with("leaves");
         let bark_name = if ribbons { "bark_two_sided" } else { "bark" };
         if !name.starts_with("leaves") {
             assert_eq!(material.name(), Some(bark_name), "{name}");
@@ -304,6 +308,114 @@ fn levels_of_detail_get_suffixed_names() {
                 .is_none()
         );
     }
+}
+
+/// Checks LOD3 export tags, links between main and fallback nodes, rotation
+/// attributes and bark/leaf joint assignments on a fruiting tree.
+#[test]
+fn billboard_parts_carry_their_tags() {
+    let tree = fruiting_tree();
+    let rig = tree.rig(&RigOptions::default()).unwrap();
+    let mesh = tree.mesh_with_detail(&default_lod_levels()[3].detail);
+    let options = GltfOptions {
+        rig: Some(&rig),
+        ..GltfOptions::default()
+    };
+    let glb = to_glb(std::slice::from_ref(&mesh), tree.options(), &options).unwrap();
+    let gltf = read(&glb);
+    let blob = gltf.blob.as_deref();
+    let weights = rig.skin(&mesh);
+
+    let nodes: Vec<gltf::Node> = gltf.nodes().filter(|n| n.mesh().is_some()).collect();
+    let names: BTreeSet<&str> = nodes.iter().filter_map(|n| n.name()).collect();
+    let extras = |node: &gltf::Node| -> serde_json::Value {
+        node.extras()
+            .as_ref()
+            .map(|raw| serde_json::from_str(raw.get()).unwrap())
+            .unwrap_or_default()
+    };
+    let mut seen = BTreeSet::new();
+    for node in &nodes {
+        let name = node.name().unwrap();
+        let extras = extras(node);
+        let primitive = node.mesh().unwrap().primitives().next().unwrap();
+        let pivot = primitive.get(&Semantic::Extras("BILLBOARD_PIVOT".to_owned()));
+        let axis = primitive.get(&Semantic::Extras("BILLBOARD_AXIS".to_owned()));
+        // Flower nodes must not carry billboard tags.
+        if name == "flowers" {
+            assert!(extras.is_null() && pivot.is_none());
+            assert!(primitive.get(&Semantic::Normals).is_some());
+            continue;
+        }
+        // Leaves keep one lighting normal per card; bark and fruit have none.
+        let leaves = name.starts_with("leaves");
+        assert_eq!(
+            primitive.get(&Semantic::Normals).is_some(),
+            leaves,
+            "{name}"
+        );
+        assert!(primitive.get(&Semantic::Tangents).is_none(), "{name}");
+
+        if let Some(cull) = name.strip_suffix("_billboard_cull") {
+            // Fallback nodes link to their main partner and omit rotation attributes.
+            assert_eq!(extras["billboard_cull"]["partner"], cull, "{name}");
+            assert!(names.contains(cull), "{name}");
+            assert!(pivot.is_none() && axis.is_none(), "{name}");
+        } else {
+            // The remaining parts rotate toward the camera. Single leaf cards
+            // have no crossed fallback partner.
+            let billboard = &extras["billboard"];
+            let mode = if name == "trunk" || name == "branches" {
+                "axis"
+            } else {
+                "camera"
+            };
+            assert_eq!(billboard["mode"], mode, "{name}");
+            assert_eq!(billboard["pivot"], "_BILLBOARD_PIVOT", "{name}");
+            assert_eq!(billboard["axis"], "_BILLBOARD_AXIS", "{name}");
+            let pivot = pivot.unwrap();
+            assert_eq!(pivot.dimensions(), gltf::accessor::Dimensions::Vec4);
+            assert_eq!(axis.unwrap().dimensions(), gltf::accessor::Dimensions::Vec4);
+            if name == "leaves" {
+                assert!(billboard.get("partner").is_none(), "{name}");
+            } else {
+                let partner = billboard["partner"].as_str().unwrap();
+                assert_eq!(partner, format!("{name}_billboard_cull"));
+                assert!(names.contains(partner), "{name}");
+            }
+        }
+
+        // Both main and fallback bark and leaf nodes must retain joint assignments.
+        let source = match name {
+            "trunk" | "trunk_billboard_cull" => Some(MeshPart::Trunk),
+            "branches" | "branches_billboard_cull" => Some(MeshPart::Branches),
+            _ => None,
+        };
+        if let Some(part) = source {
+            let (vertices, expected) = if name.ends_with("_billboard_cull") {
+                let part = mesh.billboard_cull_part(part);
+                (part.source_vertices, &weights.branches_billboard_cull)
+            } else {
+                (mesh.part(part).source_vertices, &weights.branches)
+            };
+            let reader = primitive.reader(|_| blob);
+            let joints: Vec<[u16; 4]> = reader.read_joints(0).unwrap().into_u16().collect();
+            for (k, &v) in vertices.iter().enumerate() {
+                assert_eq!(joints[k], expected.joints[v as usize], "{name}");
+            }
+        }
+        seen.insert(name.to_owned());
+    }
+    for name in [
+        "trunk",
+        "branches",
+        "branches_billboard_cull",
+        "leaves",
+        "fruit",
+    ] {
+        assert!(seen.contains(name), "{name}");
+    }
+    assert!(seen.contains("fruit_billboard_cull"));
 }
 
 #[test]

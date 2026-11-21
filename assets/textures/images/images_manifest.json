@@ -2749,7 +2749,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 528935,
-          "sha256": "9a0fccb97293569314e3090327893e35bede8ca4d2c9d9e8828ae753b1c26247"
+          "sha256": "de6815b20aa012c7f1760b330cc3324c5aab567adf5f3241b03bb414c74a4cfb"
         }
       ]
     },
@@ -2770,7 +2770,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 442410,
-          "sha256": "d718509283eaf520d4d3464158910e1299d3bff41d5a4c75203359709f70b7cb"
+          "sha256": "c74931b27802c6b9b20bf16df46b6c3755f33dc465670e43ec2c3686c0c0b00c"
         }
       ]
     },
@@ -2791,7 +2791,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 664777,
-          "sha256": "20e2e54398a3e491509b2a678795962b73a51546eb62c8e6e9fd51e2d2f45f87"
+          "sha256": "0b22250828a766d23530cbcc6ecfc2005bf0ff3f27dd07c6704f3334ac6e0167"
         }
       ]
     },
@@ -2812,7 +2812,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 950163,
-          "sha256": "911bbea3aa946e709a40705b83d323fa2b04305971a8923a97d0ce2c3f4d4f11"
+          "sha256": "8db770dde37d3d4797aa9383fd13bf1d01b5e6ae05e1cb0e616f131a45a4e112"
         }
       ]
     },
@@ -2833,7 +2833,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 900158,
-          "sha256": "13f7e09b1257101b51bbf3555e78ee2e0bbe6a2cfd4c3e4aab23d3ed7ec42b9e"
+          "sha256": "d70c387d485f11c936c719b65641f0d89ff0f02c62e9131d1a2856bf1bda3801"
         },
         {
           "path": "leaves/aspen_autumn-normal.png",
@@ -2841,7 +2841,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 357879,
-          "sha256": "31ec2f529e726266abdb1841887df5d9685982fc66f8b6645a4b13b59036406b"
+          "sha256": "b99ea5ce7173c70d4a2da981debba5abde8777b17f66ca944d4314b307b8fb8f"
         }
       ]
     },
@@ -2862,7 +2862,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1281421,
-          "sha256": "3e351d9d9ee2463f57af01d78160b58b26a0bb0af48ac40d1cc909968963dd10"
+          "sha256": "42caa65279109fa9775b584c92c1968065e915c2fff9147d345ea609304fea0d"
         },
         {
           "path": "leaves/european_aspen-normal.png",
@@ -2870,7 +2870,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 418982,
-          "sha256": "c0bcdb37e8ebccde80da48fc7c117c8c6c8229cdeb90915d4ed867ab22521250"
+          "sha256": "022306832e54c6847ca8ed9b88855a3cded3514a9416d558478410f895fe299e"
         }
       ]
     },
@@ -2891,7 +2891,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1615128,
-          "sha256": "82670f64c27a9908bc0eb0135d1a895e8da6f8f34cd0bbc92055f0479eb22865"
+          "sha256": "7d9ca3f26fdfd03c611520cd9a7301b4a73792711c5081bb77e9c10ecb46f38e"
         },
         {
           "path": "leaves/bigtooth_aspen-normal.png",
@@ -2899,7 +2899,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 591190,
-          "sha256": "1bdf57a764e7dbfd180676f0624892567f794b79431479fe7f0a233dca491448"
+          "sha256": "e3b39f414463a8a9bd9e0daa6926e2dc537033a89faa82e0435e21b67f6062a9"
         }
       ]
     },
@@ -2920,7 +2920,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 800351,
-          "sha256": "0dcc5fef3e52bc1aead6929f52fa2859fe33167925d42bece7c66ed775cd1ee9"
+          "sha256": "34f13a1fc4ef308700ccc600cd15050b019ab04d8769a12783616cd1b9c16d79"
         },
         {
           "path": "leaves/alder_buckthorn-normal.png",
@@ -2928,7 +2928,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 297875,
-          "sha256": "5deb313213ed9e5c13df422a1c9cd6c35228919cf8638a3c6e69bd73025b2a8e"
+          "sha256": "e6ee0c6eb0238e6b1b2eb4fadd3b9e7171255371c239eaf06c2642b6080b1481"
         }
       ]
     },
@@ -2949,7 +2949,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1307286,
-          "sha256": "9134acdc8e9e9d2d95250f5bf9cf49e8e48de35e101ef9ebf0ac0e1e0cebc833"
+          "sha256": "05fc04e74a22711a5efd5e9f7934400c2a9e2248a5e9fc4407f7cb5f1623f04f"
         },
         {
           "path": "leaves/smoke_bush-normal.png",
@@ -2957,7 +2957,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 426907,
-          "sha256": "9d325b4335e361bfa3a3ffb0dc10ab05f1b4f8f820a6d828afc7b3615b91aef1"
+          "sha256": "0314a0c46117cbc605f8930b83f777ab976795f8eade1510f1292b5fc4e2fdb7"
         }
       ]
     },
@@ -2978,7 +2978,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1096116,
-          "sha256": "524749eb2cd8e92b95c9ff2d5ab4e90bd50ed0135964de4eb0913b0e15d02e93"
+          "sha256": "bd5ed7df3efa2f65ce355ebcab0cd94eee6a4621c7fad7142b7a4d5f778a9c7b"
         },
         {
           "path": "leaves/field_maple_autumn-normal.png",
@@ -2986,7 +2986,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 492002,
-          "sha256": "05bf3f48eb976887aad852e06777d746e7d0315297a1c0f194fde3fc894b504b"
+          "sha256": "c6a0d94aefa395f258f41a6b80816b59b40c93691df6809ddecfc0dfeb2c8663"
         }
       ]
     },
@@ -3007,7 +3007,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1172358,
-          "sha256": "5bce43ed2bbff8b316a6fb76a4a60ec5def984c8521aa605e998cea2f06aef1e"
+          "sha256": "3b742d21804d9a63b0d6188c87543b16ca46def939802ac6cb1595d7efcc1da5"
         },
         {
           "path": "leaves/bamboo-normal.png",
@@ -3015,7 +3015,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 889085,
-          "sha256": "5b4acf55e4d3afa93f681e01e9939d82d694f48d62a1ab8cc03f82c21669148e"
+          "sha256": "a1255b9e6f0f5294b456b68bb25b2f7153a64509a7f43bc6504dfa8abf12a7da"
         }
       ]
     },
@@ -3036,7 +3036,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1130684,
-          "sha256": "5995d6eee0f0c2a0b7b300c739f9dac8ac9ff285b1084de7e22d5ef668467657"
+          "sha256": "ddb86462b3350b51dd74898f8c35cd4093dc1f4424cd569a5cc190f63ba3c150"
         },
         {
           "path": "leaves/fir-normal.png",
@@ -3044,7 +3044,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 573206,
-          "sha256": "dd3bae0c19b8435bfa8f90064e5ae24e59940ce8693327bd4e4cbecc926dd71a"
+          "sha256": "403791654aee915cc7c36a335dbdcc9789160ce3740e2ec517c19d80dc664fd2"
         }
       ]
     },
@@ -3065,7 +3065,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1933125,
-          "sha256": "8178ee054f2c00e915bf1018ca82aa91fa50f6ecfd1d3cd8e832f9d01bf97ca5"
+          "sha256": "09880d42b467a5a7051ea10f5675b3db018efeca6f31e3ce33f6356ba7075322"
         },
         {
           "path": "leaves/white_pine-normal.png",
@@ -3073,7 +3073,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1078934,
-          "sha256": "a87fc37c4d63afe3cefe965c68d993c28c6f02167c84ae3cda7f1cdf9ab2ad19"
+          "sha256": "34fe44b2a2814c8c3bf2cbf4b258a9b8663c760195efc399f9abcc9b163eb7ef"
         }
       ]
     },
@@ -3094,7 +3094,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1734087,
-          "sha256": "65772de2a6f42c2440751745feaebaf5776bd519e00faee091d32f365905b4c0"
+          "sha256": "3d99a9f8ffdfdebea1e945e2500560ceffe30390c6c1ca8f5058a71f215f2a41"
         },
         {
           "path": "leaves/arborvitae_autumn-normal.png",
@@ -3102,7 +3102,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1026922,
-          "sha256": "8d0bd0c43fc36e1563dd031996a39e2dc9fd04b81d3ebe88d385d19222f1e485"
+          "sha256": "e597cc7019a36e0644603e8493ba85c39d62a8a1585dcb414f0929fa3a6dae6f"
         }
       ]
     },
@@ -3123,7 +3123,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 558234,
-          "sha256": "ece1a4cb838ca644979e797106eede4372ac32c60e60734ca239adee83cad06e"
+          "sha256": "7b9410fa00c6a7490927480a22efd3d9f87f7f560271572ba561312b506e2358"
         },
         {
           "path": "leaves/birch_autumn-normal.png",
@@ -3131,7 +3131,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 218862,
-          "sha256": "b1b7a1fe5c49fe9e05ab0633d4b47f85b632e64d1c1ab3960d9f708cd0357014"
+          "sha256": "eea8e30263f86f4dd19fa09e87ebd384f6fdc2d0a0e5242e4fcba70aacdd73fb"
         }
       ]
     },
@@ -3152,7 +3152,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 824895,
-          "sha256": "1bba19ce9a8331df406e76244247fc0925476231661fb3dace08b642d7d3228f"
+          "sha256": "f581c20973a4990a71f7efbe6b5ca60e9b1327a5f1468290f414ed35f0a3a805"
         },
         {
           "path": "leaves/larch-normal.png",
@@ -3160,7 +3160,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 250601,
-          "sha256": "cb2b0a0c4f16bc7da6c898957c20de59e10a8d9ec558d6967ace63fe65e1bf46"
+          "sha256": "41e019e87d2a9d14775d6c6cbded51c79b27bf9fe0c05a543af204c5e91d0e64"
         }
       ]
     },
@@ -3181,7 +3181,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 637198,
-          "sha256": "88421eca205a036ca0c74caed2975f4183dae1c9a037e2bf52acef7d11ac0070"
+          "sha256": "70e9c29d89ca5c8cd0a3ab006fea5e180d9e6fcb167bb348975f6fad231f96bb"
         },
         {
           "path": "leaves/black_locust-normal.png",
@@ -3189,7 +3189,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 276040,
-          "sha256": "856324d9fed54c7426c510b9657b0a434fb064f049913e85df93600eed92f830"
+          "sha256": "d9aa86920de3b70076991471298638d9e3156f076c3373cd516d3d001e08b71e"
         }
       ]
     },
@@ -3210,7 +3210,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 643726,
-          "sha256": "896e7b26726038d8eb3f84bed9d3045daed9975d290687b880603eb2e9532304"
+          "sha256": "bd252228db49091dbfd01904e1c39f40e6d03886a23c9acca0cf3ff91580a015"
         },
         {
           "path": "leaves/olive-normal.png",
@@ -3218,7 +3218,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 242413,
-          "sha256": "04c4073cf718f5d55bfe97dcb15290275e477d774e8a80e353cfbdf963f722ea"
+          "sha256": "148346795a2f7a3ff283bc7eb1bbdedb53920fbab378bdc075ba029371064bf3"
         }
       ]
     },
@@ -3239,7 +3239,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 671157,
-          "sha256": "c8bfdc1e20f49bd64835c59b569afddf9c3a70d1c0f0bb4706a8c97802e86c75"
+          "sha256": "d682ace549a864c119fc56227e845e0f73830178042765bc0e471148858fae6c"
         },
         {
           "path": "leaves/cotoneaster-normal.png",
@@ -3247,7 +3247,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 337740,
-          "sha256": "27795255f57e408b4b3b5882458ef5bee45c8326ab105a84ec526bf5ea731657"
+          "sha256": "a0b08d2dbece9117ad8db3c996e80c7b8f4d06f48664fc2915faa44857383707"
         }
       ]
     },
@@ -3268,7 +3268,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 360828,
-          "sha256": "6c41c0b9660a81f9254f8043c0ed6c7127b16cbdb2714561e99d715e84b2056c"
+          "sha256": "9dba101ecf6f5d6d9f90c8e8d6ac9bbf0b8b1234627756c339a708ecd7614f19"
         },
         {
           "path": "leaves/bare_twig_1-normal.png",
@@ -3276,7 +3276,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 195849,
-          "sha256": "54a372afbd18c17f18b7b956ddaf0af564ab2e581ee93e9ca34ea8a4e30fd43c"
+          "sha256": "ed6bca1cf607d34a94cc67faba10ce9c7e6488c07af923fbcf5fbdf9406d51f4"
         }
       ]
     },
@@ -3297,7 +3297,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 575599,
-          "sha256": "3131d3303e7ed51063757b866a9b351807d3dd9db639ee29b76725c260356878"
+          "sha256": "5540628bea640f689ee38ee1c08967345018e208394347207ba19efd24f46c38"
         },
         {
           "path": "leaves/bare_twig_2-normal.png",
@@ -3305,7 +3305,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 274302,
-          "sha256": "a884b21ab9d46c07577106b0a6d854ef2d8debbccfbc29feb8eb36912e3b4498"
+          "sha256": "55d6c14e0911b53e88c3562579f6fa0e094a1be03e026dd1b79ee9d93af711f8"
         }
       ]
     },
@@ -3326,7 +3326,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1231892,
-          "sha256": "65bdd48f99cf591e0e9f8222042c85d85ca0147c3c668886feac57583c4ad1f1"
+          "sha256": "0f6ce4c3f90a4119c52ed28df1b2457402b822668bd71305d127e9d92bd1d0b8"
         },
         {
           "path": "leaves/white_oak_autumn-normal.png",
@@ -3334,7 +3334,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 616396,
-          "sha256": "856e920a17a56cdb6b468dae6f9ae2075cbe0ff8898c5218ada868c86ed4fa94"
+          "sha256": "6c8b683d617cb74fce7eae5bfd27a7ea7b3e356baec12ef9d5674700b3fa2f91"
         }
       ]
     },
@@ -3355,7 +3355,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1113778,
-          "sha256": "470b600ba33fd69e3302f693270045dde850579f20092f83fd5179c542933c4e"
+          "sha256": "adc083c48d9316fc29e8a425e384718bca9cf4e12038e4af86bdb11829297176"
         },
         {
           "path": "leaves/white_oak-normal.png",
@@ -3363,7 +3363,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 616396,
-          "sha256": "e2b328bbbce9c08b8300829939ec6f62860f9388b5b9a2937856ea8e88582373"
+          "sha256": "8058ba4723b8bde310a5c4a00d53fde63ac9a46f8e1d28740968f423da6ba836"
         }
       ]
     },
@@ -3384,7 +3384,7 @@
           "width": 1024,
           "height": 1024,
           "bytes": 1091682,
-          "sha256": "f12d2f4c2e135be9bd3782db97fd5861e8398b9661315efee5846d8fbc85945d"
+          "sha256": "18176f3e1481eebc5cbbf2de57c12f5272f007fbb6dbb0aea1587beda68b06a9"
         },
         {
           "path": "leaves/white_oak_dead-normal.png",
@@ -3392,7 +3392,65 @@
           "width": 1024,
           "height": 1024,
           "bytes": 616396,
-          "sha256": "56d77ebf191822a6154f69dcd683afc246fcf10157674d21b5fd3945072af51b"
+          "sha256": "f2f1a5021d5d4a9eda620ce34ccf8c01fad71983225bcd2408983521cd45a293"
+        }
+      ]
+    },
+    {
+      "id": "cedar",
+      "category": "leaves",
+      "title": "Cedar (arborvitae recoloured green)",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/cedar-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1671743,
+          "sha256": "4b751475444e9331e35b4825642c995f7e6e0e496c435ce9be5b37afb6350369"
+        },
+        {
+          "path": "leaves/cedar-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1026922,
+          "sha256": "9a2a8f4c3f06b36b482d107fecadd43360d0c39a03dd3b035e158813ee1276b6"
+        }
+      ]
+    },
+    {
+      "id": "maple",
+      "category": "leaves",
+      "title": "Maple (field maple recoloured green)",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/maple-color.png",
+          "map": "color",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 1096116,
+          "sha256": "3ab377719ade00a2c98fa0f9db564beccb6a1158e29f4573e486fe89b8c833be"
+        },
+        {
+          "path": "leaves/maple-normal.png",
+          "map": "normal",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 492002,
+          "sha256": "aa8753880b2f0e67ce5952ab9d71a8144e255b6190a49e53b637d79827c3c70f"
         }
       ]
     }

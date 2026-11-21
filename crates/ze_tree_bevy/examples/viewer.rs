@@ -21,17 +21,23 @@
 //! `cargo run -p ze_tree_bevy --example viewer -- --preset oak_medium --forest`.
 //! Use `--vary` to start with shape variation enabled,
 //! `--maturity <0–1>` to set fruit and flower maturity, `--leaves <kind>` to use
-//! another leaf texture from `ze_tree::LEAF_KINDS`,
-//! `--still` for leaf-only wind or `--flat` for mirrored bark coordinates
+//! another leaf texture from `ze_tree::LEAF_KINDS`, `--bark <kind>` to choose a
+//! bark texture from `ze_tree::BARK_KINDS`, `--bark-tint <RRGGBB>` to tint the bark
+//! with a six-digit hexadecimal RGB colour. The tint multiplies the texture's
+//! colour, so it can darken or recolour it but cannot brighten it; `FFFFFF` keeps
+//! the texture's own colour. Both bark options stay in effect when changing presets.
+//! Use `--still` for leaf-only wind or `--flat` for mirrored bark coordinates
 //! without normal maps (this does not enable flat shading). Set camera positions
 //! with `--eye x y z` and `--target x y z`. Use `--screenshot <file.png>` to
-//! capture a frame after a loading delay and exit.
+//! capture a frame after a loading delay and exit. Use `--lod <0–3>` to lock the
+//! viewer to one default detail level at all distances. For example, `--lod 3`
+//! lets you inspect the distant tree’s camera-facing shapes and shadows up close.
 
 use bevy::camera_controller::free_camera::{FreeCamera, FreeCameraPlugin};
 use bevy::prelude::*;
 use bevy::render::view::screenshot::{Screenshot, ScreenshotCaptured, save_to_disk};
-use ze_tree::{BarkUvMode, LEAF_KINDS, Rng, TreeOptions, TreePreset, WindParams};
-use ze_tree_bevy::{TreePart, Wind, ZeTree, ZeTreePlugin};
+use ze_tree::{BARK_KINDS, BarkUvMode, LEAF_KINDS, Rng, TreeOptions, TreePreset, WindParams};
+use ze_tree_bevy::{TreePart, Wind, ZeTree, ZeTreePlugin, default_tree_lod_levels};
 
 /// Distance between neighbouring trees in the forest, in world units.
 const FOREST_SPACING: f32 = 45.0;
@@ -55,6 +61,13 @@ struct Viewer {
     maturity: Option<f32>,
     /// Index into [`LEAF_KINDS`]; `None` keeps the preset's own leaf texture.
     leaves: Option<usize>,
+    /// Bark texture to use for all presets, chosen from [`BARK_KINDS`].
+    /// `None` uses each preset's own bark texture.
+    bark: Option<&'static str>,
+    /// Bark tint to use for all presets, as a hexadecimal RGB colour (`0xRRGGBB`).
+    /// Multiplies the texture's colour to darken or recolour it; `0xFFFFFF` keeps
+    /// the texture's own colour. `None` uses each preset's own tint.
+    bark_tint: Option<u32>,
     screenshot: Option<String>,
 }
 
@@ -74,10 +87,13 @@ fn main() {
         roll: 0,
         maturity: None,
         leaves: None,
+        bark: None,
+        bark_tint: None,
         screenshot: None,
     };
     let mut eye = Vec3::new(0.0, 30.0, 110.0);
     let mut target = Vec3::new(0.0, 28.0, 0.0);
+    let mut lod_levels = default_tree_lod_levels();
 
     // Apply command-line choices before creating the scene.
     let args: Vec<String> = std::env::args().skip(1).collect();
@@ -113,6 +129,23 @@ fn main() {
                 );
                 i += 1;
             }
+            "--bark" => {
+                let kind = &args[i + 1];
+                viewer.bark = Some(
+                    BARK_KINDS
+                        .into_iter()
+                        .find(|k| k == kind)
+                        .unwrap_or_else(|| panic!("unknown bark kind {kind}")),
+                );
+                i += 1;
+            }
+            "--bark-tint" => {
+                let hex = args[i + 1].trim_start_matches('#');
+                assert!(hex.len() == 6, "--bark-tint takes a RRGGBB hex colour");
+                let tint = u32::from_str_radix(hex, 16).expect("a RRGGBB hex colour");
+                viewer.bark_tint = Some(tint);
+                i += 1;
+            }
             "--still" => viewer.sway = false,
             "--flat" => viewer.continuous = false,
             "--eye" => {
@@ -125,6 +158,13 @@ fn main() {
             }
             "--screenshot" => {
                 viewer.screenshot = Some(args[i + 1].clone());
+                i += 1;
+            }
+            "--lod" => {
+                let index: usize = args[i + 1].parse().expect("a detail level number");
+                let mut level = *lod_levels.get(index).expect("a default detail level");
+                level.level.distance = 0.0;
+                lod_levels = vec![level];
                 i += 1;
             }
             other => panic!("unknown option {other}"),
@@ -140,6 +180,7 @@ fn main() {
             }),
             ZeTreePlugin {
                 texture_root: Some("textures".to_owned()),
+                lod_levels,
                 ..default()
             },
             FreeCameraPlugin,
@@ -277,6 +318,12 @@ fn show_trees(
     }
     if let Some(leaves) = viewer.leaves {
         options.leaves.kind = LEAF_KINDS[leaves].to_owned();
+    }
+    if let Some(bark) = viewer.bark {
+        options.bark.kind = bark.to_owned();
+    }
+    if let Some(tint) = viewer.bark_tint {
+        options.bark.tint = tint;
     }
     info!(
         "{} (leaves {}, maturity {:.1}, bark normal maps {}, sway {}, variation {})",

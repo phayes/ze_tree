@@ -6,24 +6,55 @@ import bevy_pbr::render::{
     mesh_view_bindings::globals,
     view_transformations::position_world_to_clip,
 };
+import package::shaders::tree_billboard::{TurnedVertex, turn_billboard, turn_lit_billboard};
 import package::shaders::tree_wind::tree_wind_offset;
 
+/// Wind controls and optional billboard rotation data added to Bevy’s vertex inputs.
+struct TreeVertex {
+    @location(8) wind: vec4<f32>,
+    @if(BILLBOARD)
+    @location(9) billboard_pivot: vec4<f32>,
+    @if(BILLBOARD)
+    @location(10) billboard_axis: vec4<f32>,
+    @if(BILLBOARD_NORMAL)
+    @location(11) billboard_normal: vec3<f32>,
+}
+
 @vertex
-fn vertex(in: Vertex, @location(8) wind: vec4<f32>) -> VertexOutput {
+fn vertex(in: Vertex, tree: TreeVertex) -> VertexOutput {
     var out: VertexOutput;
     let vertex = decompress_vertex(in, in.instance_index);
     let world_from_local = mesh_functions::get_world_from_local(in.instance_index);
 
-    // Apply wind in tree coordinates before the entity transform places the vertex in the world.
-    let position = vertex.position
-        + tree_wind_offset(vertex.position, wind, world_from_local, globals.time);
+    // Rotate billboards toward this view before adding wind movement.
+    var position = vertex.position;
+@if(BILLBOARD) {
+    let local_from_world = mesh_functions::get_local_from_world(in.instance_index);
+    var turned: TurnedVertex;
+@if(BILLBOARD_NORMAL) {
+    turned = turn_lit_billboard(
+        tree.billboard_pivot,
+        tree.billboard_axis,
+        tree.billboard_normal,
+        local_from_world,
+    );
+}
+@if(!BILLBOARD_NORMAL) {
+    turned = turn_billboard(tree.billboard_pivot, tree.billboard_axis, local_from_world);
+}
+    position = turned.position;
+    out.world_normal = mesh_functions::mesh_normal_local_to_world(turned.normal, in.instance_index);
+}
+
+    // Apply wind locally, then use the entity transform to place the vertex in the world.
+    position += tree_wind_offset(position, tree.wind, world_from_local, globals.time);
     out.world_position = mesh_functions::mesh_position_local_to_world(
         world_from_local,
         vec4<f32>(position, 1.0),
     );
     out.position = position_world_to_clip(out.world_position.xyz);
 
-@if(VERTEX_NORMALS)
+@if(VERTEX_NORMALS && !BILLBOARD)
     out.world_normal = mesh_functions::mesh_normal_local_to_world(vertex.normal, in.instance_index);
 @if(VERTEX_UVS_A)
     out.uv = vertex.uv;

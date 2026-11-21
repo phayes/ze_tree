@@ -279,9 +279,12 @@ impl Hash for BranchOptions {
     fn hash<H: Hasher>(&self, state: &mut H) {
         let Self {
             levels,
+            stems,
+            stem_angle,
             angle,
             children,
             force,
+            flatten,
             gnarliness,
             length,
             radius,
@@ -292,9 +295,12 @@ impl Hash for BranchOptions {
             twist,
         } = self;
         state.write_u32(*levels);
+        state.write_u32(*stems);
+        write_f32(state, *stem_angle);
         write_levels_f32(state, angle);
         write_levels_u32(state, children);
         force.hash(state);
+        write_levels_f32(state, flatten);
         write_levels_f32(state, gnarliness);
         write_levels_f32(state, length);
         write_levels_f32(state, radius);
@@ -334,6 +340,7 @@ impl Hash for LeafOptions {
             tint,
             alpha_test,
             rounded_normals,
+            flatten,
         } = self;
         write_str(state, kind);
         write_billboard(state, *billboard);
@@ -345,6 +352,7 @@ impl Hash for LeafOptions {
         state.write_u32(*tint);
         write_f32(state, *alpha_test);
         write_bool(state, *rounded_normals);
+        write_f32(state, *flatten);
     }
 }
 
@@ -432,6 +440,7 @@ impl Hash for ClusterPlacement {
             min_level,
             tips,
             count,
+            density,
             start,
             facing,
             facing_jitter,
@@ -441,6 +450,7 @@ impl Hash for ClusterPlacement {
         state.write_u32(*min_level);
         write_f32(state, *tips);
         state.write_u32(*count);
+        write_f32(state, *density);
         write_f32(state, *start);
         write_facing(state, *facing);
         write_f32(state, *facing_jitter);
@@ -567,7 +577,7 @@ mod tests {
     /// review the cause before updating the expected value.
     #[test]
     fn default_tree_id_is_pinned() {
-        assert_eq!(TreeOptions::default().tree_id(), 6_735_305_979_733_377_408);
+        assert_eq!(TreeOptions::default().tree_id(), 7_038_842_139_415_929_464);
     }
 
     /// Checks that a `u32` uses little-endian bytes and a `usize` uses 64 bits.

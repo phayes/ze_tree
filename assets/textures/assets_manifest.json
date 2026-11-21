@@ -7143,6 +7143,140 @@
           "sha256": "e1292020c65d79cd2e8ee226ee4c15ed5314e2b6e7c1e418f3ec083560d95ab5"
         }
       ]
+    },
+    {
+      "id": "cedar",
+      "category": "leaves",
+      "title": "Cedar (arborvitae recoloured green)",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/cedar-color-bc7.ktx2",
+          "map": "color",
+          "format": "bc7",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 668108,
+          "sha256": "5ac67dfe10b5f2d8b99d8bc8562781f1615d1e54c004ba0fc930774558c1b994"
+        },
+        {
+          "path": "leaves/cedar-color-uastc.ktx2",
+          "map": "color",
+          "format": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 800311,
+          "sha256": "b95548a88b945236b0be11dd4cc3a717dd7dc1fe043023ea241d622a1e0c3187"
+        },
+        {
+          "path": "leaves/cedar-normal-bc7.ktx2",
+          "map": "normal",
+          "format": "bc7",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 731115,
+          "sha256": "a66b1d751ac49e51086fb2e683c8e310aaf709b09158b84d47aacdeb2ba8eeac"
+        },
+        {
+          "path": "leaves/cedar-normal-uastc.ktx2",
+          "map": "normal",
+          "format": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 766515,
+          "sha256": "a57c2e58f2e3cdabce45c4e9e41dda0aecf0c6ec0424bd52de041efc34d5af4b"
+        },
+        {
+          "path": "leaves/cedar-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 57721,
+          "sha256": "25e30622fff9258cfee0e760e99d66d00dc4e47839c1aa9888f4065f3f14c603"
+        },
+        {
+          "path": "leaves/cedar-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 62270,
+          "sha256": "ad8e44bedac0c83ab9e25db72fdae3744e8e548241c436398f4a9df954b5f51a"
+        }
+      ]
+    },
+    {
+      "id": "maple",
+      "category": "leaves",
+      "title": "Maple (field maple recoloured green)",
+      "authors": [
+        "Nobiax (yughues)"
+      ],
+      "source": "nobiax",
+      "sourceUrl": "https://nobiax.deviantart.com",
+      "license": "CC0-1.0",
+      "files": [
+        {
+          "path": "leaves/maple-color-bc7.ktx2",
+          "map": "color",
+          "format": "bc7",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 547925,
+          "sha256": "0d31cdc76b811ff89f7b4efa631b2fe3bd88665cdeb55e45fbe651de3921ba62"
+        },
+        {
+          "path": "leaves/maple-color-uastc.ktx2",
+          "map": "color",
+          "format": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 642145,
+          "sha256": "2848f3f2bb7cf1c07ef71a2cd6a0128558052ab38dc914833d80546485544027"
+        },
+        {
+          "path": "leaves/maple-normal-bc7.ktx2",
+          "map": "normal",
+          "format": "bc7",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 568626,
+          "sha256": "39127b7ce3af4c804e7ee52ecfeb20b5684ec909902f7f7499c4a14fe075365f"
+        },
+        {
+          "path": "leaves/maple-normal-uastc.ktx2",
+          "map": "normal",
+          "format": "uastc",
+          "width": 1024,
+          "height": 1024,
+          "bytes": 579649,
+          "sha256": "345eb63651b95a3254eaf1646b023240d763956ba748964534ed88527563dad1"
+        },
+        {
+          "path": "leaves/maple-clump-bc7.ktx2",
+          "map": "clump",
+          "format": "bc7",
+          "width": 256,
+          "height": 256,
+          "bytes": 57694,
+          "sha256": "b9a30aa400077facdfaf659f90b05c2dfb747ae1f9732ca46b29ffe40fedbf29"
+        },
+        {
+          "path": "leaves/maple-clump-uastc.ktx2",
+          "map": "clump",
+          "format": "uastc",
+          "width": 256,
+          "height": 256,
+          "bytes": 63750,
+          "sha256": "1bf291545eb93c97ada9b62ca598463f182759b2bcd503bb4f230415480bbe69"
+        }
+      ]
     }
   ]
 }

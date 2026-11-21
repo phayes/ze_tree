@@ -154,6 +154,23 @@ fn bark_uv_mode_defaults_to_continuous_and_reads_from_json() {
     assert_eq!(json["bark"]["uvMode"], "mirrored");
 }
 
+/// Clusters default to no density, and `placement.density` reads from JSON.
+#[test]
+fn cluster_density_reads_from_json() {
+    let defaults = TreeOptions::default();
+    assert_eq!(defaults.fruit.placement.density, 0.0);
+    assert_eq!(defaults.flowers.placement.density, 0.0);
+
+    let options =
+        TreeOptions::from_json(r#"{ "fruit": { "placement": { "density": 1.5 } } }"#).unwrap();
+    assert_eq!(options.fruit.placement.density, 1.5);
+
+    // The pussy willow preset is leafless and places catkins by density.
+    let willow = TreePreset::SpringPussyWillow.options();
+    assert_eq!(willow.leaves.count, 0);
+    assert!(willow.fruit.placement.density > 0.0);
+}
+
 #[test]
 fn unknown_fields_are_ignored() {
     let options = TreeOptions::from_json(
@@ -281,6 +298,25 @@ fn fruit_and_flower_settings_round_trip() {
 #[test]
 fn fruit_and_flower_defaults_are_valid() {
     assert_eq!(TreeOptions::default().validate(), Ok(()));
+}
+
+#[test]
+fn leaf_flatten_must_be_between_0_and_1() {
+    let mut options = TreeOptions::default();
+    for (flatten, ok) in [(0.0, true), (1.0, true), (-0.1, false), (1.1, false), (f32::NAN, false)] {
+        options.leaves.flatten = flatten;
+        let expected = if ok {
+            Ok(())
+        } else {
+            Err(OptionsError::InvalidSetting {
+                field: "leaves.flatten".to_owned(),
+                requirement: "between 0 and 1",
+            })
+        };
+        assert_eq!(options.validate(), expected, "{flatten}");
+    }
+    let options = TreeOptions::from_json(r#"{ "leaves": { "flatten": 0.75 } }"#).unwrap();
+    assert_eq!(options.leaves.flatten, 0.75);
 }
 
 #[test]

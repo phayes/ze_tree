@@ -2,7 +2,7 @@
 
 use std::ops::Range;
 
-use glam::Vec3;
+use glam::{Vec2, Vec3};
 use ze_tree::{
     ClusterKind, ClusterSpan, ItemDetail, LodDetail, MeshBuffers, MeshPart, Skeleton, TreeMesh,
     TreeOptions, TreePreset, default_lod_levels,
@@ -770,36 +770,140 @@ fn minimal_flowers_are_single_stars() {
     }
 }
 
+/// Checks that minimal catkins still draw separate retained items. With 12 items
+/// and stride 3, four remain; the cluster must not become a single replacement body.
 #[test]
-fn minimal_catkins_are_one_body_whatever_the_item_stride() {
+fn minimal_catkins_draw_their_items() {
     let mut options = decorated(ClusterKind::Catkin);
     options.fruit.cluster.items = 12;
     options.flowers.cluster.items = 12;
     let skeleton = Skeleton::generate(&options).unwrap();
     let all = mesh_at(&skeleton, &options, ItemDetail::Minimal, 1, 1.0);
-    let thinned = mesh_at(&skeleton, &options, ItemDetail::Minimal, 3, 1.5);
-    assert_eq!(all.fruit, thinned.fruit);
-    assert_eq!(all.flowers, thinned.flowers);
-
-    // Each catkin has a supporting stem and one body, with roughly the same
-    // overall extent as its full-detail mesh.
-    let full = mesh_at(&skeleton, &options, ItemDetail::Full, 1, 1.0);
-    for (buffers, spans, full_buffers, full_spans) in [
-        (&all.fruit, &all.fruit_spans, &full.fruit, &full.fruit_spans),
+    let thinned = mesh_at(&skeleton, &options, ItemDetail::Minimal, 3, 1.0);
+    for (name, (all_buffers, all_spans), (thin_buffers, thin_spans)) in [
         (
-            &all.flowers,
-            &all.flower_spans,
-            &full.flowers,
-            &full.flower_spans,
+            "fruit",
+            (&all.fruit, &all.fruit_spans),
+            (&thinned.fruit, &thinned.fruit_spans),
+        ),
+        (
+            "flowers",
+            (&all.flowers, &all.flower_spans),
+            (&thinned.flowers, &thinned.flower_spans),
         ),
     ] {
-        for (span, full_span) in spans.iter().zip(full_spans) {
-            let indices = &buffers.indices[span.indices.start as usize..span.indices.end as usize];
-            assert_eq!(connected_pieces(indices, vertices(span)), 2);
-            let ratio = extent(buffers, span) / extent(full_buffers, full_span);
-            assert!((0.8..=1.05).contains(&ratio), "extent ratio {ratio}");
+        assert!(!all_spans.is_empty(), "{name}");
+        for (a, t) in all_spans.iter().zip(thin_spans) {
+            let pieces = |buffers: &MeshBuffers, span: &ClusterSpan| {
+                let range = span.indices.start as usize..span.indices.end as usize;
+                connected_pieces(&buffers.indices[range], vertices(span))
+            };
+            // Stalk geometry stays the same, so the count difference measures the eight skipped items.
+            let removed = pieces(all_buffers, a) - pieces(thin_buffers, t);
+            assert_eq!(removed, 8, "{name} cluster {}", a.cluster);
         }
     }
+}
+
+/// Builds LOD3 from the default settings to exercise camera-facing fruit.
+fn billboard_fruit(options: &TreeOptions) -> (Skeleton, TreeMesh) {
+    let skeleton = Skeleton::generate(options).unwrap();
+    let detail = default_lod_levels()[3].detail;
+    assert!(detail.billboard_fruit);
+    let mesh = skeleton.mesh(options, &detail);
+    (skeleton, mesh)
+}
+
+/// Checks that all fruit shapes, including catkin items, become crossed hexagons
+/// without stalks. The main hexagon has rotation data and no normals; the
+/// perpendicular fallback hexagon is stored separately.
+#[test]
+fn billboard_fruit_are_crossed_hexagons_for_every_fruit() {
+    for kind in KINDS {
+        let mut options = decorated(kind);
+        options.fruit.placement.size = 1.0;
+        let (skeleton, mesh) = billboard_fruit(&options);
+        let (fruit, cull) = (&mesh.fruit, &mesh.billboard_cull.fruit);
+
+        // Billboard mode keeps all fruit, using six vertices and four triangles per hexagon.
+        let items: usize = skeleton.fruit.iter().map(|c| c.items.len()).sum();
+        assert!(items > 0, "{kind:?}");
+        assert_eq!(mesh.fruit_spans.len(), skeleton.fruit.len(), "{kind:?}");
+        for buffers in [fruit, cull] {
+            assert_eq!(buffers.vertex_count(), 6 * items, "{kind:?}");
+            assert_eq!(buffers.triangle_count(), 4 * items, "{kind:?}");
+            assert!(buffers.normals.is_empty(), "{kind:?}");
+            assert_eq!(buffers.colors.len(), buffers.vertex_count(), "{kind:?}");
+        }
+        assert_eq!(fruit.billboard.len(), fruit.vertex_count(), "{kind:?}");
+        assert!(cull.billboard.is_empty(), "{kind:?}");
+
+        for (span, cluster) in mesh.fruit_spans.iter().zip(&skeleton.fruit) {
+            let hexagons = cluster.items.len() as u32;
+            assert_eq!(span.vertices.len() as u32, 6 * hexagons, "{kind:?}");
+            assert_eq!(span.cull_vertices.len() as u32, 6 * hexagons, "{kind:?}");
+        }
+
+        for h in 0..items {
+            let corners = |b: &MeshBuffers| -> Vec<Vec3> {
+                (6 * h..6 * h + 6)
+                    .map(|i| Vec3::from(b.positions[i]))
+                    .collect()
+            };
+            let (a, b) = (corners(fruit), corners(cull));
+            let normal = |c: &[Vec3]| (c[1] - c[0]).cross(c[2] - c[0]).normalize();
+
+            // The two fixed hexagons must share a centre and cross at 90°.
+            let centre = |c: &[Vec3]| c.iter().sum::<Vec3>() / 6.0;
+            let pivot = Vec3::from(fruit.billboard[6 * h].pivot);
+            assert!(centre(&a).abs_diff_eq(pivot, 1e-4), "{kind:?}");
+            assert!(centre(&b).abs_diff_eq(pivot, 1e-4), "{kind:?}");
+            assert!(normal(&a).dot(normal(&b)).abs() < 1e-3, "{kind:?}");
+
+            // Camera-facing fruit must use regular hexagons with no fixed rotation axis.
+            for v in &fruit.billboard[6 * h..6 * h + 6] {
+                assert_eq!(v.axis, [0.0; 3], "{kind:?}");
+                assert_eq!(v.pivot, fruit.billboard[6 * h].pivot, "{kind:?}");
+                let radius = Vec2::from(v.offset).length();
+                let first = Vec2::from(fruit.billboard[6 * h].offset).length();
+                assert!((radius - first).abs() < 1e-5, "{kind:?}");
+            }
+
+            // Reconstructed triangle fronts must point toward the sampled camera direction.
+            for k in 0..8 {
+                let angle = std::f32::consts::TAU * k as f32 / 8.0;
+                let to_camera = Vec3::new(angle.cos(), 0.4, angle.sin()).normalize();
+                let right = Vec3::Y.cross(to_camera).normalize();
+                let up = to_camera.cross(right);
+                let turned = |i: u32| {
+                    let b = &fruit.billboard[i as usize];
+                    Vec3::from(b.pivot) + right * b.offset[0] + up * b.offset[1]
+                };
+                let first = 4 * h * 3;
+                for t in fruit.indices[first..first + 12].chunks(3) {
+                    let [a, b, c] = [turned(t[0]), turned(t[1]), turned(t[2])];
+                    assert!((b - a).cross(c - a).dot(to_camera) > 0.0, "{kind:?}");
+                }
+            }
+        }
+    }
+}
+
+/// Checks that enabling billboard fruit does not change flower selection or geometry.
+#[test]
+fn billboard_fruit_leave_flowers_unchanged() {
+    let options = decorated(ClusterKind::Umbel);
+    let skeleton = Skeleton::generate(&options).unwrap();
+    let detail = default_lod_levels()[3].detail;
+    let without = LodDetail {
+        billboard_fruit: false,
+        ..detail
+    };
+    let a = skeleton.mesh(&options, &detail);
+    let b = skeleton.mesh(&options, &without);
+    assert_eq!(a.flowers, b.flowers);
+    assert_eq!(a.flower_spans, b.flower_spans);
+    assert!(a.flower_spans.iter().all(|s| s.cull_vertices.is_empty()));
 }
 
 #[test]
@@ -824,6 +928,11 @@ fn default_levels_simplify_fruit_and_flowers_further_away() {
         assert_eq!(farther.item_stride % nearer.item_stride.max(1), 0);
         assert_eq!(farther.cluster_stride % nearer.cluster_stride.max(1), 0);
     }
+    // LOD3 restores every fruit as a billboard, even though nearer levels may skip items.
+    assert_eq!(
+        [near, middle, far, farthest].map(|d| d.billboard_fruit),
+        [false, false, false, true]
+    );
 }
 
 #[test]

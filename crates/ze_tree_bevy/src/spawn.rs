@@ -5,12 +5,13 @@ use std::sync::Arc;
 
 use bevy::asset::io::Reader;
 use bevy::asset::{AssetLoader, LoadContext};
-use bevy::camera::visibility::VisibilityRange;
+use bevy::camera::primitives::Aabb;
+use bevy::camera::visibility::{NoAutoAabb, VisibilityRange};
 use bevy::prelude::*;
 use bevy::tasks::{AsyncComputeTaskPool, Task, block_on, poll_once};
 use ze_tree::{
-    BranchShape, LodLevel, OptionsError, Skeleton, TextureCompression, TextureSize, TreeError,
-    TreeOptions, TreePreset, TrellisWire, default_lod_levels,
+    BranchShape, LodLevel, MeshBuffers, OptionsError, Skeleton, TextureCompression, TextureSize,
+    TreeError, TreeOptions, TreePreset, TrellisWire, default_lod_levels,
 };
 
 use crate::material::{
@@ -18,7 +19,7 @@ use crate::material::{
     flower_material, fruit_material, leaf_material, trellis_material,
 };
 use crate::material_key::{BarkKey, LeafKey, TrellisKey};
-use crate::mesh::{bark_mesh, cluster_mesh, leaf_mesh};
+use crate::mesh::{bark_mesh, billboard_aabb, cluster_mesh, leaf_mesh};
 use crate::wind::Wind;
 
 /// A generated tree positioned by this entity's transform.
@@ -208,14 +209,20 @@ pub struct TreeFinished {
     pub result: Result<(), OptionsError>,
 }
 
+/// A part’s Bevy mesh and optional bounds covering its camera-facing rotations.
+struct PartMesh<M> {
+    mesh: M,
+    bounds: Option<Aabb>,
+}
+
 /// Meshes produced by a background task for one detail level; each is absent
 /// when the level has no triangles of that kind.
 struct LevelMeshes {
     level: TreeLodLevel,
-    bark: Option<Mesh>,
-    leaves: Option<Mesh>,
-    fruit: Option<Mesh>,
-    flowers: Option<Mesh>,
+    bark: Option<PartMesh<Mesh>>,
+    leaves: Option<PartMesh<Mesh>>,
+    fruit: Option<PartMesh<Mesh>>,
+    flowers: Option<PartMesh<Mesh>>,
 }
 
 /// Generated detail levels, or the validation error that prevented generation.
@@ -226,13 +233,13 @@ struct LevelAssets {
     /// Camera-distance limits; `None` means the sole detail level has no distance limit.
     range: Option<VisibilityRange>,
     /// Bark mesh, absent when this level contains no bark triangles.
-    bark: Option<Handle<Mesh>>,
+    bark: Option<PartMesh<Handle<Mesh>>>,
     /// Leaf mesh, absent when this level contains no leaf triangles.
-    leaves: Option<Handle<Mesh>>,
+    leaves: Option<PartMesh<Handle<Mesh>>>,
     /// Fruit mesh, absent when this level contains no fruit triangles.
-    fruit: Option<Handle<Mesh>>,
+    fruit: Option<PartMesh<Handle<Mesh>>>,
     /// Flower mesh, absent when this level contains no flower triangles.
-    flowers: Option<Handle<Mesh>>,
+    flowers: Option<PartMesh<Handle<Mesh>>>,
     /// Bark material, shared by levels with matching bark settings and sidedness.
     bark_material: Handle<TreeMaterial>,
     /// Leaf material, shared by levels using the same leaf image selection.
@@ -351,23 +358,29 @@ pub(crate) fn start_generation(
     }
 }
 
-/// Builds the branch structure once, then creates meshes for detail levels sorted
-/// by their switching distances.
+/// Generates one skeleton and meshes for each detail level, sorted by distance.
+/// Skips [`TreeMesh::billboard_cull`](ze_tree::TreeMesh::billboard_cull) because
+/// the tree shaders rotate the main shapes toward each view.
 fn generate(options: &TreeOptions, levels: &[TreeLodLevel]) -> TaskOutput {
     let skeleton = Skeleton::generate(options)?;
     let mut levels = levels.to_vec();
     levels.sort_by(|a, b| a.level.distance.total_cmp(&b.level.distance));
+    let part = |buffers: &MeshBuffers, convert: &dyn Fn(&MeshBuffers) -> Mesh| {
+        (!buffers.indices.is_empty()).then(|| PartMesh {
+            mesh: convert(buffers),
+            bounds: billboard_aabb(buffers),
+        })
+    };
     Ok(levels
         .into_iter()
         .map(|level| {
             let mesh = skeleton.mesh(options, &level.level.detail);
             LevelMeshes {
                 level,
-                bark: (!mesh.branches.indices.is_empty())
-                    .then(|| bark_mesh(&mesh.branches, &options.bark)),
-                leaves: (!mesh.leaves.indices.is_empty()).then(|| leaf_mesh(&mesh.leaves)),
-                fruit: (!mesh.fruit.indices.is_empty()).then(|| cluster_mesh(&mesh.fruit)),
-                flowers: (!mesh.flowers.indices.is_empty()).then(|| cluster_mesh(&mesh.flowers)),
+                bark: part(&mesh.branches, &|b| bark_mesh(b, &options.bark)),
+                leaves: part(&mesh.leaves, &leaf_mesh),
+                fruit: part(&mesh.fruit, &cluster_mesh),
+                flowers: part(&mesh.flowers, &cluster_mesh),
             }
         })
         .collect())
@@ -435,19 +448,23 @@ pub(crate) fn finish_generation(
                     }
                     _ => bark_material(&options.bark, None, wind.0),
                 };
+                // Ribbon billboards have no tangents to orient a normal map.
                 if two_sided {
                     material.base.cull_mode = None;
                     material.base.double_sided = true;
+                    material.base.normal_map_texture = None;
                 }
                 tree_materials.add(material)
             });
 
+            // Omit normal maps for camera-facing leaves, which have no tangents.
             let image = root.map(|_| l.level.leaves);
-            let key = LeafKey::new(&options.leaves, image);
+            let billboard = l.level.level.detail.leaf_billboard.is_some();
+            let key = LeafKey::new(&options.leaves, image, billboard);
             let leaves = cache.leaf_materials.entry(key).or_insert_with(|| {
                 let textures = image.zip(root).map(|(image, root)| {
                     let kind = &options.leaves.kind;
-                    cache
+                    let textures = cache
                         .leaf_textures
                         .entry((kind.clone(), image))
                         .or_insert_with(|| match image {
@@ -458,17 +475,27 @@ pub(crate) fn finish_generation(
                                 LeafTextures::load_clump(&asset_server, root, kind, compression)
                             }
                         })
-                        .clone()
+                        .clone();
+                    LeafTextures {
+                        normal: textures.normal.filter(|_| !billboard),
+                        ..textures
+                    }
                 });
                 tree_materials.add(leaf_material(&options.leaves, textures.as_ref(), wind.0))
             });
 
+            let mut add = |part: Option<PartMesh<Mesh>>| {
+                part.map(|p| PartMesh {
+                    mesh: meshes.add(p.mesh),
+                    bounds: p.bounds,
+                })
+            };
             level_assets.push(LevelAssets {
                 range,
-                bark: l.bark.map(|m| meshes.add(m)),
-                leaves: l.leaves.map(|m| meshes.add(m)),
-                fruit: l.fruit.map(|m| meshes.add(m)),
-                flowers: l.flowers.map(|m| meshes.add(m)),
+                bark: add(l.bark),
+                leaves: add(l.leaves),
+                fruit: add(l.fruit),
+                flowers: add(l.flowers),
                 bark_material: bark.clone(),
                 leaf_material: leaves.clone(),
             });
@@ -581,12 +608,17 @@ fn spawn_tree_parts(commands: &mut Commands, tree: Entity, generated: &Generated
             let Some(mesh) = mesh else { continue };
             let mut part = commands.spawn((
                 TreePart { lod, kind },
-                Mesh3d(mesh.clone()),
+                Mesh3d(mesh.mesh.clone()),
                 MeshMaterial3d(material.clone()),
                 ChildOf(tree),
             ));
             if let Some(range) = &level.range {
                 part.insert(range.clone());
+            }
+            // Use rotation-aware bounds so Bevy does not hide a billboard whose
+            // stored shape is outside the view but whose rotated shape is visible.
+            if let Some(bounds) = mesh.bounds {
+                part.insert((bounds, NoAutoAabb));
             }
         }
     }
@@ -784,6 +816,78 @@ mod tests {
             assert!(seen.contains(&(lod, TreePartKind::Bark)), "lod {lod}");
             assert!(seen.contains(&(lod, TreePartKind::Leaves)), "lod {lod}");
         }
+    }
+
+    /// Checks that LOD3 spawns only the main parts, with rotation data and bounds
+    /// for their camera-facing shapes. Crossed fallback shapes must not be spawned.
+    #[test]
+    fn farthest_level_parts_turn_toward_the_camera() {
+        let mut app = spawn_app_with(default_tree_lod_levels());
+        let tree = app
+            .world_mut()
+            .spawn(ZeTree::preset(TreePreset::Apple))
+            .id();
+        update_until_finished(&mut app, tree);
+
+        let mut parts = app
+            .world_mut()
+            .query::<(&TreePart, &Mesh3d, Option<&Aabb>, Has<NoAutoAabb>)>();
+        let meshes = app.world().resource::<Assets<Mesh>>();
+        let mut far_kinds = Vec::new();
+        for (part, mesh, bounds, fixed) in parts.iter(app.world()) {
+            let mesh = meshes.get(&mesh.0).unwrap();
+            let billboard = mesh.contains_attribute(crate::ATTRIBUTE_BILLBOARD_PIVOT)
+                && mesh.contains_attribute(crate::ATTRIBUTE_BILLBOARD_AXIS);
+            let far = part.lod == 3 && part.kind != TreePartKind::Flowers;
+            assert_eq!(billboard, far, "{part:?}");
+            assert_eq!(fixed, far, "{part:?}");
+            assert_eq!(bounds.is_some(), far, "{part:?}");
+            if part.lod == 3 {
+                far_kinds.push(part.kind);
+            }
+        }
+        far_kinds.sort_by_key(|k| *k as u8);
+        assert_eq!(
+            far_kinds,
+            [
+                TreePartKind::Bark,
+                TreePartKind::Leaves,
+                TreePartKind::Fruit
+            ]
+        );
+    }
+
+    /// Checks that camera-facing leaves omit normal maps even when their leaf
+    /// texture set provides one.
+    #[test]
+    fn billboard_leaves_leave_out_the_normal_map() {
+        let [near, .., farthest] = default_lod_levels();
+        let leaf_image = |level| TreeLodLevel {
+            level,
+            bark: BarkTexture::AverageColor,
+            leaves: LeafTexture::Leaf,
+        };
+        let mut app = spawn_app_with(vec![leaf_image(near), leaf_image(farthest)]);
+        app.world_mut().resource_mut::<SpawnSettings>().texture_root = Some("textures".into());
+        let mut options = TreePreset::OakSmall.options();
+        options.leaves.kind = "white_oak".to_owned();
+        assert!(ze_tree::leaf_has_normal_map(&options.leaves.kind));
+        let tree = app.world_mut().spawn(ZeTree::new(options)).id();
+        update_until_finished(&mut app, tree);
+
+        let mut parts = app
+            .world_mut()
+            .query::<(&TreePart, &MeshMaterial3d<TreeMaterial>)>();
+        let materials = app.world().resource::<Assets<TreeMaterial>>();
+        let mut seen = 0;
+        for (part, material) in parts.iter(app.world()) {
+            if part.kind == TreePartKind::Leaves {
+                let base = &materials.get(&material.0).unwrap().base;
+                assert_eq!(base.normal_map_texture.is_some(), part.lod == 0, "{part:?}");
+                seen += 1;
+            }
+        }
+        assert_eq!(seen, 2);
     }
 
     /// Returns the distinct material identifiers for one kind of part on a tree.

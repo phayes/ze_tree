@@ -164,6 +164,44 @@ impl TreeMesh {
         }
         out
     }
+
+    /// Copies the selected part’s crossed fallback shapes from [`TreeMesh::billboard_cull`].
+    /// Use these when drawing fixed shapes; skip them when rotating the main billboards
+    /// toward the camera.
+    ///
+    /// Bark selections copy their fallback strips. [`MeshPart::Leaves`] and
+    /// [`MeshPart::Fruit`] copy the corresponding [`BillboardCull`](crate::BillboardCull)
+    /// buffers. [`MeshPart::Flowers`] and selections without crossed shapes return
+    /// an empty part. [`PartMesh::source_vertices`] indexes the matching fallback
+    /// buffer, not the main mesh.
+    ///
+    /// # Panics
+    ///
+    /// May panic for invalid manually edited spans or indices, as with [`TreeMesh::part`].
+    pub fn billboard_cull_part(&self, part: MeshPart) -> PartMesh {
+        let cull = &self.billboard_cull;
+        let whole = match part {
+            MeshPart::Leaves => Some(&cull.leaves),
+            MeshPart::Fruit => Some(&cull.fruit),
+            MeshPart::Flowers => return PartMesh::default(),
+            MeshPart::Trunk | MeshPart::Branches | MeshPart::BranchLevel(_) => None,
+        };
+        if let Some(buffers) = whole {
+            return PartMesh {
+                buffers: buffers.clone(),
+                source_vertices: (0..buffers.next_index()).collect(),
+            };
+        }
+
+        let mut out = PartMesh::default();
+        for span in &self.branch_spans {
+            if part.includes_level(span.level) {
+                let (vertices, indices) = (span.cull_vertices.clone(), span.cull_indices.clone());
+                out.append(&cull.branches, vertices, indices);
+            }
+        }
+        out
+    }
 }
 
 impl PartMesh {
@@ -174,16 +212,21 @@ impl PartMesh {
         let base = out.next_index();
         let v = vertices.start as usize..vertices.end as usize;
 
-        // Preserve optional tangent and wind attributes when present.
+        // Copy each optional vertex attribute only when the source contains it.
         out.positions
             .extend_from_slice(&source.positions[v.clone()]);
-        out.normals.extend_from_slice(&source.normals[v.clone()]);
         out.uvs.extend_from_slice(&source.uvs[v.clone()]);
+        if !source.normals.is_empty() {
+            out.normals.extend_from_slice(&source.normals[v.clone()]);
+        }
         if !source.tangents.is_empty() {
             out.tangents.extend_from_slice(&source.tangents[v.clone()]);
         }
         if !source.wind.is_empty() {
-            out.wind.extend_from_slice(&source.wind[v]);
+            out.wind.extend_from_slice(&source.wind[v.clone()]);
+        }
+        if !source.billboard.is_empty() {
+            out.billboard.extend_from_slice(&source.billboard[v]);
         }
         self.source_vertices.extend(vertices.clone());
 
@@ -287,15 +330,22 @@ mod tests {
     fn empty_parts_are_skipped() {
         let mut options = TreeOptions::default();
         options.branch.levels = 0;
-        options.leaves.count = 0;
+        options.leaves.count = 1;
         let mesh = Skeleton::generate(&options)
             .unwrap()
             .mesh(&options, &LodDetail::default());
-        // This tree still generates a tip leaf even with no child branches or extra leaves.
+        // A trunk-only tree has leaves but no child branches.
         assert_eq!(
             BranchGrouping::Merged.parts(&mesh),
             [MeshPart::Trunk, MeshPart::Leaves]
         );
         assert!(mesh.part(MeshPart::Branches).buffers.positions.is_empty());
+
+        // With no leaves, only the trunk remains.
+        options.leaves.count = 0;
+        let bare = Skeleton::generate(&options)
+            .unwrap()
+            .mesh(&options, &LodDetail::default());
+        assert_eq!(BranchGrouping::Merged.parts(&bare), [MeshPart::Trunk]);
     }
 }

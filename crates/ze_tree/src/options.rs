@@ -150,18 +150,38 @@ pub struct BarkOptions {
 ///
 /// Level 0 is the trunk. Each successive level grows from the preceding one,
 /// up to [`levels`](Self::levels). Entries for unused levels have no effect.
+/// With more than one [`stems`](Self::stems), every stem is a level-0 trunk.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BranchOptions {
     /// Number of branching steps above the trunk: 0 means trunk only.
     /// Must not exceed [`MAX_LEVELS`]; checked by [`TreeOptions::validate`].
     pub levels: u32,
+    /// Number of trunks growing from the ground, as in a multi-stemmed shrub.
+    /// Each stem uses the level-0 settings. The default, 1, grows a single
+    /// upright trunk. Must be at least 1.
+    pub stems: u32,
+    /// Largest tilt of a stem away from vertical, in degrees, when there is more
+    /// than one stem. Stems get random tilts up to this angle, spread evenly
+    /// around the base; the more a stem tilts, the further from the centre it
+    /// starts. Ignored for a single stem. Must be between 0 and 90.
+    pub stem_angle: f32,
     /// Child-branch angle relative to its parent, in degrees, for levels 1–3.
     pub angle: PerLevel<f32>,
     /// Number of side branches per parent at levels 0–2, excluding any tip continuation.
     pub children: PerLevel<u32>,
     /// Direction and strength of a steady influence on branch growth.
     pub force: GrowthForce,
+    /// Pull toward level, sideways growth at each level, in radians per
+    /// lengthwise interval. Use it for branches that spread out in flat layers,
+    /// as on a dogwood. A branch never bends past horizontal, and one pointing
+    /// straight up or down is not pulled. 0, the default, adds no pull; negative
+    /// values have no effect. Unlike [`force`](Self::force), the pull does not
+    /// grow stronger on thinner branches. Random bending from
+    /// [`gnarliness`](Self::gnarliness) and an upward `force` still apply and work
+    /// against the pull, so the total turn a branch can make is at most this value
+    /// times its [`sections`](Self::sections) count.
+    pub flatten: PerLevel<f32>,
     /// Amount of random bending; larger values give more irregular branches.
     pub gnarliness: PerLevel<f32>,
     /// Length setting for each level, in the same units as the tree dimensions.
@@ -213,7 +233,9 @@ pub struct LeafOptions {
     pub billboard: Billboard,
     /// Leaf angle relative to its supporting branch, in degrees.
     pub angle: f32,
-    /// Number of leaves placed along each outermost branch, excluding tip leaves.
+    /// Number of leaves placed along each outermost branch. Broadleaf trees also
+    /// get one extra leaf at the tip of each outermost branch. Set to 0 for a
+    /// bare tree with no leaves at all, tip leaves included.
     pub count: u32,
     /// Earliest leaf position along a branch, from 0 (base) to 1 (tip).
     pub start: f32,
@@ -229,6 +251,14 @@ pub struct LeafOptions {
     pub alpha_test: f32,
     /// Shade leaves to suggest a rounded canopy rather than separate flat surfaces.
     pub rounded_normals: bool,
+    /// How far to turn each leaf toward lying flat with its face up, from 0 to 1.
+    /// 0, the default, keeps the angle from [`angle`](Self::angle) and the
+    /// branch. 1 lays every leaf level, pointing in the horizontal direction it
+    /// already leans, like the flat foliage sprays of a cedar. Leaves keep their
+    /// positions. With [`Billboard::Double`], the second, crossing surface stands
+    /// upright on a flattened leaf, so flat foliage usually suits
+    /// [`Billboard::Single`]. Must be between 0 and 1.
+    pub flatten: f32,
 }
 
 /// A flat grid of guide wires that can bend nearby branches toward it.
@@ -329,8 +359,15 @@ pub struct ClusterPlacement {
     /// trees, or any level on evergreen trees.
     pub tips: f32,
     /// Clusters along each eligible branch, in addition to any tip cluster.
-    /// Set both this and [`tips`](Self::tips) to zero to disable clusters.
+    /// Set this, [`density`](Self::density), and [`tips`](Self::tips) to zero
+    /// to disable clusters.
     pub count: u32,
+    /// Extra side clusters per tree unit of branch length, added to
+    /// [`count`](Self::count). Only the part of the branch after
+    /// [`start`](Self::start) is measured, so long branches get more clusters
+    /// than short ones. Fractional results are rounded up or down at random.
+    /// Must be finite and non-negative.
+    pub density: f32,
     /// Start of the region used for side clusters, from 0 (branch base) to
     /// 1 (branch tip). Does not affect the chance of a tip cluster.
     pub start: f32,
@@ -544,9 +581,12 @@ impl Default for BranchOptions {
         // position, and the final level has no child branches.
         Self {
             levels: 3,
+            stems: 1,
+            stem_angle: 0.0,
             angle: PerLevel([0.0, 70.0, 60.0, 60.0]),
             children: PerLevel([7, 7, 5, 0]),
             force: GrowthForce::default(),
+            flatten: PerLevel([0.0; 4]),
             gnarliness: PerLevel([0.15, 0.2, 0.3, 0.02]),
             length: PerLevel([20.0, 20.0, 10.0, 1.0]),
             radius: PerLevel([1.5, 0.7, 0.7, 0.7]),
@@ -581,6 +621,7 @@ impl Default for LeafOptions {
             tint: 0xffffff,
             alpha_test: 0.5,
             rounded_normals: true,
+            flatten: 0.0,
         }
     }
 }
@@ -618,6 +659,7 @@ impl Default for FruitOptions {
                 min_level: 1,
                 tips: 0.0,
                 count: 0,
+                density: 0.0,
                 start: 0.3,
                 facing: Facing::Hang,
                 facing_jitter: 15.0,
@@ -667,6 +709,7 @@ impl Default for FlowerOptions {
                 min_level: 1,
                 tips: 0.0,
                 count: 0,
+                density: 0.0,
                 start: 0.3,
                 facing: Facing::Outward,
                 facing_jitter: 20.0,
@@ -722,7 +765,7 @@ pub enum OptionsError {
         /// Index of the zero entry in `branch.sections`; 0 identifies the trunk.
         level: u32,
     },
-    /// A fruit or flower setting failed a range or finiteness check.
+    /// A stem, fruit, or flower setting failed a range or finiteness check.
     InvalidSetting {
         /// Setting name using JSON field names, for example `"fruit.maturity"`.
         field: String,
@@ -752,7 +795,8 @@ impl fmt::Display for OptionsError {
 impl std::error::Error for OptionsError {}
 
 impl TreeOptions {
-    /// Checks branch depth, branch section counts, and fruit and flower ranges.
+    /// Checks branch depth, branch section counts, stem settings, and fruit and
+    /// flower ranges.
     ///
     /// All branch levels from the trunk through `branch.levels` need nonzero
     /// section counts, even if no branches grow at a level. Higher levels are
@@ -765,7 +809,8 @@ impl TreeOptions {
     /// Returns [`OptionsError::TooManyLevels`] if branch depth exceeds [`MAX_LEVELS`],
     /// then [`OptionsError::ZeroSections`] for the first configured level with
     /// zero sections. If those checks pass, returns [`OptionsError::InvalidSetting`]
-    /// for the first invalid fruit setting, then flower setting. NaN and infinite
+    /// for an invalid stem setting, then the first invalid fruit setting, then
+    /// flower setting. NaN and infinite
     /// values fail the checked floating-point ranges.
     pub fn validate(&self) -> Result<(), OptionsError> {
         if self.branch.levels > MAX_LEVELS {
@@ -778,6 +823,14 @@ impl TreeOptions {
                 return Err(OptionsError::ZeroSections { level });
             }
         }
+        let v = Checker("branch");
+        v.check(self.branch.stems >= 1, "stems", "at least 1")?;
+        v.check(
+            (0.0..=90.0).contains(&self.branch.stem_angle),
+            "stemAngle",
+            "between 0 and 90",
+        )?;
+        Checker("leaves").unit(self.leaves.flatten, "flatten")?;
         self.fruit.validate()?;
         self.flowers.validate()
     }
@@ -878,6 +931,7 @@ impl Checker {
     ) -> Result<(), OptionsError> {
         // Check where clusters can grow, their size, and their random tilt.
         self.unit(placement.tips, "placement.tips")?;
+        self.non_negative(placement.density, "placement.density")?;
         self.unit(placement.start, "placement.start")?;
         self.non_negative(placement.facing_jitter, "placement.facingJitter")?;
         self.non_negative(placement.size, "placement.size")?;

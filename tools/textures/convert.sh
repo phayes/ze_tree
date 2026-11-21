@@ -29,10 +29,12 @@
 #
 # Requirements: ImageMagick 7 (magick), KTX-Software 4.4+ (ktx), and
 # ctt-cli 0.6 (cargo install ctt-cli --version 0.6.1 --locked).
-# Usage: tools/textures/convert.sh [--only bark|leaves|clumps] [PRIOR_ART_DIR]
+# Usage: tools/textures/convert.sh [--only bark|leaves|clumps] [--kind KIND] [PRIOR_ART_DIR]
 # By default, convert all bark and leaf images, including clumps. Use --only leaves
 # to skip bark, or --only clumps to regenerate clump textures without replacing
-# regular leaf or bark textures. PRIOR_ART_DIR defaults to prior_art/ in the repository.
+# regular leaf or bark textures. Use --kind to convert only one leaf kind from
+# leaves.txt, such as a newly added one; bark is skipped. PRIOR_ART_DIR defaults
+# to prior_art/ in the repository.
 # Run fetch.sh for bark sources in its textures/ folder. For leaves, clone ez-tree
 # at the commit in port_plan.md and extract Nobiax's packs as described in
 # leaves.txt. All leaf source paths are relative to PRIOR_ART_DIR.
@@ -44,9 +46,11 @@ source "$repo/tools/textures/leaves.sh"
 
 # Read the options.
 only=
+leaf_kind=
 while [[ $# -gt 0 && $1 == --* ]]; do
     case $1 in
         --only) only=$2; shift 2 ;;
+        --kind) leaf_kind=$2; shift 2 ;;
         *) echo "unknown option $1" >&2; exit 1 ;;
     esac
 done
@@ -98,7 +102,7 @@ while read -r source id; do
     [[ -z $source || $source == \#* ]] || bark_ids+=("$id")
 done <"$repo/tools/textures/sets.txt"
 
-[[ $only == leaves || $only == clumps ]] && bark_ids=()
+[[ $only == leaves || $only == clumps || -n $leaf_kind ]] && bark_ids=()
 for id in "${bark_ids[@]}"; do
     for size in "${sizes[@]}"; do
         name=${size%%:*} px=${size#*:}
@@ -128,6 +132,7 @@ done
 # Prepare each leaf colour image and available normal map, then write both GPU formats.
 if [[ $only != bark ]]; then
     while IFS=$'\t' read -r kind source path _; do
+        [[ -n $leaf_kind && $kind != "$leaf_kind" ]] && continue
         prepare_leaf "$kind" "$source" "$prior_art/$path" "$stage/leaves"
         prepare_clump "$kind" "$stage/leaves"
         prefix=$out/leaves/$kind

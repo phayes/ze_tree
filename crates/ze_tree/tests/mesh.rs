@@ -13,8 +13,8 @@ mod common;
 use glam::{Quat, Vec3};
 use serde_json::Value;
 use ze_tree::{
-    BarkUvMode, Billboard, LodDetail, LodLevel, MeshBuffers, Section, Skeleton, SkeletonLeaf,
-    TreeOptions, TreePreset, default_lod_levels,
+    BarkUvMode, Billboard, BillboardMode, BranchShape, LodDetail, MeshBuffers, Section, Skeleton,
+    SkeletonLeaf, TreeOptions, TreePreset, default_lod_levels,
 };
 
 /// Allowed differences when Rust meshes the saved ez-tree skeleton.
@@ -58,26 +58,35 @@ struct Tolerances {
 
 const CASES: [&str; 3] = ["aspen_small", "bush_2", "evergreen_levels_2"];
 
+/// Checks the default switching distances and branch and leaf settings.
+/// Fruit and flower defaults are covered in `tests/cluster_mesh.rs`.
 #[test]
-fn default_lod_levels_match_ez_tree() {
-    let expected: Vec<LodLevel> =
-        serde_json::from_str(&common::fixture_text("lod_levels.json")).expect("lod levels parse");
-    // The ez-tree fixture has no fruit or flower settings; exclude those from this comparison.
-    // Compare the first three levels with ez-tree; its fixture has no fourth level.
-    let ours: Vec<LodLevel> = default_lod_levels()
-        .into_iter()
-        .take(3)
-        .map(|mut level| {
-            let full = LodDetail::default();
-            level.detail.cluster_stride = full.cluster_stride;
-            level.detail.item_stride = full.item_stride;
-            level.detail.item_scale = full.item_scale;
-            level.detail.item_detail = full.item_detail;
-            level.detail.flat_item_size = full.flat_item_size;
-            level
-        })
-        .collect();
-    assert_eq!(expected, ours);
+fn default_lod_levels_have_the_documented_settings() {
+    let levels = default_lod_levels();
+    assert_eq!(levels.map(|l| l.distance), [0.0, 100.0, 250.0, 500.0]);
+    assert_eq!(levels.map(|l| l.hysteresis), [0.0, 0.05, 0.05, 0.05]);
+    assert_eq!(levels[0].detail, LodDetail::default());
+
+    let [_, near, far, farthest] = levels.map(|l| l.detail);
+    let bark = |d: LodDetail| (d.section_stride, d.segment_factor, d.branch_shape);
+    assert_eq!(bark(near), (3, 0.75, BranchShape::Tube));
+    assert_eq!(bark(far), (6, 0.4, BranchShape::Tube));
+    assert_eq!(bark(farthest), (8, 1.0, BranchShape::Ribbons));
+    assert_eq!(
+        levels.map(|l| l.detail.min_branch_radius),
+        [0.0, 0.0, 0.0, 0.15]
+    );
+
+    let leaves = |d: LodDetail| (d.leaf_stride, d.leaf_scale, d.billboard);
+    assert_eq!(leaves(near), (2, 1.25, None));
+    assert_eq!(leaves(far), (2, 1.3, Some(Billboard::Single)));
+    assert_eq!(leaves(farthest), (4, 1.8, Some(Billboard::Single)));
+    // Camera-facing leaf rotation is enabled only for LOD3.
+    for detail in [near, far] {
+        assert_eq!(detail.leaf_billboard, None);
+    }
+    assert_eq!(farthest.leaf_billboard, Some(BillboardMode::Camera));
+    assert_eq!(farthest.leaf_billboard_scale, 1.25);
 }
 
 /// Returns the case's options, a Rust-grown skeleton, and a skeleton using saved ez-tree shapes.
@@ -250,10 +259,13 @@ fn matches_ez_tree_meshes() {
                 ("grown", &grown, &GROWN),
             ] {
                 let mesh = skeleton.mesh(&options, &detail);
-                let parts = [
-                    ("branches", &mesh.branches, tolerances.branch_normal),
-                    ("leaves", &mesh.leaves, tolerances.leaf_normal),
-                ];
+                // Simplified leaves intentionally differ from the ez-tree fixtures:
+                // selection starts at each branch tip, and resizing preserves centres.
+                // Compare full-detail leaves and the matching bark levels instead.
+                let mut parts = vec![("branches", &mesh.branches, tolerances.branch_normal)];
+                if lod == 0 {
+                    parts.push(("leaves", &mesh.leaves, tolerances.leaf_normal));
+                }
                 for (part, ours, normal_tolerance) in parts {
                     let what = format!("{case} lod{lod} {source} {part}");
                     let worst = compare(&what, ours, &fixture[part], extent);
@@ -303,7 +315,7 @@ fn spans_cover_the_buffers() {
         assert_eq!(index as usize, mesh.branches.indices.len());
 
         // Only retained leaves get spans; together they must cover both leaf buffers completely.
-        let kept: Vec<usize> = (0..skeleton.leaves.len()).step_by(stride).collect();
+        let kept = kept_leaves(&skeleton, stride);
         let leaves: Vec<usize> = mesh.leaf_spans.iter().map(|s| s.leaf).collect();
         assert_eq!(leaves, kept);
         let (mut vertex, mut index) = (0, 0);
@@ -313,6 +325,112 @@ fn spans_cover_the_buffers() {
         }
         assert_eq!(vertex as usize, mesh.leaves.vertex_count());
         assert_eq!(index as usize, mesh.leaves.indices.len());
+    }
+}
+
+/// Returns expected leaf indices in skeleton order. On each branch, select
+/// every `stride`th leaf starting nearest its tip.
+fn kept_leaves(skeleton: &Skeleton, stride: usize) -> Vec<usize> {
+    let stride = stride.max(1);
+    let mut by_branch: std::collections::BTreeMap<usize, Vec<usize>> = Default::default();
+    for (i, leaf) in skeleton.leaves.iter().enumerate() {
+        by_branch.entry(leaf.parent.branch).or_default().push(i);
+    }
+    let along = |i: usize| {
+        let parent = &skeleton.leaves[i].parent;
+        parent.section as f32 + parent.t
+    };
+    let mut kept: Vec<usize> = by_branch
+        .into_values()
+        .flat_map(|mut group| {
+            group.sort_by(|&a, &b| along(b).total_cmp(&along(a)).then(a.cmp(&b)));
+            group.into_iter().step_by(stride).collect::<Vec<_>>()
+        })
+        .collect();
+    kept.sort_unstable();
+    kept
+}
+
+/// Checks that tip-first selection keeps each branch’s outermost leaf and
+/// rounds the retained count up when `n` leaves are divided by the stride.
+#[test]
+fn leaf_stride_keeps_each_branch_tip() {
+    for preset in [
+        TreePreset::AspenSmall,
+        TreePreset::OakMedium,
+        TreePreset::PineMedium,
+    ] {
+        let options = preset.options();
+        let skeleton = Skeleton::generate(&options).unwrap();
+        for stride in [2, 3, 4, 7] {
+            let detail = LodDetail {
+                leaf_stride: stride,
+                ..LodDetail::default()
+            };
+            let mesh = skeleton.mesh(&options, &detail);
+            let kept: Vec<usize> = mesh.leaf_spans.iter().map(|s| s.leaf).collect();
+            assert_eq!(
+                kept,
+                kept_leaves(&skeleton, stride as usize),
+                "{preset:?} {stride}"
+            );
+
+            let mut counts: std::collections::BTreeMap<usize, (usize, usize)> = Default::default();
+            for (i, leaf) in skeleton.leaves.iter().enumerate() {
+                counts.entry(leaf.parent.branch).or_default().0 += 1;
+                if kept.binary_search(&i).is_ok() {
+                    counts.entry(leaf.parent.branch).or_default().1 += 1;
+                }
+            }
+            for (branch, (all, kept_here)) in counts {
+                let case = format!("{preset:?} stride {stride} branch {branch}");
+                assert_eq!(kept_here, all.div_ceil(stride as usize), "{case}");
+                let outermost = (0..skeleton.leaves.len())
+                    .filter(|&i| skeleton.leaves[i].parent.branch == branch)
+                    .max_by(|&a, &b| {
+                        let along = |i: usize| {
+                            let p = &skeleton.leaves[i].parent;
+                            p.section as f32 + p.t
+                        };
+                        along(a).total_cmp(&along(b)).then(b.cmp(&a))
+                    })
+                    .unwrap();
+                assert!(kept.binary_search(&outermost).is_ok(), "{case}");
+            }
+        }
+    }
+}
+
+/// Checks that enlarging cards preserves their original centres, and that
+/// a size multiplier of 1 preserves the original corners.
+#[test]
+fn scaled_leaves_stay_centred() {
+    let options = TreePreset::OakSmall.options();
+    let skeleton = Skeleton::generate(&options).unwrap();
+    let mesh_at = |leaf_scale| {
+        let detail = LodDetail {
+            leaf_scale,
+            billboard: Some(Billboard::Single),
+            ..LodDetail::default()
+        };
+        skeleton.mesh(&options, &detail).leaves
+    };
+    let (unscaled, scaled) = (mesh_at(1.0), mesh_at(1.8));
+    for (i, leaf) in skeleton.leaves.iter().enumerate() {
+        let corners = |buffers: &MeshBuffers| -> Vec<Vec3> {
+            (4 * i..4 * i + 4)
+                .map(|v| Vec3::from_array(buffers.positions[v]))
+                .collect()
+        };
+        let (a, b) = (corners(&unscaled), corners(&scaled));
+        let centre = leaf.origin + leaf.orientation * Vec3::Y * (leaf.size / 2.0);
+        let mean = |c: &[Vec3]| c.iter().sum::<Vec3>() / 4.0;
+        let tolerance = 1e-4 * leaf.size.max(1.0);
+        assert!(mean(&a).abs_diff_eq(centre, tolerance), "leaf {i}");
+        assert!(mean(&b).abs_diff_eq(centre, tolerance), "leaf {i}");
+        let side = |c: &[Vec3]| c[1].distance(c[2]);
+        assert!((side(&a) - leaf.size).abs() < tolerance, "leaf {i}");
+        assert!((side(&b) - leaf.size * 1.8).abs() < tolerance, "leaf {i}");
     }
 }
 
@@ -390,8 +508,9 @@ fn rounded_leaf_normals_are_unit_at_size_two() {
     }
 }
 
-/// Checks that bark and leaf vertices provide unit tangents perpendicular to
-/// their lighting normals, with a sign of +1 or -1 for the second texture direction.
+/// Checks the lighting directions used by bark and leaf normal maps: tangents
+/// are unit length and perpendicular to normals, with handedness +1 or -1.
+/// Camera-facing buffers must omit both normals and tangents.
 #[test]
 fn bark_and_leaf_tangents_are_unit_and_perpendicular() {
     for preset in TreePreset::ALL {
@@ -401,6 +520,15 @@ fn bark_and_leaf_tangents_are_unit_and_perpendicular() {
         for level in default_lod_levels() {
             let mesh = skeleton.mesh(&options, &level.detail);
             for buffers in [&mesh.branches, &mesh.leaves] {
+                if !buffers.billboard.is_empty() {
+                    // Billboard bark has no normals; billboard leaves keep one per card.
+                    assert_eq!(buffers.billboard.len(), buffers.vertex_count());
+                    assert!(buffers.tangents.is_empty());
+                    let leaves = std::ptr::eq(buffers, &mesh.leaves);
+                    let expected = if leaves { buffers.vertex_count() } else { 0 };
+                    assert_eq!(buffers.normals.len(), expected);
+                    continue;
+                }
                 assert_eq!(buffers.tangents.len(), buffers.vertex_count());
                 for (t, n) in buffers.tangents.iter().zip(&buffers.normals) {
                     let xyz = Vec3::new(t[0], t[1], t[2]);
@@ -501,11 +629,8 @@ fn farthest_level_culls_thin_branches_and_keeps_leaves() {
         }
 
         // Branch removal must not reduce the number of leaves selected by leaf_stride.
-        let kept = skeleton
-            .leaves
-            .len()
-            .div_ceil(farthest.detail.leaf_stride as usize);
-        assert_eq!(mesh.leaf_spans.len(), kept, "{name}");
+        let kept = kept_leaves(&skeleton, farthest.detail.leaf_stride as usize);
+        assert_eq!(mesh.leaf_spans.len(), kept.len(), "{name}");
 
         let before = skeleton.mesh(&options, &far.detail).triangle_count();
         let after = mesh.triangle_count();

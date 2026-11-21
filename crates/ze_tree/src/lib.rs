@@ -22,8 +22,9 @@
 //!
 //! `mesh.branches` and `mesh.leaves` contain positions, normals, texture coordinates,
 //! and triangle indices. Upload these buffers to your renderer and give each mesh
-//! its own material. Presets include ash, aspen, oak, pine, bushes, and a tree trained
-//! along a trellis. `TreePreset::ALL` lists them all.
+//! its own material. Presets include ash, aspen, oak, pine, bushes, a tree trained
+//! along a trellis, and flowering and fruiting trees such as apple and flowering
+//! dogwood. `TreePreset::ALL` lists them all.
 //!
 //! ## Customize the shape
 //!
@@ -213,8 +214,8 @@ pub use material::{
     bark_texture_path, leaf_has_normal_map, leaf_texture_path,
 };
 pub use mesh::{
-    BranchShape, BranchSpan, ClusterSpan, ItemDetail, LeafSpan, LodDetail, LodLevel, MeshBuffers,
-    TreeMesh, default_lod_levels,
+    BillboardCull, BillboardMode, BillboardVertex, BranchShape, BranchSpan, ClusterSpan,
+    ItemDetail, LeafSpan, LodDetail, LodLevel, MeshBuffers, TreeMesh, default_lod_levels,
 };
 pub use options::{
     BarkOptions, BarkUvMode, Billboard, BranchOptions, ClusterKind, ClusterPlacement, ClusterShape,

@@ -69,6 +69,7 @@ fn every_kind_of_setting_changes_the_id() {
         ("leaves.rounded_normals", |o| {
             o.leaves.rounded_normals ^= true
         }),
+        ("leaves.flatten", |o| o.leaves.flatten = 0.5),
         ("trellis.position", |o| o.trellis.position.z += 1.0),
         ("trellis.force.falloff", |o| o.trellis.force.falloff += 1.0),
         ("fruit.placement.facing", |o| {
